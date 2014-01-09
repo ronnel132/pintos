@@ -1,0 +1,50 @@
+@c Local settings
+
+@set coursenumber CS124
+@set localpintostarpath TBD
+@c /cs/courses/cs124/pintos.tar.gz
+@set localpintoshttppath TBD
+@c http://courses.cms.caltech.edu/cs124/pintos.tar.gz
+@set localpintosbindir unused
+
+@set recommendvnc
+@clear recommendcygwin
+
+@macro localhonorcodepolicy{}
+Students are expected to follow the Honor Code in this class by refraining
+from reading any homework solutions available online or elsewhere.  This
+includes looking through other Pintos codebases.
+
+Reading the source code for other operating system kernels, such as Linux
+or FreeBSD, is encouraged, but do not copy code from them directly.  Also,
+please cite the code that inspired your own in your design documentation;
+we can share these references with other students taking the course in the
+future.
+@end macro
+
+@macro localcredits{}
+@c none needed
+@end macro
+
+@macro localmachines{}
+@c coming soon
+@end macro
+
+@macro localcvspolicy{}
+@c coming soon
+@end macro
+
+@macro localcodingstandards{}
+The codebase for this course follows a coding style like the CS11 C++ track
+coding style, described here:
+@uref{http://courses.cms.caltech.edu/cs11/material/cpp/donnie/cppstyle.html}.
+Pintos uses only spaces for indentation, @strong{no tabs}, and 4 spaces per
+indentation level.  Opening curly-braces are placed on the same line as the
+statement that begins the block; closing curly-braces are placed on a
+separate line.
+@end macro
+
+@macro localdevelopmenttools{}
+@c Descriptions of additional, local development tools can be inserted here
+@end macro
+

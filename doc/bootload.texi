@@ -1,0 +1,426 @@
+@node Project 2--Pintos Bootloader
+@chapter Project 2:  Pintos Bootloader
+
+In this assignment you will begin to get familiar with the Pintos project
+and how to run it in an emulator.  Also, Pintos is lacking one important
+component - a bootloader.  Besides becoming familiar with the codebase, your
+task will be to write the bootloader that brings the Pintos kernel into
+memory, and then starts the kernel running.
+
+The code you will have to write this week is simpler than the code you will
+have to write in subsequent projects; this is because you will need to learn
+the Pintos tools as well as write your code.
+
+@menu
+* Project 2 Background::
+* Project 2 Requirements::
+* Project 2 Suggested Order of Implementation::
+* Project 2 Extra Credit::
+@end menu
+
+@node Project 2 Background
+@section Background
+
+@menu
+* Project 2 Overview::
+* Pintos Bootloading::
+* Relevant BIOS Functions::
+* Bootloader Coding::
+* Pintos Bootloader Testing::
+@end menu
+
+@node Project 2 Overview
+@subsection Overview
+
+The bootloader is a critical component of the operating system, although its
+lifetime is very short:  the bootloader is responsible for initially bridging
+the gap between the computer hardware and the operating system, bringing the OS
+into memory from permanent storage and then starting the execution of the OS.
+
+Bootloaders have a large task, and a very small amount of memory to do it in.
+For example, IA32 bootloaders generally have to fit within 510 bytes for a
+partition (or floppy disk) bootloader, or an even smaller 436 bytes for a
+bootloader in the Master Boot Record (MBR).  This means that they are generally
+written in assembly language, because even C code would include too much bloat.
+
+Pintos reduces this space even further by storing commands to run in the boot
+sector.  This leaves Pintos with only around 300 bytes for the bootstrap code.
+
+On IA32, the system BIOS loads the bootloader from the first sector of a
+bootable drive (512 bytes) into the address range 0x7C00-0x7DFF, and then jumps
+to address 0x7C00 and begins executing the bootloader.  The BIOS also passes
+the drive number in the DL register, in case the bootloader wishes to use it.
+(MBR bootloaders often ignore this value, particularly if they provide
+@strong{multiboot} capabilities:  the ability to load operating systems in
+various partitions or various disks attached to the system).
+
+IA32 bootloaders also have the unenviable position of running in
+@strong{real-addressing mode} (also known as "real mode"), where the segment
+registers are used to compute the addresses of memory accesses according to
+the following formula:  @var{address} = @var{segment} << 4 + @var{offset}.
+The code segment CS is used for instruction execution (e.g. the BIOS jumps to
+0x0000:7C00, loading CS with 0x0000 and IP with 0x7C00), SS for the stack
+segment, and DS for the data segment.  ES is frequently used for moving data
+around in the bootloader as well.  Note that each segment is 64KiB in size;
+since bootloaders often have to load kernels that are larger than 64KiB, they
+must utilize the segment registers carefully.
+
+Different operating systems are bootstrapped in different ways:
+@itemize
+@item Different kernels often expect to be loaded at different memory
+      addresses.  Some, like Linux, can be loaded to one of several addresses
+      (small kernels get loaded at address 0x10000 and large kernels get
+      loaded at address 0x100000).
+@item Different kernels occupy different amounts of space, requiring the
+      bootloader to load different amounts of data.
+@item A bootloader must also perform the specific tasks to determine the
+      starting address of the OS kernel to jump to, so that the loader
+      can hand off to the kernel.
+@end itemize
+
+Because of these OS-specific details, the bootloader must be purpose-built for
+the operating system itself.  Larger, multi-purpose bootloaders like GRUB and
+LILO are aware of how to load multiple operating systems, but such bootloaders
+can also implement a mechanism called @strong{chain-loading} to leverage an
+existing operating system bootloader.  A common chain-loading technique for
+IA32 is to copy the chain-loader to address 0x0600, and then load the next
+bootloader at 0x7C00 (emulating what the BIOS did initially).  Then, the
+chain-loader simply jumps to the next bootloader.
+
+@node Pintos Bootloading
+@subsection Pintos Bootloading
+
+Pintos bootloading is a pretty simple process compared to how modern OS kernels
+are loaded.  The kernel is a maximum of 512KiB (or 1024 sectors), and must be
+loaded into memory starting at the address 0x20000.  Note that the Pintos
+kernel isn't required to fit into a single 64KiB segment, so loading this will
+require manipulation of the segment registers.
+
+Pintos does require a specific kind of partition for the OS, so the Pintos
+bootloader must look for a disk partition of the appropriate type.  This means
+that the Pintos bootloader must understand how to utilize Master Boot Records
+(MBRs).  Fortunately they aren't very complicated to understand.
+
+Pintos also only supports booting off of a hard disk; therefore, the Pintos
+bootloader doesn't need to check floppy drives or handle disks without an MBR
+in the first sector.
+
+Here is the relevant layout of an MBR sector:
+
+@example
+@group
+  HEX-OFF  DEC-OFF  DESCRIPTION
+  -------  -------  -----------
+   +0x000   (+  0)   Start of bootloader code
+                     ...
+                     (Some MBR formats include other drive data
+                     in the middle of this intervening space.)
+                     ...
+   +0x1BE   (+446)   Partition entry #1
+   +0x1CE   (+462)   Partition entry #2
+   +0x1DE   (+478)   Partition entry #3
+   +0x1EE   (+494)   Partition entry #4
+   +0x1FE   (+510)   0x55 (boot-sector signature)
+   +0x1FF   (+511)   0xAA (boot-sector signature)
+@end group
+@end example
+
+The most important detail is:  if sector 0 doesn't end with 0x55, 0xAA then
+it isn't a boot sector!  That drive should be skipped.
+
+Partition-table entries are 16 bytes each, and have a straightforward layout:
+
+@example
+@group
+  HEX-OFF  DEC-OFF  SIZE  DESCRIPTION
+  -------  -------  ----  -----------
+   +0x00    (+ 0)    1B   Drive Status.
+                            0x00 = inactive partition
+                            0x80 = bootable partition
+                            (other values => ignore partition)
+
+   +0x01    (+ 1)    1B   Starting head number (CHS addressing)
+   +0x02    (+ 2)    2B   Starting cylinder number (10 bits)
+                          and sector number (6 bits) (CHS addressing)
+
+   +0x04    (+ 4)    1B   Partition type value
+
+   +0x05    (+ 1)    1B   Ending head number (CHS addressing)
+   +0x06    (+ 2)    2B   Ending cylinder number (10 bits) and
+                          sector number (6 bits) (CHS addressing)
+
+   +0x08    (+ 8)    4B   LBA address of starting sector
+   +0x0C    (+12)    4B   Number of sectors in the partition
+@end group
+@end example
+
+Although Pintos easily fits within a small partition, the Pintos bootloader
+ignores the Cylinder-Head-Sector (CHS) addressing and uses the Logical Block
+Addressing (LBA) mechanism for accessing specific sectors.
+
+The Pintos bootloader is looking for a partition of type 32 (0x20), which
+indicates a Pintos partition.  Once found, the Pintos loader simply loads
+up to the first 512KiB of this partition (or the entire partition, if it is
+smaller than 512KiB) starting at linear memory address 0x20000.  Finally, the
+bootloader jumps to the Pintos @code{start} label in the file
+@file{threads/start.S}.  If this all completes successfully, the operating
+system is underway!
+
+Of course, it's possible that the Pintos bootloader won't find a Pintos disk
+partition to load.  In this case, the bootloader must signal to the BIOS that
+no OS could be loaded from disk.  This is done through @code{int $0x18} (or
+24 in base-10), the "diskless boot hook."  In ancient PCs gone by, this would
+invoke a ROM BASIC interpreter, but in current machines it simply reports a
+failure.
+
+@node Relevant BIOS Functions
+@subsection Relevant BIOS Functions
+
+There are really only two BIOS functions that you will need to use this week.
+One you have already seen, and the other is used to interact with the
+computer's hard disks.  You will be given some helper functions to output
+text to the console, so you won't have to learn about those interrupts.
+
+@table @code
+
+@item int $0x13
+
+This interrupt is used to access all of the disk-drive related functionality
+provided by the BIOS.  The bootloader actually has very simple requirements
+for interacting with the computer's disks:  it never needs to write data, only
+read it, and it can determine that a disk is not present by checking the error
+response of the BIOS read-sectors call.  Recall that hard disks are numbered
+from 0x80 up, and they are assigned contiguous values.  Thus, if a particular
+number doesn't correspond to a hard disk, then no larger numbers will either.
+This provides an easy way to loop through the disk drives that are present.
+
+The BIOS provides two functions for reading disk sectors.  One is AH = 0x02
+"Read Sectors."  However, this call uses the Cluster-Head-Sector (CHS)
+addressing mechanism, which is limited to small disks.  We would like to avoid
+this limitation in our bootloader.
+
+The other BIOS @code{int $0x13} function is AH = 0x42 "Extended Read Sectors,"
+and uses the Logical Block Addressing (LBA) mechanism for referring to sectors.
+The only challenge of this function is that @code{DS:SI} must point to a "disk
+access packet" structure that specifies the starting sector and number of
+sectors to read.  This structure is 16 bytes in size, and must be constructed
+somewhere:  the bootloader might use an adjacent area of memory (really, it can
+do whatever it wants with memory at this point, as long as it doesn't trample
+bootloader code or try to write to read-only memory regions), or it might
+construct the structure on the stack.  Either way, once the "disk access
+packet" is constructed, it can be passed to the BIOS handler to read the data
+from the disk.
+
+Note that some BIOSes can't load a large number of sectors at once, and you
+are limited to 64KiB sectors by the addressing mode anyway.  Your bootloader
+may want to load smaller chunks of data from the partition and report its
+progress to the console as it loads the kernel.
+
+@item int $0x18
+
+As mentioned before, this interrupt is called the "diskless boot hook," because
+it is invoked by the bootloader when no operating system can be found on any of
+the disks.  Generally, this interrupt just causes the BIOS to halt the computer
+with an error message, but in the past this would launch a simple BASIC
+interpreter.
+
+@end table
+
+@node Bootloader Coding
+@subsection Bootloader Coding
+
+The bootloader runs in IA32 real-address mode, which means that all addresses
+are 20 bits, computed using the segment registers and effective offsets.
+Registers like @code{IP} and @code{FLAGS} are 16 bits wide.  Additionally,
+BIOS calls generally expect all values to be passed via 16-bit registers
+(@code{AX}, @code{BX}, @code{CX}, @code{DX}, @code{BP}, @code{SI}, @code{DI}),
+or using the 8-bit registers (e.g. @code{AH}/@code{AL}, @code{BH}/@code{BL},
+and so forth).
+
+However, even with that constraint, you should note that the 32-bit general
+purpose registers (@code{EAX}, @code{EBX}, @code{ECX}, @code{EDX}, @code{ESP},
+@code{EBP}, @code{ESI}, @code{EDI}) are still accessible in your bootloader
+code.  (For example, you will note that the existing loader code uses
+@code{%esp} instead of just @code{%sp}.)  You should use this capability very
+judiciously, but you may find it extremely useful at times, e.g. when trying
+to access sectors via their LBA index, which are 22 bits.
+
+It is probably a good idea to factor the coding of the bootloader into several
+operational components, e.g. "read the MBR of a disk," "read a sector of a
+disk," etc.  You can write and call subroutines in your bootloader using the
+usual @code{call} and @code{ret} instructions.  Of course, you can implement
+looping and other flow-control constructs using jumps.
+
+You undoubtedly recall that if you are going to call IA32 assembly code from
+@command{gcc} or vice versa, you must follow a specific calling convention
+like cdecl (for Linux) or stdcall (for Windows).  However, when you are writing
+a program like a bootloader, you really don't need to follow a particular
+calling convention because it's just assembly-language functions calling each
+other.  Therefore, don't feel compelled to follow e.g. cdecl.
+
+That said, you still need to think about how arguments and return-values are
+going to be passed back and forth, and it might be easiest to use some simple
+calling convention within your program.  However, passing arguments via
+registers might make your program much easier to write than if it passes
+arguments via the stack.
+
+For example, you might write a "read one sector into memory," with the disk
+number in @code{DL}, the sector to read in @code{EBX}, and the target address
+to store the data at in @code{ES:DI}, or something like that.  Of course, all
+the details are up to you!
+
+@node Pintos Bootloader Testing
+@subsection Pintos Bootloader Testing
+
+You will build and test your bootloader by changing into the @file{src/threads}
+directory and running @command{make}; this will create a @file{build}
+directory containing the loader and the Pintos kernel.
+
+Once the kernel is built, you need to see if it works, but keep in mind that
+the OS itself still lacks many critical components.  Therefore, you will try
+to execute a single test from the suite for Project 3 and see if it runs
+successfully.  Change to the @file{build} directory and type this:
+
+@command{pintos run alarm-zero} (This runs the @command{alarm-zero} test.)
+
+Before you complete the bootloader, you will see that the Pintos bootstrap
+process halt with a message like this:
+
+@example
+PiLo
+
+TODO:  IMPLEMENT THE BOOTLOADER
+@end example
+
+Once you complete your bootloader, you should see the Pintos kernel load and
+start, and then the test should pass:
+
+@example
+@group
+[This is Bochs output; QEMU will be slightly different.]
+
+ata0 master: Generic 1234 ATA-2 Hard-Disk (0 Mbytes)
+
+Booting from Hard Disk...
+PiLo <output from your bootloader>
+<output from your bootloader, cont.>
+
+Kernel command line: run alarm-zero
+Pintos booting with 4,096 kB RAM...
+383 pages available in kernel pool.
+383 pages available in user pool.
+Calibrating timer...  <###> loops/s.
+Boot complete.
+Executing 'alarm-zero':
+(alarm-zero) begin
+(alarm-zero) PASS
+(alarm-zero) end
+Execution of 'alarm-zero' complete.
+@end group
+@end example
+
+@node Project 2 Requirements
+@section Requirements
+
+To receive full credit, your submission for Project 2 must include all aspects
+described in this section.
+
+@menu
+* Project 2 Design Document::
+* Project 2 Tasks::
+@end menu
+
+@node Project 2 Design Document
+@subsection Design Document
+
+Before you turn in your project, you must copy @uref{bootload.tmpl, ,
+the project 2 design document template} into your source tree under the
+name @file{pintos/src/threads/BOOT_DOC} and fill it in.  We recommend
+that you read the design document template before you start working on
+the project.  @xref{Project Documentation}, for a sample design document
+that goes along with a fictitious project.
+
+@node Project 2 Tasks
+@subsection Implementation Tasks
+
+@strong{Implement a bootloader for Pintos in the file @file{threads/loader.S}.}
+Your bootloader should conform to the above discussion, specifically:
+
+@itemize
+
+@item Iterate through all hard disks on the system.
+
+@item For each hard disk, load its MBR and iterate through the partition
+      table.  If the partition is not a boot partition, or if it is not a
+      Pintos partition (type 0x20), skip it.
+
+@item When the first bootable Pintos partition is found, use the LBA addresses
+      to load the first 512KiB of the partition into memory starting at linear
+      address 0x20000.  (If the partition is smaller than this, just load the
+      entire partition.)
+
+@item Any of the above steps could fail.  Additionally, it is possible that
+      the system contains no bootable Pintos partition.  In either of these
+      cases, issue an @code{int $0x18} to inform the BIOS that bootstrapping
+      failed.
+
+@end itemize
+
+For the sake of easy diagnosis, it is advisable to print out details of your
+bootstrap efforts.  The clarity of your bootloader's output will also factor
+into your grade.  Here are some examples:
+
+@itemize
+
+@item It would be a good idea to print out the drive and partition that the
+      Pintos kernel was loaded from, e.g. "@file{hda3}" or "@file{hdb1}".
+      (On UNIX operating systems the first hard disk is @file{hda}, the second
+      is @file{hdb}, and so forth.  The first partition on the first hard
+      disk is @file{hda1}, and so forth.)
+
+@item It would also be a good idea to print out some indication of kernel
+      loading progress, e.g. a character every @var{N} sectors that are
+      successfully loaded.
+
+@item Of course, if a sector-read fails, or no Pintos partition is found,
+      etc., then indicate the nature of the error in your bootloader's output.
+
+@end itemize
+
+@node Project 2 Suggested Order of Implementation
+@section Suggested Order of Implementation
+
+This component of the operating system is pretty monolithic; it is difficult
+to factor it into multiple pieces for multiple students to work on concurrently.
+Therefore, you may want to write this code as a group.
+
+Also, it isn't a lot of code to write, but because there is so little space
+available for the program, it would be good to draw up a pseudocode sketch
+of how your bootloader will work before you begin coding it.  This way it's
+easy to see what flow-control is necessary, and how to translate it into
+assembly language.
+
+@node Project 2 Extra Credit
+@section Extra Credit
+
+Here are some extra credit tasks for your bootloader:
+
+@itemize
+
+@item Implement support for chain-loading of at least one major operating
+      system, e.g. DOS or Windows or Linux.  You will need a simple user
+      interface to allow the user to choose the partition to boot from; for
+      example, you might print a numbered list of the bootable partitions
+      found, and let the user choose one by typing in the number.  You will
+      also need to figure out how to configure the emulator to demonstrate
+      your bootloader's multiboot capabilities, and include this in your
+      submission!  (25 points)
+
+@item Add the option to play a simple game to your bootloader, and allow the
+      user to choose to play this game or boot into Pintos.  When the game is
+      over, present the option to the user again.  Examples might be a number
+      guessing game, or hangman, or something else not too complicated.
+      (varies based on the coolness of the game)
+
+@end itemize
+

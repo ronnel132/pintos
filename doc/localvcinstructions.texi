@@ -1,0 +1,246 @@
+@c
+@c Instructions on how to set up a group environment, permissions, 
+@c code repository, dealing with local locking issues etc.
+@c
+@c While some of the discussion may apply to more than one environment,
+@c no attempt was made to untangle and split the discussion.
+@c
+
+@menu
+* Setting Up Git::
+* Git Repository Details::
+* Using Git for Local Edits::
+* Sharing Work with Your Team::
+* Submitting Assignments::
+@end menu
+
+@node Setting Up Git
+@subsection Setting Up Git
+
+The Pintos codebase is rather substantial, and you will be working in teams
+to develop some complex features on the project.  In situations like this,
+a version control system is absolutely essential so that you can coordinate
+your interactions with the codebase, and so you can record checkpoints of
+your work as you go.  Additionally, you will submit your work using the
+version-control system so that we can retrieve and grade what you have done.
+
+We will be using the Git distributed version control system for
+@value{coursenumber}.  You can install Git onto your local machine from the
+following website:  @url{http://git-scm.com/}.  (It is already installed on the
+CMS cluster if you decide to work there.)  There are installers for all
+major operating systems.  Once Git is installed, you can follow the
+instructions below to get started on Pintos.
+
+Each team is given a blank Git repository on the CMS cluster (aka "the CS
+cluster") to work with.  If your team has not received information about your
+Git repository, email Donnie and he will create one for you and send you the
+connection details.  This is the repository where your work must be submitted.
+
+@strong{A CMS cluster account is required to access the Git repositories on the
+CMS cluster!}  If you don't have an account, or your account is suspended etc.,
+you need to get this resolved ASAP.  Ask Donnie if you have any questions about
+this.
+
+@enumerate
+
+@item Once you have installed Git on your computer, configure it with your
+      user information.  The double-quotes in these commands are necessary if
+      you have spaces in the values you specify.
+
+      @command{git config --global user.name "Your Name"}
+
+      @command{git config --global user.email "your@@email.tld"}
+
+      You will probably also find it helpful to turn on colorful output:
+
+      @command{git config --global color.ui true}
+
+@item Your team's repository will initially be empty, so for you to be able to
+      do any work on Pintos you must retrieve the codebase and add it to your
+      repository.  The starting code is exposed as another Git repository so
+      that if there are any bugfixes that must be passed along, you can easily
+      retrieve them.  To get the code from this repository, @strong{one} team
+      member should do the following:
+
+      @itemize
+
+      @item Clone your team's empty repository to a local computer:
+
+            @command{git clone @var{username}@@login.cms.caltech.edu:/cs/courses/cs124/teams/@var{teamname}}
+
+            Since the repository is initially empty, this won't be very
+            exciting yet.
+
+      @item Execute the following command to retrieve the Pintos codebase into
+            your local clone of the team's repository:
+
+            @command{git pull @var{username}@@login.cms.caltech.edu:/cs/courses/cs124/pintos-cit master}
+
+      @item Push the Pintos code back up to the team repository with this
+            command:
+
+            @command{git push --all}
+
+            (The @command{--all} argument is necessary for the first push,
+            since the team repository is empty.  It will be unnecessary once
+            the repository is initialized.)
+
+      @end itemize
+
+      If future changes are made to the Pintos sources, one teammate can again
+      perform the above procedure, with the following differences:
+
+      @itemize
+      @item Obviously the team repository won't be empty at that point.
+      @item The @command{git push} command will not require the @command{--all}
+            argument.
+      @end itemize
+
+@item Now that the team repository is set up, team members will need to
+      figure out a location to work.  You can work on your local computer,
+      on the CMS cluster, or wherever you feel comfortable doing so.
+      I usually work within a @file{projects/pintos} directory on my laptop,
+      but perhaps you will want to create a @file{@value{coursenumber}}
+      directory for yourself to work in.
+
+@item Once you have a location figured out, clone your team's repository to
+      that location.  You will actually be making a complete local copy of the
+      team repository (which Git calls "origin") for yourself to work against.
+      You will be able to make whatever changes you want to this repository
+      without affecting the team repository until you are ready to do so.
+
+      @command{git clone @var{username}@@login.cms.caltech.edu:/cs/courses/cs124/teams/@var{teamname}}
+
+      Once you have done this, you can run "@command{git remote -v}" to see
+      that this repository is now nicknamed "origin", as stated earlier.
+
+@end enumerate
+
+@node Git Repository Details
+@subsection Git Repository Details
+
+You should be aware that your local repository actually contains two
+components in one.  First, you will see directories and files like @file{src},
+@file{doc}, etc.  These are actually not part of the Git repository itself;
+they are a working copy that you can edit separately.  If you decide you don't
+like the changes you have made in your working copy, you can always revert
+back to the repository version with no problems.
+
+When you are completely satisfied with your changes, then you can commit these
+changes to your own local repository.  The repository itself is stored in a
+subdirectory named @file{.git}, which you can see if you type
+"@command{ls -al}".  (Feel free to look in this directory, but don't muck
+with anything in there unless you absolutely know what you are doing.)
+
+@node Using Git for Local Edits
+@subsection Using Git for Local Edits
+
+As you work on your projects, you may want to commit your changes as you get
+various parts of the project working.  In fact, you are encouraged to do this!
+Nothing is more frustrating than completing a complicated feature, and then
+immediately mangling it as you start working on the next task.  Commit your
+work every time you complete anything that you don't feel like doing again.
+At any point in your work, you can run the command "@command{git status}" to
+see what files have been modified in your working directory.
+
+The command you use to commit changes to your local repository is
+"@command{git commit}".  However, it is important to understand Git's
+workflow for committing changes to the repository.  Changes you make in your
+working directory will not immediately be included when you commit to your
+repository; rather, Git maintains a "staging area" of changes that will be
+included in the next commit.  In other words, you can make some changes that
+will be included in the commit, and other changes that will not be included
+in the commit.  A file whose changes will be included in the next commit is
+described as being "staged" (i.e. its changes are included in the staging
+area).  A file whose changes will not be included in the next commit is
+"unstaged," or "modified but not staged."
+
+To complicate this somewhat, files also fall into two categories:  "tracked"
+files, which have been added to the repository and Git is managing them; and
+"untracked" files, which have not yet been added to the repository.
+
+The upshot of all this is that if you want to add a new file to your
+repository, or you want to include changes of an existing file into your
+repository, you must run "@command{git add filename}" to include the file
+in the staging area.  Then, these changes will be included in the next commit.
+There is a simplification for when you haven't added any new files:  you can
+run "@command{git commit -a}", which will perform the staging step as well as
+the commit step.  However, if you create a brand new file, you still need to
+run "@command{git add filename}" on that new file before it will be committed.
+
+@node Sharing Work with Your Team
+@subsection Sharing Work with Your Team
+
+When you are ready to share your local work with the rest of your team, you can
+run this command to push all of your changes back to the team's Git repository:
+
+@command{git push}
+
+That's really all it takes!  Of course, the rest of the team must then pull
+your changes into their local repositories by running "@command{git pull}".
+This will bring all changes in the team repository down to the local
+repository.
+
+There are two important rules that you must always follow:
+
+@itemize
+
+@item @strong{Never break the code in the team repository, unless you have
+      first coordinated your changes with the rest of your team!}  It is
+      extremely frustrating to pull changes from the team's repository and then
+      discover that nothing works!
+
+      The corrolary is that if you are going to break the code in the team
+      repository, make sure your team knows first.  That way they can avoid
+      pulling the changes if they are in the middle of other work.
+
+@item @strong{Make sure to pull changes from your team repository frequently!}
+      It may be tempting to avoid retrieving changes from the team repository
+      so that you can work uninterrupted, but if you do this then your local
+      repository will become more and more different from the team repository,
+      and it will become more and more painful to get back in sync.  However,
+      if you synchronize with the team repository frequently, the pain of
+      keeping in sync will be minimized.
+
+@end itemize
+
+@node Submitting Assignments
+@subsection Submitting Assignments
+
+When your team has completed a project to the team's satisfaction, these are
+the steps to submit it for grading:
+
+@enumerate
+
+@item Make sure that all changes for the project are pushed to the team
+      repository.  Also, make sure that you have completed your design
+      document, and that it is in your repository at the specified location.
+
+@item Create a tag to identify your submission.  One team meber should execute
+      this command:  "@command{git tag project@var{n}-@var{version}}"
+
+      For example, after completing the command shell, one teammate could do
+      the following:
+
+      @command{git tag project1-1}
+
+      This tag will only be in the local repository, so once it is tagged,
+      the tag also needs to be pushed to the team repository:
+
+      @command{git push --tags}
+
+      If you discover a bug in your work and you want to fix it, feel free to
+      do so and then retag your work, but increment the version, e.g.
+      "@command{project1-2}".  If you try to reuse the same tag you will run
+      into some trouble with Git, so make sure each tag is unique.
+
+      Also, if multiple teammates create the same tag name on different
+      commits in their local repositories, and then try to push them to the
+      team repository, this will cause some serious problems.
+
+@item Finally, one teammate should submit the team's design document on Moodle.
+      (Again, if you discover bugs and want to fix them, just resubmit a new
+      design document with the new commit hash-value.)
+
+@end enumerate
+

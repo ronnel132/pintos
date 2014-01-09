@@ -1,0 +1,568 @@
+@node Project 1--Command Shell
+@chapter Project 1: Command Shell
+
+This assignment will give you a chance to warm up your C programming skills,
+see what the UNIX operating system offers in terms of system calls, and also
+let you implement one of the most important system applications:  a command
+shell.  Your command shell must be able to run programs on Linux platforms,
+and must support basic IO redirection and piping between commands.  (If you
+want to take it further than that, there are many extra credit options you
+can complete as well.)
+
+You will complete your command shell in the @file{shell} directory for this
+assignment.  Note that this assignment doesn't require you to use any code
+within Pintos; it is a completely stand-alone assignment.
+
+@menu
+* Project 1 Background::
+* Project 1 Requirements::
+* Project 1 Useful UNIX Functions::
+* Project 1 Suggested Order of Implementation::
+* Project 1 Extra Credit::
+@end menu
+
+@node Project 1 Background
+@section Background
+
+@menu
+* Project 1 Overview::
+* Built-In Commands::
+* Input/Output Redirection::
+* Pipes::
+@end menu
+
+@node Project 1 Overview
+@subsection Overview
+
+Command shells are the most basic tools that facilitate user interaction
+with the operating system, and one of the oldest.  Although modern operating
+systems with graphical user interfaces no longer require users to work at
+a command prompt, most OSes still provide a command shell for lower level
+tasks.  (A notable exception is iOS.)
+
+There are a variety of UNIX command shells, each with its own strengths,
+but virtually all of them use a very basic syntax for specifying commands.
+For example:
+
+@command{grep Allow logfile.txt}
+
+The command is @code{"grep"}, and the two arguments are @code{"Allow"}
+and @code{"logfile.txt"}.  The command shell runs the program
+"@command{grep}" (wherever it might appear on the current filesystem
+path), and passes it an array of 3 arguments:
+
+@code{char *argv[] = @{ "grep", "Allow", "logfile.txt", NULL @};}
+
+(The argument list is always terminated with a @code{NULL} value.  In this
+case, @code{argc = 3} even though there are four elements in @code{argv}.)
+
+Note that the command is tokenized by whitespace (spaces and tabs).  If we
+want an argument to preserve its whitespace, it must be enclosed in double
+quotes, like this:
+
+@command{grep " Allowing access" logfile.txt}
+
+Now, the argument array is as follows:
+
+@code{char *argv[] = @{ "grep", " Allowing access", "logfile.txt", NULL @};}
+
+@node Built-In Commands
+@subsection Built-In Commands
+
+You may wonder how your shell will support commands like @command{ls},
+@command{rm} and @command{cat}, but the good news is that your computer
+provides these commands and many more as programs in the @file{/bin} directory.
+Thus, your shell will automatically support all of these commands once you can
+fork a child process and execute a program.
+
+However, not all commands can be implemented this way.  There are two
+specific commands that must be supported as built-in commands:
+
+@command{cd} or @command{chdir} - Changes the current working directory of
+the shell.  If no argument is specified, the shell should change to the
+user's home directory, otherwise the argument is the directory to change to.
+
+@command{exit} - Causes the shell to terminate.
+
+@node Input/Output Redirection
+@subsection Input/Output Redirection
+
+Most command shells also allow you to redirect standard input from a file
+to a process, or redirect standard output from a process to a file.  For
+example, we can type:
+
+@command{grep Allow < logfile.txt > output.txt}
+
+Now, instead of taking its standard input from the console, @command{grep}
+will see the contents of @file{logfile.txt} on its standard input.  Similarly,
+when @command{grep} prints out its results, they will automatically go into
+the file @file{output.txt} instead of being displayed on the console.
+
+Note that whitespace is not required around the < and > characters; for
+example, this is a valid (albeit ugly) command:
+
+@command{grep Allow<logfile.txt>output.txt}
+
+@node Pipes
+@subsection Pipes
+
+Besides being able to redirect input and output to various locations, most
+command shells also support piping the output of one process to the input of
+another process.  For example, one might do the following:
+
+@command{grep Allow < logfile.txt | grep -v google | sort | uniq -c > out.txt}
+
+In this example, four processes are started:
+
+@itemize
+
+@item
+The first process runs the @command{grep} program, and receives the
+arguments @code{@{"grep", "Allow", NULL@}}.  Its standard input is the
+contents of the file @file{logfile.txt}.
+
+@item
+The standard output from the first process is piped to the standard input of
+the second process, which also runs the @command{grep} program.  The second
+program receives the arguments @code{@{"grep", "-v", "google", NULL@}}.
+
+@item
+The standard output from the second process is piped to the standard input
+of the third process, which runs the @command{sort} utility.  It receives
+the argument array @code{@{"sort", NULL@}}, and that's it.
+
+@item
+The standard input from the third process is piped to the standard input of
+the fourth process, which runs the @command{uniq} utility.  The @command{uniq}
+program receives the arguments @code{@{"uniq", "-c", NULL@}} and its
+standard output is redirected into the output file "@file{out.txt}".
+
+@end itemize
+
+Note that such commands are processed from left to right.  As before, pipes
+do not require whitespace around them, so you can also type the above as:
+
+@command{grep Allow<logfile.txt|grep -v google|sort|uniq -c>out.txt}
+
+The parsing is clearly not trivial, particularly in the context of
+double-quoted strings.  If a pipe or redirection character appears within a
+double-quoted string then it is ignored.  The shell must break the input
+command-string into a sequence of tokens using whitespace, "|" pipe characters,
+and the redirection characters ">" and "<", unless of course it sees a
+double-quote in which case it will consume characters until it reaches the
+closing double-quote.
+
+Once the command-string is tokenized, individual commands can be identified by
+searching for the "|" pipe tokens in the sequence, and then within each command
+the redirection characters can be processed as necessary.
+
+@node Project 1 Requirements
+@section Requirements
+
+To receive full credit, your submission for Project 1 must include all aspects
+described in this section.
+
+@menu
+* Project 1 Design Document::
+* Shell Program::
+* Shell Prompt::
+* Shell Behavior::
+* Error Handling::
+@end menu
+
+@node Project 1 Design Document
+@subsection Design Document
+
+Before you turn in your project, you must copy @uref{cmdshell.tmpl, ,
+the project 1 design document template} into your source tree under the
+name @file{pintos/src/shell/DESIGNDOC} and fill it in.  We recommend
+that you read the design document template before you start working on
+the project.  @xref{Project Documentation}, for a sample design document
+that goes along with a fictitious project.
+
+@node Shell Program
+@subsection Shell Program
+
+You should implement your shell in the C file @file{mysh.c} (for "my
+shell").  Feel free to add other header or source files if you prefer,
+but your @func{main} method is expected to be in this file.
+
+It should be possible to build your shell program with the provided
+@file{Makefile}.  If you add source files you will need to modify the
+@file{Makefile}'s contents.
+
+@node Shell Prompt
+@subsection Shell Prompt
+
+Your shell should present a prompt that contains the username and the entire
+current working directory, in a form something like this:
+
+@command{username:current/working/directory>}
+
+(A description of various helpful UNIX functions follows in the next section;
+the current username and working directory are both available via function
+calls.)
+
+The command the user types should be on the same line as the prompt,
+immediately following the prompt.
+
+@node Shell Behavior
+@subsection Shell Behavior
+
+Your shell implementation should support all functionality described in
+the @ref{Project 1 Background} section above, including the built-in
+commands, forking and executing commands, input/output redirection, and
+piped commands.  It should be able to parse commands of the format outlined
+above as well, including double-quoted strings containing internal spaces,
+and redirection/pipe symbols <, > and | without spaces on either side.
+
+You should assume that all commands will be entered on a single line;
+commands will never contain internal newline characters.  Also, you can
+assume that commands will be < 1KiB in length.
+
+You can also assume that piping and redirection will not be used in bizarre
+or meaningless ways, e.g. @command{someprog > foo.txt | anotherprog}.
+(In this example, standard output is redirected to @file{foo.txt} and then
+it is piped to the next program; this doesn't make much sense.  Widely used
+shells like Bash will parse and execute such commands, but you don't have to.)
+Your shell only has to handle commands that make sense.
+
+In your code, you should not use the literals 0/1/2 for the stdin/stdout/stderr
+file descriptors; rather, use the constants @code{STDIN_FILENO},
+@code{STDOUT_FILENO}, and @code{STDERR_FILENO}.
+
+@node Error Handling
+@subsection Error Handling
+
+Your shell should be resilient to all errors that can be reported by the
+standard UNIX functions you use.  For example, a command might not be found,
+a @func{fork} operation might fail, a file receiving a program's output might
+not be able to be created, etc.  Make sure you read the documentation for all
+API calls you use, and gracefully handle and report any errors that occur.
+
+Note that the C standard header file @file{errno.h} includes some very
+helpful functions for reporting useful error messages based on the error
+codes returned from the standard API calls.
+
+@node Project 1 Useful UNIX Functions
+@section Useful UNIX Functions
+
+This section will point out some of the standard functions that you might
+find really useful for this assignment.  You are not required to use all of
+these functions; some will be necessary to implement the specified
+functionality, but others are simply only one option for the implementation.
+
+@menu
+* The man Utility::
+* Console I/O Functions::
+* String Manipulation Functions::
+* Process Management Functions::
+* Filesystem and Pipe Functions::
+@end menu
+
+@node The man Utility
+@subsection The @command{man} Utility
+
+You will need to use the UNIX file API and the UNIX process API for this
+assignment.  However, there are too many functions for us to enumerate and
+describe all of them.  Therefore you must become familiar with the
+@command{man} utility, if you aren't already.  Running the command
+@command{man} command will display information about that command (called
+a "man page"), and specifically, @command{man unix_func} will display the
+man page for the UNIX function @func{unix_func}.  So, when you are looking
+at the UNIX functions needed to implement this assignment, use @command{man}
+to access detailed information about them.
+
+The @command{man} program presents you with a simple page of text about the
+command or function you are interested in, and you can navigate the text
+using these commands:
+
+@itemize
+@item Down arrow goes forward one line
+@item Up arrow goes back one line
+@item "f" or Spacebar goes forward a page
+@item "b" goes back a page
+@item "G" goes to the end of the man page
+@item "g" goes to the start of the man page
+@item "q" exits @command{man}
+@end itemize
+
+One problem with @command{man} is that there are often commands and functions
+with the same name; the UNIX command "@command{open}" and the UNIX file API
+function "@func{open}" are an example of this.  To resolve situations like
+this, @command{man} collects keywords into groups called "sections"; when
+@command{man} is run, the section to use can also be specified as an argument
+to @command{man}.  For example, all shell commands are in section "1".  (You
+can see this when you run @command{man}; for example, when you run
+"@command{man ls}" you will see the text @t{LS(1)} at the top of the man page.)
+Standard UNIX APIs are usually in section 2, and standard C APIs are usually
+in section 3.
+
+So, if you run "@command{man open}", you will see the documentation for the
+@command{open} command from section 1.  However, if you run
+"@command{man 2 open}", you will see the description of the @func{open} API
+call, along with what header file to include when you use it, and so forth.
+
+You can often even look at some of the libraries of functions by using the
+name of the header file.  For example, "@command{man string}" (or
+"@command{man 3 string}") will show you the functions available in
+@file{string.h}, and "@command{man stdio}" will show you the functions
+available in @file{stdio.h}.
+
+@node Console I/O Functions
+@subsection Console I/O Functions
+
+You can use @func{printf} and @func{scanf} (declared in @file{stdio.h}) for
+your input and output, although it is probably better to use @func{fgets} to
+receive the command from the user.  @strong{Do not use @func{gets}, ever!!!}
+You should always use @code{fgets(stdio, ...)} instead of @func{gets} since
+it will allow you to specify the buffer length.  Using @func{gets} virtually
+guarantees that your program will contain buffer overflow exploits.
+
+@node String Manipulation Functions
+@subsection String Manipulation Functions
+
+The C standard API includes many string manipulation functions for you to
+use in parsing commands.  These functions are declared in the header file
+@file{string.h}.  You can either use these functions, or you can analyze
+and process command strings directly.
+
+@table @func
+
+@item strchr()
+Looks for a character in a string
+
+@item strcmp()
+Compares one string to another string
+
+@item strcpy()
+Copies a string into an existing buffer; does not perform allocation
+
+@item strdup()
+Makes a copy of a string into a newly allocated chunk of memory, whichi
+must be @func{free}d
+
+@item strlen()
+Returns the length of a string
+
+@item strstr()
+Looks for a substring in another string
+
+@end table
+
+@node Process Management Functions
+@subsection Process Management Functions
+
+The @file{unistd.h} header file includes standard process management
+functions like forking a process and waiting for a process to terminate.
+
+@table @func
+
+@item getlogin()
+Reports the username of the user that owns the process.  This is useful
+for the command prompt.
+
+@item getcwd()
+Reports the current working directory of a process.  This is also useful
+for the command prompt.
+
+@item chdir()
+Changes the current working directory of the process that calls it.
+
+@item fork()
+Forks the calling process into a parent and a child process
+
+@item wait()
+Waits for a child process to terminate, and returns the status of the
+terminated process.  Note that a process can only wait for its own children;
+it cannot wait e.g. for grandchildren or for other processes.  This constrains
+how command-shells must start child processes for piped commands.
+
+@item execve()
+@itemx execlp()
+The @func{execve} function loads and runs a new program into the
+current process.  However, this function doesn't search the path for
+the program, so you always have to specify the absolute path to the
+program to be run.  However, there are a number of wrappers to the
+@func{execve} function.  One of these is @func{execlp}, and it
+examines the path to find the program to run, if the command doesn't
+include an absolute path.
+
+Be careful to read the man page on @func{execlp} so that you satisfy
+all requirements of the argument array.  (Note that once you have
+prepared your argument array, your call will be something like
+@code{execlp(argv[0], argv)}.)
+
+@end table
+
+@node Filesystem and Pipe Functions
+@subsection Filesystem and Pipe Functions
+
+@table @func
+
+@item open()
+Opens a file, possibly creating and/or truncating it when it is
+opened, depending on the mode argument.  If you use @func{open} to
+create a file, you can specify 0 for the file-creation flags.
+
+@item creat()
+Creates a file (although why not use @func{open} instead?)
+
+@item close()
+Closes a file descriptor
+
+@item dup()
+@itemx dup2()
+These functions allow a file descriptor to be duplicated.  @func{dup2}
+will be the useful function to you, since it allows you to specify the
+number of the new file descriptor to duplicate into.  It is useful for
+both piping and redirection.
+
+@item pipe()
+Creates a pipe, and then returns the two file descriptors that can be
+used to interact with the pipe.  This function can be used to pipe
+the output of one process into the input of another process:
+
+@enumerate 1
+
+@item The parent process creates a new pipe using @func{pipe}
+
+@item The parent process @func{fork}s off the child process.  Of course,
+      this means that the parent and the child each have their own pair
+      of read/write file-descriptors to the same pipe object.
+
+@item The parent process closes the read-end of the pipe (since it will
+      be outputting to the pipe), and the child process closes the
+      write-end of the pipe (since it will be reading from the pipe).
+
+@item The parent process uses @func{dup2} to set the write-end of the
+      pipe to be its standard output, and then closes the original
+      write-end (to avoid leaking file descriptors).
+
+@item Similarly, the child process uses @func{dup2} to set the read-end
+      of the pipe to be its standard input, and then closes the original
+      read-end (to avoid leaking file descriptors).
+
+@end enumerate
+
+@end table
+
+@node Project 1 Extra Credit
+@section Extra Credit
+
+If you want a greater challenge, here are some extra credit tasks you can
+complete:
+
+@itemize
+
+@item
+In addition to > output redirection, shells also support the >> sequence
+to cause the process to append to an existing file instead of truncating
+it.  (+3 points)
+
+@item
+It should be obvious that you can't redirect standard error with >, since this
+redirects standard output.  Many shells also allow redirection to be specified
+like this:  @command{@var{n}>}, where @var{n} is an integer file descriptor.
+This allows standard error to be redirected to a file by typing
+@command{... 2> errors.txt}.  (+4 points)
+
+@item
+Similar to the previous example, shells also often support more advanced
+redirection using this mechanism:  @command{@var{a}>&@var{b}}, where @var{a}
+and @var{b} are integer file descriptors.  This causes the shell to duplicate
+file-descriptor @var{b} into file-descriptor @var{a}.  For example, the command
+"@command{someprog > output.txt 2>&1}" causes the standard output from
+@command{someprog} to end up in @file{output.txt}, but the standard
+output stream (file descriptor 1) is duplicated into the standard error
+stream (file descriptor 2) so that any output to standard error will
+end up in the same place as the standard output stream.  (+6 points)
+
+@item
+Use the @code{readline} library to allow users of your shell to scroll
+through old commands using the up and down arrows, and to edit commands
+in place.  If you do this, add a "@command{history}" built-in command
+that lists all old commands that have been executed in order.  (+6 points)
+
+@item
+If you complete the previous item, number your commands in your history
+output (starting with 1), and allow a user to rerun an old command by
+typing @command{!@var{n}}, where @var{n} is the number of the old
+command.  (+4 points)
+
+@item
+Shell commands can end with an ampersand "&" character, causing them to be
+run in the background instead of the foreground.  Instead of waiting for the
+child process to terminate, the parent should go on and allow the user to
+type other commands.  Supporting this functionality is harder than you might
+think; you will need a @code{SIGCHLD} signal handler to listen for when a child
+process is completed.  Child process termination should be reported, but
+not while the command shell is waiting for another command to complete (i.e.
+while another command is running in the foreground).  (+10 points)
+
+@end itemize
+
+@node Project 1 Suggested Order of Implementation
+@section Suggested Order of Implementation
+
+This project will best be suited by breaking the command-prompt functionality
+into several components, and having those components implemented as functions
+within the command shell.  Here is a list of tasks to consider implementing as
+separate functions:
+
+@itemize
+
+@item Given a user-specified command string, tokenize it into a sequence of
+      tokens based on the parsing rules described earlier in this assignment.
+      Don't forget that when pipe and redirection characters appear within a
+      double-quoted string, they are ignored.
+
+@item Given a sequence of command tokens, convert it into a sequence of one or
+      more structs, each of which represents one of the commands to be
+      executed.  (If the original input is e.g. "@command{ls -l}", there would
+      be only one command struct, but if the command were "@command{grep foo
+      input.txt | sort | uniq}" then there would be three command structs.)
+
+      The command-struct would hold details like input/output/error redirection
+      (if any), the number of tokens for the command, and the array of
+      command-line arguments for the command.  A sequence of commands might be
+      represented as a linked list, or as an array, etc.
+
+@item Handle forking off and executing an external command, including
+      setting up redirection in the child process, pipes (this one
+      will be challenging), and waiting for the command to complete
+      in the shell process.
+
+      @strong{Important Note:  As stated earlier, a process can only wait for
+      its immediate children to terminate.}  This means that if the user types
+      a piped sequence of commands, each of these children must be forked by
+      the shell process itself; one child may not fork off the next child.
+      So while I/O redirection must be performed within the child process, the
+      pipes must be created in the shell process before forking off the
+      children.
+
+      Probably the easiest way to do this will be to have the shell create all
+      necessary pipes before it forks any children, and then have each child
+      process close everything it doesn't need.  A more advanced approach is
+      possible, if you want to try to be more efficient.
+
+@item Handle internal commands.
+
+@item The mainloop for the command shell to execute, using the above
+      functions.
+
+@end itemize
+
+@strong{Don't try to get the entire shell working at once.}  Rather, get
+pieces of functionality working, commit them to your repository, then add
+a bit more.  And as always, @strong{test along the way}, so that if things
+suddenly break on you, you won't have too much code to debug.  For example:
+
+@itemize
+@item Get execution of an internal command working.
+@item Get execution of a single external command (no redirection/pipes)
+      working.
+@item Get simple redirection with no pipes working.
+@item Get pipes working.
+@end itemize
+
