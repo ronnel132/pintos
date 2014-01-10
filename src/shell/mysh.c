@@ -25,6 +25,16 @@ int main() {
 }
 
 
+struct command {
+    char *process;
+    int argc;
+    char **argv;
+    char *stdin;
+    char *stdout;
+    char *stderr;
+    struct command *next; 
+};
+
 char ** tokenizer(char token, char * str) {
     char ** tokens;
     int num_tokens = 0;
