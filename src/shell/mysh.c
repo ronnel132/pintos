@@ -10,6 +10,7 @@ struct command {
     char *stdin;
     char *stdout;
     char *stderr;
+    struct command *next; 
 };
 
 char ** tokenizer(char token, char * str) {
