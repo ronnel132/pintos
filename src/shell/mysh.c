@@ -2,16 +2,26 @@
 #include <string.h>
 
 #define ASCII_NUL '\0'
-#define MAX_LENGTH 500
+#define MAX_INPUT_LENGTH 500
+#define MAX_CURR_PATH 100
 
 int main() {
-    while (1==1) {
-        char input[MAX_LENGTH];
-        printf("Enter cmd\n");
+    /* current path */
+    char curr_path[MAX_CURR_PATH] = "/";
+
+    /* main input loop */
+    while (1) {
+        char input[MAX_INPUT_LENGTH];
+
+        printf("%s > ", curr_path);
         scanf("%s", input);
+
+        if (strcmp(input, "exit") == 0) {
+            return 0;
+        }
+
         printf("%s\n", input);
     }
-    return 1;
 }
 
 
