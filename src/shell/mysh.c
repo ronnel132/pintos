@@ -20,6 +20,16 @@ int main() {
             return 0;
         }
 
+        /* Detecting whether a cd was issued. In case an argument was provided,
+        *  strstr() is used together with pointer subtraction, to calculate the
+        *  offset (if offset == 0, means that the substring starts at beginning of
+        *  the string */
+        else if ((strcmp(input, "cd") == 0) || (strstr(input, "cd ") - input == 0) || 
+            (strcmp(input, "chdir ") == 0) || (strstr(input, "chdir") - input == 0)) {
+
+            printf("chmod!\n");
+        }
+
         printf("%s\n", input);
     }
 }
