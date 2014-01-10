@@ -5,9 +5,11 @@
 
 struct command {
     char *process;
-    char **argc;
+    int argc;
+    char **argv;
     char *stdin;
     char *stdout;
+    char *stderr;
 };
 
 char ** tokenizer(char token, char * str) {
