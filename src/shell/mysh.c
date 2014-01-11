@@ -5,11 +5,21 @@
 #define MAX_INPUT_LENGTH 500
 #define MAX_CURR_PATH 100
 
+struct command {
+    char *process;
+    int argc;
+    char **argv;
+    char *stdin;
+    char *stdout;
+    char *stderr;
+    struct command *next; 
+};
+
 int main() {
     int i, j;
     char **commands, **tokenized;
     char *process, *stdin_loc, *stdout_loc;
-    struct command *cur_cmd, *cmd_list_root;
+    struct command *cmd, *cur_cmd, *cmd_list_root;
 
     /* current path */
     char curr_path[MAX_CURR_PATH] = "/";
@@ -52,7 +62,8 @@ int main() {
         while (commands[i] != NULL) {
             /* The tokenized command */
             tokenized = tokenizer(" ", commands[i]);
-            command = (struct command *) malloc(sizeof(struct command));
+            /* The current command we are parsing */
+            cmd = (struct command *) malloc(sizeof(struct command));
 
             process = tokenized[0];
             argc = 0;
@@ -87,36 +98,25 @@ int main() {
             argv[j] = NULL;
 
             /* set command struct's fields. update the cur_cmd pointer */
-            command->process = process;
-            command->argc = argc;
-            command->argv = argv;
-            command->stdin_loc = stdin_loc;
-            command->stdout_loc = stdout_loc;
-            command->next = NULL;
+            cmd->process = process;
+            cmd->argc = argc;
+            cmd->argv = argv;
+            cmd->stdin_loc = stdin_loc;
+            cmd->stdout_loc = stdout_loc;
+            cmd->next = NULL;
 
             /* append to the command-struct linked list */
             if (cur_cmd == NULL) {
-                cur_cmd = command;
-                cmd_list_root = command;
+                cur_cmd = cmd;
+                cmd_list_root = cmd;
             }
             else {
-                cur_cmd->next = command;
-                cur_cmd = command;
+                cur_cmd->next = cmd;
+                cur_cmd = cmd;
             }
         }
     }
 }
-
-
-struct command {
-    char *process;
-    int argc;
-    char **argv;
-    char *stdin;
-    char *stdout;
-    char *stderr;
-    struct command *next; 
-};
 
 char ** tokenizer(char token, char * str) {
     char ** tokens;
