@@ -6,6 +6,11 @@
 #define MAX_CURR_PATH 100
 
 int main() {
+    int i, j;
+    char **commands, **tokenized;
+    char *process, *stdin_loc, *stdout_loc;
+    struct command *cur_cmd, *cmd_list_root;
+
     /* current path */
     char curr_path[MAX_CURR_PATH] = "/";
 
@@ -31,6 +36,74 @@ int main() {
         }
 
         printf("%s\n", input);
+
+        commands = tokenizer("|", input);
+        
+        if (commands[1] == NULL) {
+            /* Single one-word command. Try the built-in processes first */
+            // TODO
+        }
+
+        /* Initialize pointers to create the command-struct linked list */
+        cur_cmd = NULL;
+        cmd_list_root = NULL;
+
+        i = 0;
+        while (commands[i] != NULL) {
+            /* The tokenized command */
+            tokenized = tokenizer(" ", commands[i]);
+            command = (struct command *) malloc(sizeof(struct command));
+
+            process = tokenized[0];
+            argc = 0;
+            stdin_loc = NULL;
+            stdout_loc = NULL;
+            while (tokenized[j] != NULL) {
+                /* stdin redirection specified */
+                if (strcmp(tokenized[j], "<") == 0) {
+                    stdin_loc = tokenized[j + 1];
+                    tokenized[j] = NULL;
+                    tokenized[j + 1] = NULL;
+                    j = j + 2;
+                }
+                else if (strcmp(tokenized[j], ">") == 0) {
+                    stdout_loc = tokenized[j + 1];
+                    tokenized[j] = NULL;
+                    tokenized[j + 1] = NULL;
+                    j = j + 2;
+                }
+                else {
+                    argc++;
+                }
+            }
+
+            /* argc + 1 because we have a NULL pointer at the end */
+            argv = (char **) malloc(sizeof(char *) * (argc + 1)); 
+            j = 0;
+            while (tokenized[j] != NULL) {
+                argv[j] = tokenized[j];
+                j++;
+            }
+            argv[j] = NULL;
+
+            /* set command struct's fields. update the cur_cmd pointer */
+            command->process = process;
+            command->argc = argc;
+            command->argv = argv;
+            command->stdin_loc = stdin_loc;
+            command->stdout_loc = stdout_loc;
+            command->next = NULL;
+
+            /* append to the command-struct linked list */
+            if (cur_cmd == NULL) {
+                cur_cmd = command;
+                cmd_list_root = command;
+            }
+            else {
+                cur_cmd->next = command;
+                cur_cmd = command;
+            }
+        }
     }
 }
 
