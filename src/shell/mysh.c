@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #define ASCII_NUL '\0'
 #define MAX_INPUT_LENGTH 500
-#define MAX_CURR_PATH 100
 
 struct command {
     char *process;
@@ -23,7 +23,7 @@ int main() {
     struct command *cmd, *cur_cmd, *cmd_list_root;
 
     /* current path */
-    char curr_path[MAX_CURR_PATH] = "/";
+    char *curr_path = get_current_dir_name();
 
     /* main input loop */
     while (1) {
@@ -117,7 +117,10 @@ int main() {
             }
         }
     }
+
+    free(curr_path);
 }
+
 
 char ** tokenizer(char delimiter, char * str) {
     int num_tokens;
