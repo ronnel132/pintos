@@ -15,7 +15,6 @@ struct command {
     struct command *next; 
 };
 
-
 int main() {
     int i, j;
     char **commands, **tokenized;
@@ -48,12 +47,7 @@ int main() {
 
         printf("%s\n", input);
 
-        commands = tokenizer("|", input);
-        
-        if (commands[1] == NULL) {
-            /* Single one-word command. Try the built-in processes first */
-            // TODO
-        }
+        commands = tokenizer('|', input);
 
         /* Initialize pointers to create the command-struct linked list */
         cur_cmd = NULL;
@@ -62,7 +56,7 @@ int main() {
         i = 0;
         while (commands[i] != NULL) {
             /* The tokenized command */
-            tokenized = tokenizer(" ", commands[i]);
+            tokenized = tokenizer(' ', commands[i]);
             /* The current command we are parsing */
             cmd = (struct command *) malloc(sizeof(struct command));
 
