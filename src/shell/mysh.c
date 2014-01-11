@@ -64,6 +64,7 @@ int main() {
             argc = 0;
             stdin_loc = NULL;
             stdout_loc = NULL;
+            j = 0;
             while (tokenized[j] != NULL) {
                 /* stdin redirection specified */
                 if (strcmp(tokenized[j], "<") == 0) {
@@ -80,6 +81,7 @@ int main() {
                 }
                 else {
                     argc++;
+                    j++;
                 }
             }
 
@@ -90,6 +92,7 @@ int main() {
                 argv[j] = tokenized[j];
                 j++;
             }
+            free(tokenized);
             argv[j] = NULL;
 
             /* set command struct's fields. update the cur_cmd pointer */
@@ -109,9 +112,10 @@ int main() {
                 cur_cmd->next = cmd;
                 cur_cmd = cmd;
             }
+            i++;
         }
+        free(commands); 
     }
-
     free(curr_path);
 }
 
