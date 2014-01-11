@@ -4,6 +4,13 @@
 
 #define ASCII_NUL '\0'
 #define MAX_INPUT_LENGTH 500
+#define MAX_CURR_PATH 1024
+
+
+/* gets the pathname of cwd. from unistd.h */ 
+char *getcwd(char *buf, size_t size);
+
+char ** tokenizer(char delimiter, char * str);
 
 struct command {
     char *process;
