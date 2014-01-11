@@ -185,7 +185,7 @@ char ** tokenizer(char delimiter, char * str) {
         } else if (*str_it == '\'' || *str_it == '"') {
             in_string_char = *str_it;
         } else if (*str_it == delimiter) {
-            tokens[i] = strndup(token, token_length);
+            tokens[token_index] = strndup(token, token_length);
             token_index++;
             token_length = 0;
             token = str_it + 1;
