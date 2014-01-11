@@ -28,8 +28,10 @@ int main() {
     char *process, *stdin_loc, *stdout_loc;
     struct command *cmd, *cur_cmd, *cmd_list_root;
 
-    /* current path */
-    char *curr_path = get_current_dir_name();
+    char curr_path[MAX_CURR_PATH];
+    
+    /* get current path */
+    getcwd(curr_path, MAX_CURR_PATH);
 
     /* main input loop */
     while (1) {
