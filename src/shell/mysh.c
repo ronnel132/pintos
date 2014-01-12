@@ -50,6 +50,7 @@ int main() {
                 (strstr(input, "chdir ") - input == 0)) {
 
             printf("chmod!\n");
+            /* TODO: implement cd */
         }
 
         cmd_ll = make_cmd_ll(input, &ll_size);
@@ -69,6 +70,13 @@ char * concat(char *str1, char *str2) {
     len = (int) (strlen(str1) + strlen(str2) + 1);
 
     buffer = (char*) malloc(sizeof(char *) * len);
+
+    /* Malloc failed */
+    if (buffer == NULL) {
+        fputs("Fatal error: Could not allocate memory. Aborting.", stderr);
+        exit(1);
+    }
+        
     for (i = 0; i < (int) strlen(str1); i++) {
         buffer[i] = str1[i];
     }
@@ -93,6 +101,13 @@ Command * make_cmd_ll(char *input, int *ll_size) {
 
     /* The current command we are parsing */
     cmd = (Command *) malloc(sizeof(Command));
+
+    /* Malloc failed */
+    if (cmd == NULL) {
+        fputs("Fatal error: Could not allocate memory. Aborting.", stderr);
+        exit(1);
+    }
+
     i = 0;
     while (tokenized[i] != NULL) {
         if (strcmp(tokenized[i], "|") == 0) {
@@ -106,6 +121,13 @@ Command * make_cmd_ll(char *input, int *ll_size) {
             }
             /* We are piping to a new command so create that command struct */
             cmd = (Command *) malloc(sizeof(Command));
+
+            /* Malloc failed */
+            if (cmd == NULL) {
+                fputs("Fatal error: Could not allocate memory. Aborting.", stderr);
+                exit(1);
+            }
+
             /* Initialize its fields */
             cmd->argc = 0;
             cmd->stdin_loc = NULL;
@@ -138,6 +160,13 @@ Command * make_cmd_ll(char *input, int *ll_size) {
     cur_cmd = cmd_ll_root;
     /* cmd_ll_root->argc + 1 because we include NULL at the end */
     cmd_argv = (char **) malloc(sizeof(char *) * (cmd_ll_root->argc + 1));
+
+    /* Malloc failed */
+    if (cmd_argv == NULL) {
+        fputs("Fatal error: Could not allocate memory. Aborting.", stderr);
+        exit(1);
+    }
+
     while (tokenized[i] != NULL) {
         if (strcmp(tokenized[i], "|") == 0) {
             cur_cmd->argv = cmd_argv;
@@ -145,6 +174,13 @@ Command * make_cmd_ll(char *input, int *ll_size) {
             cur_cmd = cur_cmd->next;
             cmd_argv = (char **) malloc(sizeof(char *) * 
                 (cmd_ll_root->argc + 1));
+
+            /* Malloc failed */
+            if (cmd_argv == NULL) {
+                fputs("Fatal error: Could not allocate memory. Aborting.", stderr);
+                exit(1);
+            }
+
             argv_ind = 0;
             *ll_size++;
         }
@@ -178,6 +214,12 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
 
     /* Array of children pids */
     pid_t * pids = (pid_t *) malloc(num_cmds * sizeof(pid_t));
+
+    /* Malloc failed */
+    if (pids == NULL) {
+        fputs("Fatal error: Could not allocate memory. Aborting.", stderr);
+        exit(1);
+    }
     
     for (i = 0; i < num_cmds; i++) {
         pid = fork();
