@@ -159,6 +159,7 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
     int i;
     pid_t pid;
     int remaining;
+    int ret_val;
 
     /* Inspired by: 
         http://stackoverflow.com/questions/876605/multiple-child-process */
@@ -200,7 +201,7 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
             /* If children is alive */
             if (pids[i] != NULL) {
                 /* Wait for this child */
-                waitpid(pids[i]);
+                waitpid(pids[i], &ret_val, 0);
 
                 /* Set this pid to NULL to denote dead child */
                 pids[i] = NULL;
