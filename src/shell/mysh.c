@@ -4,62 +4,78 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <errno.h>
+#include <limits.h>
+#include <sys/types.h>
+#include <pwd.h>
+
 
 #include "mysh.h"
 
 #define ASCII_NUL '\0'
-#define MAX_INPUT_LENGTH 500
-#define MAX_CURR_PATH 1024
+#define MAX_INPUT_LENGTH 1024
 
 
 int main() {
-    char *curr_path, *curr_user;
-    
-    /* get current user and path */
-    curr_path = getcwd(NULL, 0);
-    curr_user = getlogin();
+    char curr_path[PATH_MAX];
+    char curr_user[LOGIN_NAME_MAX];
+    struct passwd *pw;
+    char *homedir;
 
-    /* The cmd linked list */
-    Command *cmd_ll;
+    char input[MAX_INPUT_LENGTH];
+    char **tokenized_input;
 
-    /* Size of the cmd linked list */
-    int ll_size;
+    Command *cmd_ll;  /* The cmd linked list */
+    int ll_size;  /* Size of the cmd linked list */
 
-    /* main input loop */
+
+    getlogin_r(curr_user, LOGIN_NAME_MAX);
+    pw = getpwuid(getuid());
+    homedir = pw->pw_dir;
+
+    /* Loop the shell prompt, waiting for input */
     while (1) {
-        char input[MAX_INPUT_LENGTH];
+        /* Get current user and path */
+        getcwd(curr_path, PATH_MAX);
 
+        /* Print prompt */
         printf("%s:%s> ", curr_user, curr_path);
+
+        /* Get user input and tokenize it */
         fgets(input, MAX_INPUT_LENGTH, stdin);
+        tokenized_input = tokenizer(input);
 
-        /* Stripping newline from input */
-        input[strlen(input) - 1] = ASCII_NUL;
+        /* Interpret tokenized input */
+        if (!tokenized_input || !*tokenized_input) {
+            continue;
+        } else if (strcmp(tokenized_input[0], "exit") == 0) {
+            break;
+        } else if (strcmp(tokenized_input[0], "cd") ||
+                   strcmp(tokenized_input[0], "chdir")) {
 
-        if (strcmp(input, "exit") == 0) {
-            return 0;
+            if (tokenized_input[1] == NULL) {
+                free(tokenized_input[1]);
+                tokenized_input[1] = strdup(homedir);
+            }
+
+            /* chdir changes current directory. Returns nonzero if error. */
+            if (chdir(tokenized_input[1])) {
+                if (errno == ENOTDIR) {
+                    fputs("A component of the path is not a directory.\n", stderr);
+                } else if (errno == EACCES) {
+                    fputs("Access denied.\n", stderr);
+                } else if (errno == EIO) {
+                    fputs("IO error.\n", stderr);
+                } else {
+                    fputs("Error changing directory.\n", stderr);
+                }
+            }
+        } else {
+            cmd_ll = make_cmd_ll(input, &ll_size);
+            exec_cmd(curr_path, cmd_ll, ll_size);
         }
-
-        /* Detecting whether a cd was issued. In case an argument was provided,
-        *  strstr() is used together with pointer subtraction, to calculate the
-        *  offset (if offset == 0, means that the substring starts at beginning
-        *  of the string */
-
-        else if ((strcmp(input, "cd") == 0) || 
-                (strstr(input, "cd ") - input == 0) || 
-                (strcmp(input, "chdir") == 0) || 
-                (strstr(input, "chdir ") - input == 0)) {
-
-            printf("chmod!\n");
-            /* TODO: implement cd */
-        }
-
-        cmd_ll = make_cmd_ll(input, &ll_size);
-
-        exec_cmd(curr_path, cmd_ll, ll_size);
-        
-        
     }
-    free(curr_path);
+
+    return 0;
 }
 
 char * concat(char *str1, char *str2) {
@@ -324,6 +340,7 @@ char ** tokenizer(char * str) {
         /* Whitespace handling */
         } else if (*str_it == ' ' ||
                    *str_it == '\t' ||
+                   *str_it == '\n' ||
                    *str_it == ASCII_NUL) {
             if (token_length > 1) {
                 /*
@@ -407,6 +424,7 @@ char ** tokenizer(char * str) {
         /* Whitespace handling */
         } else if (*str_it == ' ' ||
                    *str_it == '\t' ||
+                   *str_it == '\n' ||
                    *str_it == ASCII_NUL) {
             if (token_length > 1) {
                 /*
