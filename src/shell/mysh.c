@@ -8,12 +8,10 @@
 #include <sys/types.h>
 #include <pwd.h>
 
-
 #include "mysh.h"
 
 #define ASCII_NUL '\0'
 #define MAX_INPUT_LENGTH 1024
-
 
 int main() {
     char curr_path[PATH_MAX];
@@ -27,7 +25,7 @@ int main() {
     Command *cmd_ll;  /* The cmd linked list */
     int ll_size;  /* Size of the cmd linked list */
 
-
+    /* TODO: Check for errors. */
     getlogin_r(curr_user, LOGIN_NAME_MAX);
     pw = getpwuid(getuid());
     homedir = pw->pw_dir;
@@ -36,6 +34,7 @@ int main() {
     while (1) {
         /* Get current user and path */
         getcwd(curr_path, PATH_MAX);
+        /* TODO: Check for errors. */
 
         /* Print prompt */
         printf("%s:%s> ", curr_user, curr_path);
@@ -89,7 +88,7 @@ char * concat(char *str1, char *str2) {
 
     /* Malloc failed */
     if (buffer == NULL) {
-        fputs("Fatal error: Could not allocate memory. Aborting.", stderr);
+        fputs("Fatal error: Could not allocate memory. Aborting.\n", stderr);
         exit(1);
     }
         
@@ -109,38 +108,36 @@ Command * make_cmd_ll(char *input, int *ll_size) {
     char **tokenized, **cmd_argv;
     Command *cmd, *cur_cmd, *cmd_ll_root;
 
-    tokenized = tokenizer(input);
+    if (strlen(input) == 0) {
+        return NULL;
+    }
 
-    /* Initialize pointers to create the command-struct linked list */
-    cur_cmd = NULL;
-    cmd_ll_root = NULL;
+    tokenized = tokenizer(input);
 
     /* The current command we are parsing */
     cmd = (Command *) malloc(sizeof(Command));
+    cmd->stdin_loc = NULL;
+    cmd->stdout_loc = NULL;
+    cmd->stderr_loc = NULL;
+    cmd->next = NULL;
+    cmd_ll_root = cmd;
+    cur_cmd = cmd;
 
     /* Malloc failed */
     if (cmd == NULL) {
-        fputs("Fatal error: Could not allocate memory. Aborting.", stderr);
+        fputs("Fatal error: Could not allocate memory. Aborting.\n", stderr);
         exit(1);
     }
 
     i = 0;
     while (tokenized[i] != NULL) {
         if (strcmp(tokenized[i], "|") == 0) {
-            if (cmd_ll_root == NULL) {
-                cur_cmd = cmd;
-                cmd_ll_root = cmd;
-            }
-            else {
-                cur_cmd->next = cmd;
-                cur_cmd = cmd;
-            }
             /* We are piping to a new command so create that command struct */
             cmd = (Command *) malloc(sizeof(Command));
 
             /* Malloc failed */
             if (cmd == NULL) {
-                fputs("Fatal error: Could not allocate memory. Aborting.", stderr);
+                fputs("Fatal error: Could not allocate memory. Aborting.\n", stderr);
                 exit(1);
             }
 
@@ -150,17 +147,21 @@ Command * make_cmd_ll(char *input, int *ll_size) {
             cmd->stdout_loc = NULL;
             cmd->stderr_loc = NULL;
             cmd->next = NULL;
+            cur_cmd->next = cmd;
+            cur_cmd = cmd; 
+            i++; 
+            continue;
         }
         
-        if ((i == 0) || (strcmp(tokenized[i - 1], "|"))) {
+        if ((i == 0) || (strcmp(tokenized[i - 1], "|") == 0)) {
             cmd->process = tokenized[i];
         }
 
-        if (strcmp(tokenized[i], "<")) {
+        if (strcmp(tokenized[i], "<") == 0) {
             cmd->stdin_loc = tokenized[i + 1];
             i = i + 2;
         }
-        else if (strcmp(tokenized[i], ">")) {
+        else if (strcmp(tokenized[i], ">") == 0) {
             cmd->stdout_loc = tokenized[i + 1];
             i = i + 2;
         }
@@ -179,7 +180,7 @@ Command * make_cmd_ll(char *input, int *ll_size) {
 
     /* Malloc failed */
     if (cmd_argv == NULL) {
-        fputs("Fatal error: Could not allocate memory. Aborting.", stderr);
+        fputs("Fatal error: Could not allocate memory. Aborting.\n", stderr);
         exit(1);
     }
 
@@ -193,19 +194,22 @@ Command * make_cmd_ll(char *input, int *ll_size) {
 
             /* Malloc failed */
             if (cmd_argv == NULL) {
-                fputs("Fatal error: Could not allocate memory. Aborting.", stderr);
+                fputs("Fatal error: Could not allocate memory. Aborting.\n", stderr);
                 exit(1);
             }
 
             argv_ind = 0;
-            *ll_size++;
+            (*ll_size)++;
         }
         if (strcmp(tokenized[i], ">") == 0 
-            || strcmp(tokenized[i], ">") == 0) {
+            || strcmp(tokenized[i], "<") == 0) {
             free(tokenized[i]);
-            free(tokenized[i + 1]);
             i = i + 2;
-        } 
+        }
+        else if (strcmp(tokenized[i], "|") == 0) {
+            free(tokenized[i]);
+            i++;
+        }
         else {
             cmd_argv[argv_ind] = tokenized[i];
             i++;
@@ -214,7 +218,7 @@ Command * make_cmd_ll(char *input, int *ll_size) {
     }
     /* Set the last command struct's argv */
     cur_cmd->argv = cmd_argv;
-    *ll_size++;
+    (*ll_size)++;
     
     return cmd_ll_root;
 }
@@ -233,7 +237,7 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
 
     /* Malloc failed */
     if (pids == NULL) {
-        fputs("Fatal error: Could not allocate memory. Aborting.", stderr);
+        fputs("Fatal error: Could not allocate memory. Aborting.\n", stderr);
         exit(1);
     }
     
@@ -242,7 +246,7 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
         pids[i] = pid;
 
         if (pid < 0) {
-            fputs("Fatal error: Could not fork. Aborting.", stderr);
+            fputs("Fatal error: Could not fork. Aborting.\n", stderr);
             exit(1);
         }
         else if (pid == 0) {
@@ -256,7 +260,7 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
             execve(concat(curr_path, cmd->process), cmd->argv, NULL);
 
             /* If we're here, second execve failed. */
-            fputs("Fatal error: Could not execve. Aborting.", stderr);
+            fputs("Fatal error: Could not execve. Aborting.\n", stderr);
             exit(1);
 
             /* TODO: If one command fails, should all of them fail? */
@@ -318,7 +322,7 @@ char ** tokenizer(char * str) {
     while (1) {
         token_length++;
 
-        /* Qutation handling */
+        /* Quotation handling */
         if (in_string_char) {
             if (*str_it == in_string_char) {
                 in_string_char = ASCII_NUL;
@@ -382,7 +386,7 @@ char ** tokenizer(char * str) {
 
     tokens = (char **) malloc(sizeof(char *) * num_tokens);
     if (tokens == NULL) {
-        fputs("Fatal error: Could not allocate memory. Aborting.", stderr);
+        fputs("Fatal error: Could not allocate memory. Aborting.\n", stderr);
         exit(1);
     }
     tokens[num_tokens - 1] = NULL;
@@ -401,7 +405,7 @@ char ** tokenizer(char * str) {
     while (1) {
         token_length++;
 
-        /* Qutation handling */
+        /* Quotation handling */
         if (in_string_char) {
             if (*str_it == in_string_char) {
                 in_string_char = ASCII_NUL;
