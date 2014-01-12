@@ -29,16 +29,17 @@ int main() {
     char *process, *stdin_loc, *stdout_loc;
     Command *cmd, *cur_cmd, *cmd_list_root;
 
-    char curr_path[MAX_CURR_PATH];
+    char *curr_path, *curr_user;
     
-    /* get current path */
-    getcwd(curr_path, MAX_CURR_PATH);
+    /* get current user and path */
+    curr_path = getcwd(NULL, 0);
+    curr_user = getlogin();
 
     /* main input loop */
     while (1) {
         char input[MAX_INPUT_LENGTH];
 
-        printf("%s > ", curr_path);
+        printf("%s:%s> ", curr_user, curr_path);
         scanf("%s", input);
 
         if (strcmp(input, "exit") == 0) {
