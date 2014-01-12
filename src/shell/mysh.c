@@ -37,7 +37,7 @@ int main() {
         char input[MAX_INPUT_LENGTH];
 
         printf("%s:%s> ", curr_user, curr_path);
-        scanf("%s", input);
+        fgets(input, MAX_INPUT_LENGTH, stdin);
 
         if (strcmp(input, "exit") == 0) {
             return 0;
