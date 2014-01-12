@@ -83,7 +83,7 @@ char * concat(char *str1, char *str2) {
 
     /* Malloc failed */
     if (buffer == NULL) {
-        fputs("Fatal error: Could not allocate memory. Aborting.", stderr);
+        fputs("Fatal error: Could not allocate memory. Aborting.\n", stderr);
         exit(1);
     }
         
@@ -120,7 +120,7 @@ Command * make_cmd_ll(char *input, int *ll_size) {
 
     /* Malloc failed */
     if (cmd == NULL) {
-        fputs("Fatal error: Could not allocate memory. Aborting.", stderr);
+        fputs("Fatal error: Could not allocate memory. Aborting.\n", stderr);
         exit(1);
     }
 
@@ -132,7 +132,7 @@ Command * make_cmd_ll(char *input, int *ll_size) {
 
             /* Malloc failed */
             if (cmd == NULL) {
-                fputs("Fatal error: Could not allocate memory. Aborting.", stderr);
+                fputs("Fatal error: Could not allocate memory. Aborting.\n", stderr);
                 exit(1);
             }
 
@@ -175,7 +175,7 @@ Command * make_cmd_ll(char *input, int *ll_size) {
 
     /* Malloc failed */
     if (cmd_argv == NULL) {
-        fputs("Fatal error: Could not allocate memory. Aborting.", stderr);
+        fputs("Fatal error: Could not allocate memory. Aborting.\n", stderr);
         exit(1);
     }
 
@@ -189,7 +189,7 @@ Command * make_cmd_ll(char *input, int *ll_size) {
 
             /* Malloc failed */
             if (cmd_argv == NULL) {
-                fputs("Fatal error: Could not allocate memory. Aborting.", stderr);
+                fputs("Fatal error: Could not allocate memory. Aborting.\n", stderr);
                 exit(1);
             }
 
@@ -232,7 +232,7 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
 
     /* Malloc failed */
     if (pids == NULL) {
-        fputs("Fatal error: Could not allocate memory. Aborting.", stderr);
+        fputs("Fatal error: Could not allocate memory. Aborting.\n", stderr);
         exit(1);
     }
     
@@ -241,7 +241,7 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
         pids[i] = pid;
 
         if (pid < 0) {
-            fputs("Fatal error: Could not fork. Aborting.", stderr);
+            fputs("Fatal error: Could not fork. Aborting.\n", stderr);
             exit(1);
         }
         else if (pid == 0) {
@@ -255,7 +255,7 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
             execve(concat(curr_path, cmd->process), cmd->argv, NULL);
 
             /* If we're here, second execve failed. */
-            fputs("Fatal error: Could not execve. Aborting.", stderr);
+            fputs("Fatal error: Could not execve. Aborting.\n", stderr);
             exit(1);
 
             /* TODO: If one command fails, should all of them fail? */
@@ -380,7 +380,7 @@ char ** tokenizer(char * str) {
 
     tokens = (char **) malloc(sizeof(char *) * num_tokens);
     if (tokens == NULL) {
-        fputs("Fatal error: Could not allocate memory. Aborting.", stderr);
+        fputs("Fatal error: Could not allocate memory. Aborting.\n", stderr);
         exit(1);
     }
     tokens[num_tokens - 1] = NULL;
