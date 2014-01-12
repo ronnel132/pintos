@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <errno.h>
 
 #include "mysh.h"
 
@@ -17,6 +18,12 @@ int main() {
     /* get current user and path */
     curr_path = getcwd(NULL, 0);
     curr_user = getlogin();
+
+    /* The cmd linked list */
+    Command *cmd_ll;
+
+    /* Size of the cmd linked list */
+    int ll_size;
 
     /* main input loop */
     while (1) {
@@ -45,8 +52,10 @@ int main() {
             printf("chmod!\n");
         }
 
-        printf("%s\n", input);
+        cmd_ll = make_cmd_ll(input, &ll_size);
 
+        exec_cmd(curr_path, cmd_ll, ll_size);
+        
         
     }
     free(curr_path);
@@ -181,9 +190,19 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
         else if (pid == 0) {
             /* We're in child process here */
             execve(concat("/bin", cmd->process), cmd->argv, NULL);
-            /* TODO: error handling if we're here */
 
-            /* TODO: Fallback to exec-ing in current path */
+            /* If we're here, execve failed. Let's try to run it on
+            *  current wd
+            */
+
+            execve(concat(curr_path, cmd->process), cmd->argv, NULL);
+
+            /* If we're here, second execve failed. */
+            fputs("Fatal error: Could not execve. Aborting.", stderr);
+            exit(1);
+
+            /* TODO: If one command fails, should all of them fail? */
+
         }
 
         /* Advance to next command */
