@@ -8,9 +8,6 @@
 #define MAX_CURR_PATH 1024
 
 
-/* gets the pathname of cwd. from unistd.h */ 
-char *getcwd(char *buf, size_t size);
-
 char ** tokenizer(char delimiter, char * str);
 
 typedef struct command {
