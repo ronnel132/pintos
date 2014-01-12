@@ -65,6 +65,25 @@ int main() {
     free(curr_path);
 }
 
+char * concat(char *str1, char *str2) {
+    char *buffer;
+    int i, len;
+
+    /* + 1 because of the NULL at the end */
+    len = strlen(str1) + strlen(str2) + 1;
+
+    char *buffer = (char*) malloc(sizeof(char *) * len);
+    for (i = 0; i < strlen(str1); i++) {
+        buffer[i] = str1[i];
+    }
+    for (i = strlen(str1); i < (len - 1); i++) {
+        buffer[i] = str2[i - strlen(str1)];
+    }
+    buffer[i] = ASCII_NUL;
+
+    return buffer;
+}
+
 Command * make_cmd_ll(char *input, int *ll_size) {
     int i, argv_ind;
     char **tokenized, **cmd_argv;
@@ -151,8 +170,6 @@ Command * make_cmd_ll(char *input, int *ll_size) {
     
     return cmd_ll_root;
 }
-
-
 
 char ** tokenizer(char * str) {
     int num_tokens;
