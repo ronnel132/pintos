@@ -10,10 +10,6 @@
 #define MAX_CURR_PATH 1024
 
 
-/* Takes a curr_path string, apointer to a linked list of Command structs
-* (and their count), and executes each one of them */
-void exec_cmd(char *curr_path, Command *cmd, num_cmds); 
-
 
 int main() {
     char *curr_path, *curr_user;

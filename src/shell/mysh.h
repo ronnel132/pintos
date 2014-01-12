@@ -15,3 +15,7 @@ void exec(Command *cmds);
 Command * make_cmd_ll(char *input, int *ll_size);
 
 char ** tokenizer(char * str);
+
+/* Takes a curr_path string, apointer to a linked list of Command structs
+* (and their count), and executes each one of them */
+void exec_cmd(char *curr_path, Command *cmd, num_cmds); 
