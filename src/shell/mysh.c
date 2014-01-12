@@ -131,7 +131,7 @@ int main() {
 }
 
 
-char ** tokenizer(char delimiter, char * str) {
+char ** tokenizer(char * str) {
     int num_tokens;
     char ** tokens;
 
@@ -146,53 +146,127 @@ char ** tokenizer(char delimiter, char * str) {
     /*
      * Count number of tokens.
      */
-    in_string_char = ASCII_NUL;
-    num_tokens = 1;  /* Includes NULL terminal. */
+
     str_it = str;
+    token_length = 0;
+    in_string_char = ASCII_NUL;
+    token = str;
+    num_tokens = 0;
+
     while (*str_it != ASCII_NUL) {
-        if (in_string_char) {  /* Inside a string */
-            if (*str_it == in_string_char) {  /* String ending */
+        token_length++;
+
+        /* Qutation handling */
+        if (in_string_char) {
+            if (*str_it == in_string_char) {
                 in_string_char = ASCII_NUL;
+
+                if (token_length > 1) {
+                    /* End string token, don't include this quotation mark */
+                    num_tokens++;
+                }
             }
-        } else if (*str_it == '\'' || *str_it == '"') {  /* String starting */
+        } else if (*str_it == '\'' || *str_it == '"') {
             in_string_char = *str_it;
-        } else if (*str_it == delimiter) {  /* Not in string delimiter */
+
+            /* Start token, don't include this quotation mark */
+            token = str_it + 1;
+            token_length = 0;
+        /* Whitespace handling */
+        } else if (*str_it == ' ' || *str_it == '\t') {
+            if (token_length > 1) {
+                /*
+                 * If this whitespace isn't start of token,
+                 * end token, don't include this whitespace.
+                 */
+                num_tokens++;
+            }
+
+            /* Start new token after whitespace */
+            token = str_it + 1;
+            token_length = 0;
+        /* Redirection and pipe handling */
+        } else if (*str_it == '<' ||
+                   *str_it == '>' ||
+                   *str_it == '|') {
+            /* Redirection or pipe symbol is its own token */
             num_tokens++;
+
+            /* Start new token */
+            token = str_it + 1;
+            token_length = 0;
         }
-        
+
         str_it++;
     }
+
 
     /*
      * Allocate token array.
      */
+
     tokens = (char **) malloc(sizeof(char *) * num_tokens);
+    if (tokens == NULL) return NULL;
     tokens[num_tokens - 1] = NULL;
     
+
     /*
      * Populate token array.
      */
+
     str_it = str;
-    token = str;
     token_length = 0;
     in_string_char = ASCII_NUL;
+    token = str;
     token_index = 0;
+
     while (*str_it != ASCII_NUL) {
         token_length++;
 
+        /* Qutation handling */
         if (in_string_char) {
             if (*str_it == in_string_char) {
                 in_string_char = ASCII_NUL;
+
+                if (token_length > 1) {
+                    /* End string token, don't include this quotation mark */
+                    tokens[token_index] = strndup(token, token_length - 1);
+                    token_index++;
+                }
             }
         } else if (*str_it == '\'' || *str_it == '"') {
             in_string_char = *str_it;
-        } else if (*str_it == delimiter) {
-            tokens[token_index] = strndup(token, token_length);
-            token_index++;
-            token_length = 0;
+
+            /* Start token, don't include this quotation mark */
             token = str_it + 1;
+            token_length = 0;
+        /* Whitespace handling */
+        } else if (*str_it == ' ' || *str_it == '\t') {
+            if (token_length > 1) {
+                /*
+                 * If this whitespace isn't start of token,
+                 * end token, don't include this whitespace.
+                 */
+                tokens[token_index] = strndup(token, token_length - 1);
+                token_index++;
+            }
+
+            /* Start new token after whitespace */
+            token = str_it + 1;
+            token_length = 0;
+        /* Redirection and pipe handling */
+        } else if (*str_it == '<' ||
+                   *str_it == '>' ||
+                   *str_it == '|') {
+            /* Redirection or pipe symbol is its own token */
+            tokens[token_index] = strndup(str_it, 1);
+            token_index++;
+
+            /* Start new token */
+            token = str_it + 1;
+            token_length = 0;
         }
-        
+
         str_it++;
     }
     
