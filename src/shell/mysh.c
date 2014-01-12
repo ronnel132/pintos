@@ -254,13 +254,13 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
         }
         else if (pid == 0) {
             /* We're in child process here */
-            execve(concat("/bin", cmd->process), cmd->argv, NULL);
+            execve(concat("/bin/", cmd->process), cmd->argv, NULL);
 
             /* If we're here, execve failed. Let's try to run it on
             *  current wd
             */
 
-            execve(concat(curr_path, cmd->process), cmd->argv, NULL);
+            execve(concat(concat(curr_path, "/"), cmd->process), cmd->argv, NULL);
 
             /* If we're here, second execve failed. */
             fputs("Fatal error: Could not execve. Aborting.\n", stderr);
