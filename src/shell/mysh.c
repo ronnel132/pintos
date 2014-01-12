@@ -57,6 +57,11 @@ int main() {
             /* TODO: implement cd */
         }
 
+        /* On empty string, prompt again */
+        else if (strcmp(input, "") == 0) {
+            continue;
+        }
+
         cmd_ll = make_cmd_ll(input, &ll_size);
 
         exec_cmd(curr_path, cmd_ll, ll_size);
