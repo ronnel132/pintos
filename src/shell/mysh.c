@@ -25,6 +25,9 @@ int main() {
         printf("%s:%s> ", curr_user, curr_path);
         fgets(input, MAX_INPUT_LENGTH, stdin);
 
+        /* Stripping newline from input */
+        input[strlen(input) - 1] = ASCII_NUL;
+
         if (strcmp(input, "exit") == 0) {
             return 0;
         }
