@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -W
+CFLAGS = -Wall -W -g
 
 all: mysh
 
