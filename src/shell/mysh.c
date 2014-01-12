@@ -3,29 +3,12 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "mysh.h"
+
 #define ASCII_NUL '\0'
 #define MAX_INPUT_LENGTH 500
 #define MAX_CURR_PATH 1024
 
-
-char ** tokenizer(char delimiter, char * str);
-
-/* Takes a pointer to a linked list of Command structs, and
-* executes each one of them */
-void exec(Command *cmds);
-
-typedef struct command {
-    char *process;
-    int argc;
-    char **argv;
-    char *stdin_loc;
-    char *stdout_loc;
-    char *stderr_loc;
-    struct command *next; 
-} Command;
-
-Command * make_cmd_ll(char *input, int *ll_size);
-char ** tokenizer(char delimiter, char * str);
 
 int main() {
     char *curr_path, *curr_user;
