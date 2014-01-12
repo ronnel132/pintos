@@ -69,8 +69,13 @@ int main() {
                 }
             }
         } else {
-            cmd_ll = make_cmd_ll(input, &ll_size);
-            exec_cmd(curr_path, cmd_ll, ll_size);
+            cmd_ll = make_cmd_ll(tokenized_input, &ll_size);
+            if (cmd_ll == NULL) {
+                fputs("Invalid entry. Command not supported.\n", stderr);
+            }
+            else {
+                exec_cmd(curr_path, cmd_ll, ll_size);
+            }
         }
     }
 
@@ -103,19 +108,17 @@ char * concat(char *str1, char *str2) {
     return buffer;
 }
 
-Command * make_cmd_ll(char *input, int *ll_size) {
+Command * make_cmd_ll(char **tokenized, int *ll_size) {
     int i, argv_ind;
-    char **tokenized, **cmd_argv;
+    char **cmd_argv;
     Command *cmd, *cur_cmd, *cmd_ll_root;
 
     if (strlen(input) == 0) {
         return NULL;
     }
 
-    /* Initialize size to 0 */
+    /* Initialize linked list size to 0 */
     *ll_size = 0;
-
-    tokenized = tokenizer(input);
 
     /* The current command we are parsing */
     cmd = (Command *) malloc(sizeof(Command));
@@ -135,6 +138,10 @@ Command * make_cmd_ll(char *input, int *ll_size) {
     i = 0;
     while (tokenized[i] != NULL) {
         if (strcmp(tokenized[i], "|") == 0) {
+            if (tokenized[i + 1] == NULL) {
+                fputs("Invalid pipe specified.\n", stderr);
+                return NULL;
+            }
             /* We are piping to a new command so create that command struct */
             cmd = (Command *) malloc(sizeof(Command));
 
@@ -161,10 +168,18 @@ Command * make_cmd_ll(char *input, int *ll_size) {
         }
 
         if (strcmp(tokenized[i], "<") == 0) {
+            if (tokenized[i + 1] == NULL) {
+                fputs("Invalid redirect specified.\n", stderr);
+                return NULL;
+            }
             cmd->stdin_loc = tokenized[i + 1];
             i = i + 2;
         }
         else if (strcmp(tokenized[i], ">") == 0) {
+            if (tokenized[i + 1] == NULL) {
+                fputs("Invalid redirect specified.\n", stderr);
+                return NULL;
+            }
             cmd->stdout_loc = tokenized[i + 1];
             i = i + 2;
         }
