@@ -13,21 +13,21 @@ char *getcwd(char *buf, size_t size);
 
 char ** tokenizer(char delimiter, char * str);
 
-struct command {
+typedef struct command {
     char *process;
     int argc;
     char **argv;
-    char *stdin;
-    char *stdout;
-    char *stderr;
+    char *stdin_loc;
+    char *stdout_loc;
+    char *stderr_loc;
     struct command *next; 
-};
+} Command;
 
 int main() {
     int i, j;
     char **commands, **tokenized;
     char *process, *stdin_loc, *stdout_loc;
-    struct command *cmd, *cur_cmd, *cmd_list_root;
+    Command *cmd, *cur_cmd, *cmd_list_root;
 
     char curr_path[MAX_CURR_PATH];
     
@@ -68,7 +68,7 @@ int main() {
             /* The tokenized command */
             tokenized = tokenizer(' ', commands[i]);
             /* The current command we are parsing */
-            cmd = (struct command *) malloc(sizeof(struct command));
+            cmd = (Command *) malloc(sizeof(Command));
 
             process = tokenized[0];
             argc = 0;
