@@ -104,7 +104,7 @@ Command * make_cmd_ll(char *input, int *ll_size) {
     Command *cmd, *cur_cmd, *cmd_ll_root;
 
     if (strlen(input) == 0) {
-        return NULL
+        return NULL;
     }
 
     tokenized = tokenizer(input);
