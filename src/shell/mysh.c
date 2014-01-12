@@ -103,6 +103,10 @@ Command * make_cmd_ll(char *input, int *ll_size) {
     char **tokenized, **cmd_argv;
     Command *cmd, *cur_cmd, *cmd_ll_root;
 
+    if (strlen(input) == 0) {
+        return NULL
+    }
+
     tokenized = tokenizer(input);
 
     /* The current command we are parsing */
