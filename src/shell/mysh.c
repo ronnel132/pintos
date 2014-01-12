@@ -174,7 +174,7 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
         }
         else if (pid == 0) {
             /* We're in child process here */
-            execve(concat("/bin", cmd->process));
+            execve(concat("/bin", cmd->process, { NULL }));
             /* TODO: error handling if we're here */
 
             /* TODO: Fallback to exec-ing in current path */
