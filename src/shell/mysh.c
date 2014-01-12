@@ -250,6 +250,9 @@ char ** tokenizer(char * str) {
                     /* End string token, don't include this quotation mark */
                     num_tokens++;
                 }
+
+                token = str_it + 1;
+                token_length = 0;
             }
         } else if (*str_it == '\'' || *str_it == '"') {
             in_string_char = *str_it;
@@ -327,6 +330,9 @@ char ** tokenizer(char * str) {
                     tokens[token_index] = strndup(token, token_length - 1);
                     token_index++;
                 }
+
+                token = str_it + 1;
+                token_length = 0;
             }
         } else if (*str_it == '\'' || *str_it == '"') {
             in_string_char = *str_it;
