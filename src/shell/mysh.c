@@ -55,7 +55,7 @@ char * concat(char *str1, char *str2) {
     /* + 1 because of the NULL at the end */
     len = strlen(str1) + strlen(str2) + 1;
 
-    char *buffer = (char*) malloc(sizeof(char *) * len);
+    buffer = (char*) malloc(sizeof(char *) * len);
     for (i = 0; i < strlen(str1); i++) {
         buffer[i] = str1[i];
     }
@@ -154,7 +154,7 @@ Command * make_cmd_ll(char *input, int *ll_size) {
     return cmd_ll_root;
 }
 
-void exec_cmd(char *curr_path, Command *cmd, num_cmds) {
+void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
     int i;
     pid_t pid;
 
