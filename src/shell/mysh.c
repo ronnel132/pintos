@@ -157,6 +157,7 @@ Command * make_cmd_ll(char *input, int *ll_size) {
 void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
     int i;
     pid_t pid;
+    int remaining;
 
     /* Inspired by: 
         http://stackoverflow.com/questions/876605/multiple-child-process */
