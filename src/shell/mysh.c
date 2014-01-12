@@ -48,8 +48,8 @@ int main() {
             continue;
         } else if (strcmp(tokenized_input[0], "exit") == 0) {
             break;
-        } else if (strcmp(tokenized_input[0], "cd") ||
-                   strcmp(tokenized_input[0], "chdir")) {
+        } else if (strcmp(tokenized_input[0], "cd") == 0 ||
+                   strcmp(tokenized_input[0], "chdir") == 0) {
 
             if (tokenized_input[1] == NULL) {
                 free(tokenized_input[1]);
