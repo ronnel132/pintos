@@ -8,10 +8,11 @@
 #define MAX_CURR_PATH 1024
 
 
-/* gets the pathname of cwd. from unistd.h */ 
-char *getcwd(char *buf, size_t size);
-
 char ** tokenizer(char delimiter, char * str);
+
+/* Takes a pointer to a linked list of Command structs, and
+* executes each one of them */
+void exec(Command *cmds);
 
 typedef struct command {
     char *process;
@@ -23,12 +24,10 @@ typedef struct command {
     struct command *next; 
 } Command;
 
-int main() {
-    int i, j, cmd_argc;
-    char **commands, **tokenized, **cmd_argv;
-    char *process, *stdin_loc, *stdout_loc;
-    Command *cmd, *cur_cmd, *cmd_list_root;
+Command * make_cmd_ll(char *input, int *ll_size);
+char ** tokenizer(char delimiter, char * str);
 
+int main() {
     char *curr_path, *curr_user;
     
     /* get current user and path */
@@ -40,7 +39,7 @@ int main() {
         char input[MAX_INPUT_LENGTH];
 
         printf("%s:%s> ", curr_user, curr_path);
-        scanf("%s", input);
+        fgets(input, MAX_INPUT_LENGTH, stdin);
 
         if (strcmp(input, "exit") == 0) {
             return 0;
@@ -48,87 +47,111 @@ int main() {
 
         /* Detecting whether a cd was issued. In case an argument was provided,
         *  strstr() is used together with pointer subtraction, to calculate the
-        *  offset (if offset == 0, means that the substring starts at beginning of
-        *  the string */
-        else if ((strcmp(input, "cd") == 0) || (strstr(input, "cd ") - input == 0) || 
-            (strcmp(input, "chdir ") == 0) || (strstr(input, "chdir") - input == 0)) {
+        *  offset (if offset == 0, means that the substring starts at beginning
+        *  of the string */
+
+        else if ((strcmp(input, "cd") == 0) || 
+                (strstr(input, "cd ") - input == 0) || 
+                (strcmp(input, "chdir ") == 0) || 
+                (strstr(input, "chdir") - input == 0)) {
 
             printf("chmod!\n");
         }
 
         printf("%s\n", input);
 
-        commands = tokenizer('|', input);
+        
+    }
+    free(curr_path);
+}
 
-        /* Initialize pointers to create the command-struct linked list */
-        cur_cmd = NULL;
-        cmd_list_root = NULL;
+Command * make_cmd_ll(char *input, int *ll_size) {
+    int i, argv_ind;
+    char **tokenized, **cmd_argv;
+    Command *cmd, *cur_cmd, *cmd_ll_root;
 
-        i = 0;
-        while (commands[i] != NULL) {
-            /* The tokenized command */
-            tokenized = tokenizer(' ', commands[i]);
-            /* The current command we are parsing */
-            cmd = (Command *) malloc(sizeof(Command));
+    tokenized = tokenizer(input);
 
-            process = tokenized[0];
-            cmd_argc = 0;
-            stdin_loc = NULL;
-            stdout_loc = NULL;
-            j = 0;
-            while (tokenized[j] != NULL) {
-                /* stdin redirection specified */
-                if (strcmp(tokenized[j], "<") == 0) {
-                    stdin_loc = tokenized[j + 1];
-                    tokenized[j] = NULL;
-                    tokenized[j + 1] = NULL;
-                    j = j + 2;
-                }
-                else if (strcmp(tokenized[j], ">") == 0) {
-                    stdout_loc = tokenized[j + 1];
-                    tokenized[j] = NULL;
-                    tokenized[j + 1] = NULL;
-                    j = j + 2;
-                }
-                else {
-                    cmd_argc++;
-                    j++;
-                }
-            }
+    /* Initialize pointers to create the command-struct linked list */
+    cur_cmd = NULL;
+    cmd_ll_root = NULL;
 
-            /* cmd_argc + 1 because we have a NULL pointer at the end */
-            cmd_argv = (char **) malloc(sizeof(char *) * (cmd_argc + 1)); 
-            j = 0;
-            while (tokenized[j] != NULL) {
-                cmd_argv[j] = tokenized[j];
-                j++;
-            }
-            free(tokenized);
-            cmd_argv[j] = NULL;
-
-            /* set command struct's fields. update the cur_cmd pointer */
-            cmd->process = process;
-            cmd->argc = cmd_argc;
-            cmd->argv = cmd_argv;
-            cmd->stdin_loc = stdin_loc;
-            cmd->stdout_loc = stdout_loc;
-            cmd->next = NULL;
-
-            /* append to the command-struct linked list */
-            if (cur_cmd == NULL) {
+    /* The current command we are parsing */
+    cmd = (Command *) malloc(sizeof(Command));
+    i = 0;
+    while (tokenized[i] != NULL) {
+        if (strcmp(tokenized[i], "|") == 0) {
+            if (cmd_ll_root == NULL) {
                 cur_cmd = cmd;
-                cmd_list_root = cmd;
+                cmd_ll_root = cmd;
             }
             else {
                 cur_cmd->next = cmd;
                 cur_cmd = cmd;
             }
-            i++;
+            /* We are piping to a new command so create that command struct */
+            cmd = (Command *) malloc(sizeof(Command));
+            /* Initialize its fields */
+            cmd->argc = 0;
+            cmd->stdin_loc = NULL;
+            cmd->stdout_loc = NULL;
+            cmd->stderr_loc = NULL;
+            cmd->next = NULL;
         }
-        free(commands); 
+        
+        if ((i == 0) || (strcmp(tokenized[i - 1], "|"))) {
+            cmd->process = tokenized[i];
+        }
+
+        if (strcmp(tokenized[i], "<")) {
+            cmd->stdin_loc = tokenized[i + 1];
+            i = i + 2;
+        }
+        else if (strcmp(tokenized[i], ">")) {
+            cmd->stdout_loc = tokenized[i + 1];
+            i = i + 2;
+        }
+        else {
+            i++;
+            cmd->argc++;
+        }
     }
-    free(curr_path);
+    
+    i = 0;
+    argv_ind = 0;
+    /* Loop for setting command structs' argv fields. */
+    cur_cmd = cmd_ll_root;
+    /* cmd_ll_root->argc + 1 because we include NULL at the end */
+    cmd_argv = (char **) malloc(sizeof(char *) * (cmd_ll_root->argc + 1));
+    while (tokenized[i] != NULL) {
+        if (strcmp(tokenized[i], "|") == 0) {
+            cur_cmd->argv = cmd_argv;
+            cur_cmd->argv[argv_ind] = NULL;
+            cur_cmd = cur_cmd->next;
+            cmd_argv = (char **) malloc(sizeof(char *) * 
+                (cmd_ll_root->argc + 1));
+            argv_ind = 0;
+            *ll_size++;
+        }
+        if (strcmp(tokenized[i], ">") == 0 
+            || strcmp(tokenized[i], ">") == 0) {
+            free(tokenized[i]);
+            free(tokenized[i + 1]);
+            i = i + 2;
+        } 
+        else {
+            cmd_argv[argv_ind] = tokenized[i];
+            i++;
+            argv_ind++;
+        }
+    }
+    /* Set the last command struct's argv */
+    cur_cmd->argv = cmd_argv;
+    *ll_size++;
+    
+    return cmd_ll_root;
 }
+
 
 
 char ** tokenizer(char * str) {
