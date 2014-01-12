@@ -10,6 +10,10 @@
 
 char ** tokenizer(char delimiter, char * str);
 
+/* Takes a pointer to a linked list of Command structs, and
+* executes each one of them */
+void exec(Command *cmds);
+
 typedef struct command {
     char *process;
     int argc;
@@ -45,10 +49,13 @@ int main() {
 
         /* Detecting whether a cd was issued. In case an argument was provided,
         *  strstr() is used together with pointer subtraction, to calculate the
-        *  offset (if offset == 0, means that the substring starts at beginning of
-        *  the string */
-        else if ((strcmp(input, "cd") == 0) || (strstr(input, "cd ") - input == 0) || 
-            (strcmp(input, "chdir ") == 0) || (strstr(input, "chdir") - input == 0)) {
+        *  offset (if offset == 0, means that the substring starts at beginning
+        *  of the string */
+
+        else if ((strcmp(input, "cd") == 0) || 
+                (strstr(input, "cd ") - input == 0) || 
+                (strcmp(input, "chdir ") == 0) || 
+                (strstr(input, "chdir") - input == 0)) {
 
             printf("chmod!\n");
         }
@@ -127,6 +134,8 @@ int main() {
     free(curr_path);
 }
 
+
+void exec(Command *cmds);
 
 char ** tokenizer(char delimiter, char * str) {
     int num_tokens;
