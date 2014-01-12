@@ -24,8 +24,8 @@ typedef struct command {
 } Command;
 
 int main() {
-    int i, j;
-    char **commands, **tokenized;
+    int i, j, cmd_argc;
+    char **commands, **tokenized, **cmd_argv;
     char *process, *stdin_loc, *stdout_loc;
     Command *cmd, *cur_cmd, *cmd_list_root;
 
@@ -71,7 +71,7 @@ int main() {
             cmd = (Command *) malloc(sizeof(Command));
 
             process = tokenized[0];
-            argc = 0;
+            cmd_argc = 0;
             stdin_loc = NULL;
             stdout_loc = NULL;
             j = 0;
@@ -90,25 +90,25 @@ int main() {
                     j = j + 2;
                 }
                 else {
-                    argc++;
+                    cmd_argc++;
                     j++;
                 }
             }
 
-            /* argc + 1 because we have a NULL pointer at the end */
-            argv = (char **) malloc(sizeof(char *) * (argc + 1)); 
+            /* cmd_argc + 1 because we have a NULL pointer at the end */
+            cmd_argv = (char **) malloc(sizeof(char *) * (cmd_argc + 1)); 
             j = 0;
             while (tokenized[j] != NULL) {
-                argv[j] = tokenized[j];
+                cmd_argv[j] = tokenized[j];
                 j++;
             }
             free(tokenized);
-            argv[j] = NULL;
+            cmd_argv[j] = NULL;
 
             /* set command struct's fields. update the cur_cmd pointer */
             cmd->process = process;
-            cmd->argc = argc;
-            cmd->argv = argv;
+            cmd->argc = cmd_argc;
+            cmd->argv = cmd_argv;
             cmd->stdin_loc = stdin_loc;
             cmd->stdout_loc = stdout_loc;
             cmd->next = NULL;
