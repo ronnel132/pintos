@@ -3,7 +3,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
-#include <errno.h>
 
 #include "mysh.h"
 
@@ -18,6 +17,12 @@ int main() {
     /* get current user and path */
     curr_path = getcwd(NULL, 0);
     curr_user = getlogin();
+
+    if (curr_path == NULL || curr_user == NULL) {
+        fputs("Fatal error: Could not obtain current path or user", stderr);
+        exit(1);
+    }
+        
 
     /* The cmd linked list */
     Command *cmd_ll;
