@@ -10,7 +10,6 @@
 #define MAX_INPUT_LENGTH 500
 #define MAX_CURR_PATH 1024
 
-
 int main() {
     char *curr_path, *curr_user;
     
@@ -91,10 +90,6 @@ Command * make_cmd_ll(char *input, int *ll_size) {
                 cur_cmd = cmd;
                 cmd_ll_root = cmd;
             }
-            else {
-                cur_cmd->next = cmd;
-                cur_cmd = cmd;
-            }
             /* We are piping to a new command so create that command struct */
             cmd = (Command *) malloc(sizeof(Command));
             /* Initialize its fields */
@@ -103,17 +98,21 @@ Command * make_cmd_ll(char *input, int *ll_size) {
             cmd->stdout_loc = NULL;
             cmd->stderr_loc = NULL;
             cmd->next = NULL;
+            cur_cmd->next = cmd;
+            cur_cmd = cmd; 
+            i++; 
+            continue;
         }
         
-        if ((i == 0) || (strcmp(tokenized[i - 1], "|"))) {
+        if ((i == 0) || (strcmp(tokenized[i - 1], "|") == 0)) {
             cmd->process = tokenized[i];
         }
 
-        if (strcmp(tokenized[i], "<")) {
+        if (strcmp(tokenized[i], "<") == 0) {
             cmd->stdin_loc = tokenized[i + 1];
             i = i + 2;
         }
-        else if (strcmp(tokenized[i], ">")) {
+        else if (strcmp(tokenized[i], ">") == 0) {
             cmd->stdout_loc = tokenized[i + 1];
             i = i + 2;
         }
@@ -137,14 +136,17 @@ Command * make_cmd_ll(char *input, int *ll_size) {
             cmd_argv = (char **) malloc(sizeof(char *) * 
                 (cmd_ll_root->argc + 1));
             argv_ind = 0;
-            *ll_size++;
+            (*ll_size)++;
         }
         if (strcmp(tokenized[i], ">") == 0 
-            || strcmp(tokenized[i], ">") == 0) {
+            || strcmp(tokenized[i], "<") == 0) {
             free(tokenized[i]);
-            free(tokenized[i + 1]);
             i = i + 2;
-        } 
+        }
+        else if (strcmp(tokenized[i], "|") == 0) {
+            free(tokenized[i]);
+            i++;
+        }
         else {
             cmd_argv[argv_ind] = tokenized[i];
             i++;
@@ -153,7 +155,7 @@ Command * make_cmd_ll(char *input, int *ll_size) {
     }
     /* Set the last command struct's argv */
     cur_cmd->argv = cmd_argv;
-    *ll_size++;
+    (*ll_size)++;
     
     return cmd_ll_root;
 }
