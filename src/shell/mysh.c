@@ -255,9 +255,9 @@ char ** tokenizer(char * str) {
     token_length = 0;
     in_string_char = ASCII_NUL;
     token = str;
-    num_tokens = 0;
+    num_tokens = 1;
 
-    while (*str_it != ASCII_NUL) {
+    while (1) {
         token_length++;
 
         /* Qutation handling */
@@ -269,6 +269,9 @@ char ** tokenizer(char * str) {
                     /* End string token, don't include this quotation mark */
                     num_tokens++;
                 }
+
+                token = str_it + 1;
+                token_length = 0;
             }
         } else if (*str_it == '\'' || *str_it == '"') {
             in_string_char = *str_it;
@@ -277,13 +280,19 @@ char ** tokenizer(char * str) {
             token = str_it + 1;
             token_length = 0;
         /* Whitespace handling */
-        } else if (*str_it == ' ' || *str_it == '\t') {
+        } else if (*str_it == ' ' ||
+                   *str_it == '\t' ||
+                   *str_it == ASCII_NUL) {
             if (token_length > 1) {
                 /*
                  * If this whitespace isn't start of token,
                  * end token, don't include this whitespace.
                  */
                 num_tokens++;
+            }
+
+            if (*str_it == ASCII_NUL) {
+                break;
             }
 
             /* Start new token after whitespace */
@@ -293,6 +302,9 @@ char ** tokenizer(char * str) {
         } else if (*str_it == '<' ||
                    *str_it == '>' ||
                    *str_it == '|') {
+            if (token_length > 1) {
+                num_tokens++;
+            }
             /* Redirection or pipe symbol is its own token */
             num_tokens++;
 
@@ -324,7 +336,7 @@ char ** tokenizer(char * str) {
     token = str;
     token_index = 0;
 
-    while (*str_it != ASCII_NUL) {
+    while (1) {
         token_length++;
 
         /* Qutation handling */
@@ -337,6 +349,9 @@ char ** tokenizer(char * str) {
                     tokens[token_index] = strndup(token, token_length - 1);
                     token_index++;
                 }
+
+                token = str_it + 1;
+                token_length = 0;
             }
         } else if (*str_it == '\'' || *str_it == '"') {
             in_string_char = *str_it;
@@ -345,7 +360,9 @@ char ** tokenizer(char * str) {
             token = str_it + 1;
             token_length = 0;
         /* Whitespace handling */
-        } else if (*str_it == ' ' || *str_it == '\t') {
+        } else if (*str_it == ' ' ||
+                   *str_it == '\t' ||
+                   *str_it == ASCII_NUL) {
             if (token_length > 1) {
                 /*
                  * If this whitespace isn't start of token,
@@ -355,6 +372,10 @@ char ** tokenizer(char * str) {
                 token_index++;
             }
 
+            if (*str_it == ASCII_NUL) {
+                break;
+            }
+
             /* Start new token after whitespace */
             token = str_it + 1;
             token_length = 0;
@@ -362,6 +383,10 @@ char ** tokenizer(char * str) {
         } else if (*str_it == '<' ||
                    *str_it == '>' ||
                    *str_it == '|') {
+            if (token_length > 1) {
+                tokens[token_index] = strndup(token, token_length - 1);
+                token_index++;
+            }
             /* Redirection or pipe symbol is its own token */
             tokens[token_index] = strndup(str_it, 1);
             token_index++;
