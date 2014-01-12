@@ -36,8 +36,8 @@ int main() {
 
         else if ((strcmp(input, "cd") == 0) || 
                 (strstr(input, "cd ") - input == 0) || 
-                (strcmp(input, "chdir ") == 0) || 
-                (strstr(input, "chdir") - input == 0)) {
+                (strcmp(input, "chdir") == 0) || 
+                (strstr(input, "chdir ") - input == 0)) {
 
             printf("chmod!\n");
         }
