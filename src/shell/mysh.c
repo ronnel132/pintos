@@ -107,6 +107,9 @@ Command * make_cmd_ll(char *input, int *ll_size) {
         return NULL;
     }
 
+    /* Initialize size to 0 */
+    *ll_size = 0;
+
     tokenized = tokenizer(input);
 
     /* The current command we are parsing */
