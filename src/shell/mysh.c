@@ -199,12 +199,12 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
         for (i = 0; i < num_cmds; i++) {
 
             /* If children is alive */
-            if (pids[i] != NULL) {
+            if (pids[i] != 0) {
                 /* Wait for this child */
                 waitpid(pids[i], &ret_val, 0);
 
                 /* Set this pid to NULL to denote dead child */
-                pids[i] = NULL;
+                pids[i] = 0;
 
                 /* We have one less remaining child to wait for */
                 remaining--;
