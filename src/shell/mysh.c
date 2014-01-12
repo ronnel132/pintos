@@ -8,8 +8,11 @@
 #define MAX_CURR_PATH 1024
 
 
-/* gets the pathname of cwd. from unistd.h */ 
-char *getcwd(char *buf, size_t size);
+char ** tokenizer(char delimiter, char * str);
+
+/* Takes a pointer to a linked list of Command structs, and
+* executes each one of them */
+void exec(Command *cmds);
 
 typedef struct command {
     char *process;
@@ -25,18 +28,18 @@ Command * make_cmd_ll(char *input, int *ll_size);
 char ** tokenizer(char delimiter, char * str);
 
 int main() {
+    char *curr_path, *curr_user;
     
-    char curr_path[MAX_CURR_PATH];
-    
-    /* get current path */
-    getcwd(curr_path, MAX_CURR_PATH);
+    /* get current user and path */
+    curr_path = getcwd(NULL, 0);
+    curr_user = getlogin();
 
     /* main input loop */
     while (1) {
         char input[MAX_INPUT_LENGTH];
 
-        printf("%s > ", curr_path);
-        scanf("%s", input);
+        printf("%s:%s> ", curr_user, curr_path);
+        fgets(input, MAX_INPUT_LENGTH, stdin);
 
         if (strcmp(input, "exit") == 0) {
             return 0;
@@ -44,10 +47,13 @@ int main() {
 
         /* Detecting whether a cd was issued. In case an argument was provided,
         *  strstr() is used together with pointer subtraction, to calculate the
-        *  offset (if offset == 0, means that the substring starts at beginning of
-        *  the string */
-        else if ((strcmp(input, "cd") == 0) || (strstr(input, "cd ") - input == 0) || 
-            (strcmp(input, "chdir ") == 0) || (strstr(input, "chdir") - input == 0)) {
+        *  offset (if offset == 0, means that the substring starts at beginning
+        *  of the string */
+
+        else if ((strcmp(input, "cd") == 0) || 
+                (strstr(input, "cd ") - input == 0) || 
+                (strcmp(input, "chdir ") == 0) || 
+                (strstr(input, "chdir") - input == 0)) {
 
             printf("chmod!\n");
         }
