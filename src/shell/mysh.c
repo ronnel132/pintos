@@ -308,7 +308,7 @@ char ** tokenizer(char * str) {
     while (1) {
         token_length++;
 
-        /* Qutation handling */
+        /* Quotation handling */
         if (in_string_char) {
             if (*str_it == in_string_char) {
                 in_string_char = ASCII_NUL;
@@ -390,7 +390,7 @@ char ** tokenizer(char * str) {
     while (1) {
         token_length++;
 
-        /* Qutation handling */
+        /* Quotation handling */
         if (in_string_char) {
             if (*str_it == in_string_char) {
                 in_string_char = ASCII_NUL;
