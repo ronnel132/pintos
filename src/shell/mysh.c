@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 #include "mysh.h"
 
@@ -24,6 +25,9 @@ int main() {
         printf("%s:%s> ", curr_user, curr_path);
         fgets(input, MAX_INPUT_LENGTH, stdin);
 
+        /* Stripping newline from input */
+        input[strlen(input) - 1] = ASCII_NUL;
+
         if (strcmp(input, "exit") == 0) {
             return 0;
         }
@@ -35,8 +39,8 @@ int main() {
 
         else if ((strcmp(input, "cd") == 0) || 
                 (strstr(input, "cd ") - input == 0) || 
-                (strcmp(input, "chdir ") == 0) || 
-                (strstr(input, "chdir") - input == 0)) {
+                (strcmp(input, "chdir") == 0) || 
+                (strstr(input, "chdir ") - input == 0)) {
 
             printf("chmod!\n");
         }
@@ -157,6 +161,8 @@ Command * make_cmd_ll(char *input, int *ll_size) {
 void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
     int i;
     pid_t pid;
+    int remaining;
+    int ret_val;
 
     /* Inspired by: 
         http://stackoverflow.com/questions/876605/multiple-child-process */
@@ -174,7 +180,7 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
         }
         else if (pid == 0) {
             /* We're in child process here */
-            execve(concat("/bin", cmd->process, { NULL }));
+            execve(concat("/bin", cmd->process), cmd->argv, NULL);
             /* TODO: error handling if we're here */
 
             /* TODO: Fallback to exec-ing in current path */
@@ -196,12 +202,12 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
         for (i = 0; i < num_cmds; i++) {
 
             /* If children is alive */
-            if (pids[i] != NULL) {
+            if (pids[i] != 0) {
                 /* Wait for this child */
-                waitpid(pids[i]);
+                waitpid(pids[i], &ret_val, 0);
 
                 /* Set this pid to NULL to denote dead child */
-                pids[i] = NULL;
+                pids[i] = 0;
 
                 /* We have one less remaining child to wait for */
                 remaining--;
@@ -230,9 +236,9 @@ char ** tokenizer(char * str) {
     token_length = 0;
     in_string_char = ASCII_NUL;
     token = str;
-    num_tokens = 0;
+    num_tokens = 1;
 
-    while (*str_it != ASCII_NUL) {
+    while (1) {
         token_length++;
 
         /* Qutation handling */
@@ -252,13 +258,19 @@ char ** tokenizer(char * str) {
             token = str_it + 1;
             token_length = 0;
         /* Whitespace handling */
-        } else if (*str_it == ' ' || *str_it == '\t') {
+        } else if (*str_it == ' ' ||
+                   *str_it == '\t' ||
+                   *str_it == ASCII_NUL) {
             if (token_length > 1) {
                 /*
                  * If this whitespace isn't start of token,
                  * end token, don't include this whitespace.
                  */
                 num_tokens++;
+            }
+
+            if (*str_it == ASCII_NUL) {
+                break;
             }
 
             /* Start new token after whitespace */
@@ -268,6 +280,9 @@ char ** tokenizer(char * str) {
         } else if (*str_it == '<' ||
                    *str_it == '>' ||
                    *str_it == '|') {
+            if (token_length > 1) {
+                num_tokens++;
+            }
             /* Redirection or pipe symbol is its own token */
             num_tokens++;
 
@@ -299,7 +314,7 @@ char ** tokenizer(char * str) {
     token = str;
     token_index = 0;
 
-    while (*str_it != ASCII_NUL) {
+    while (1) {
         token_length++;
 
         /* Qutation handling */
@@ -320,7 +335,9 @@ char ** tokenizer(char * str) {
             token = str_it + 1;
             token_length = 0;
         /* Whitespace handling */
-        } else if (*str_it == ' ' || *str_it == '\t') {
+        } else if (*str_it == ' ' ||
+                   *str_it == '\t' ||
+                   *str_it == ASCII_NUL) {
             if (token_length > 1) {
                 /*
                  * If this whitespace isn't start of token,
@@ -330,6 +347,10 @@ char ** tokenizer(char * str) {
                 token_index++;
             }
 
+            if (*str_it == ASCII_NUL) {
+                break;
+            }
+
             /* Start new token after whitespace */
             token = str_it + 1;
             token_length = 0;
@@ -337,6 +358,10 @@ char ** tokenizer(char * str) {
         } else if (*str_it == '<' ||
                    *str_it == '>' ||
                    *str_it == '|') {
+            if (token_length > 1) {
+                tokens[token_index] = strndup(token, token_length - 1);
+                token_index++;
+            }
             /* Redirection or pipe symbol is its own token */
             tokens[token_index] = strndup(str_it, 1);
             token_index++;
