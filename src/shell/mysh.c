@@ -65,6 +65,7 @@ int main() {
         
     }
     free(curr_path);
+    return 0;
 }
 
 char * concat(char *str1, char *str2) {
