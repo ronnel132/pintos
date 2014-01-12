@@ -20,7 +20,7 @@ int main() {
     char *homedir;
 
     char input[MAX_INPUT_LENGTH];
-    char **tokenized_input;
+    char **tokenized_input, **tokenized_it;
 
     Command *cmd_ll;  /* The cmd linked list */
     int ll_size;  /* Size of the cmd linked list */
@@ -77,6 +77,14 @@ int main() {
                 exec_cmd(curr_path, cmd_ll, ll_size);
             }
         }
+
+        /* Free tokenized input */
+        tokenized_it = tokenized_input;
+        while (*tokenized_it != NULL) {
+            free(*tokenized_it);
+            tokenized_it++;
+        }
+        free(tokenized_input);
     }
 
     return 0;
@@ -113,9 +121,6 @@ Command * make_cmd_ll(char **tokenized, int *ll_size) {
     char **cmd_argv;
     Command *cmd, *cur_cmd, *cmd_ll_root;
 
-    if (strlen(input) == 0) {
-        return NULL;
-    }
 
     /* Initialize linked list size to 0 */
     *ll_size = 0;
@@ -164,7 +169,7 @@ Command * make_cmd_ll(char **tokenized, int *ll_size) {
         }
         
         if ((i == 0) || (strcmp(tokenized[i - 1], "|") == 0)) {
-            cmd->process = tokenized[i];
+            cmd->process = strdup(tokenized[i]);
         }
 
         if (strcmp(tokenized[i], "<") == 0) {
@@ -172,7 +177,7 @@ Command * make_cmd_ll(char **tokenized, int *ll_size) {
                 fputs("Invalid redirect specified.\n", stderr);
                 return NULL;
             }
-            cmd->stdin_loc = tokenized[i + 1];
+            cmd->stdin_loc = strdup(tokenized[i + 1]);
             i = i + 2;
         }
         else if (strcmp(tokenized[i], ">") == 0) {
@@ -180,7 +185,7 @@ Command * make_cmd_ll(char **tokenized, int *ll_size) {
                 fputs("Invalid redirect specified.\n", stderr);
                 return NULL;
             }
-            cmd->stdout_loc = tokenized[i + 1];
+            cmd->stdout_loc = strdup(tokenized[i + 1]);
             i = i + 2;
         }
         else {
@@ -221,15 +226,13 @@ Command * make_cmd_ll(char **tokenized, int *ll_size) {
         }
         if (strcmp(tokenized[i], ">") == 0 
             || strcmp(tokenized[i], "<") == 0) {
-            free(tokenized[i]);
             i = i + 2;
         }
         else if (strcmp(tokenized[i], "|") == 0) {
-            free(tokenized[i]);
             i++;
         }
         else {
-            cmd_argv[argv_ind] = tokenized[i];
+            cmd_argv[argv_ind] = strdup(tokenized[i]);
             i++;
             argv_ind++;
         }
