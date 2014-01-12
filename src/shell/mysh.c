@@ -370,7 +370,10 @@ char ** tokenizer(char * str) {
      */
 
     tokens = (char **) malloc(sizeof(char *) * num_tokens);
-    if (tokens == NULL) return NULL;
+    if (tokens == NULL) {
+        fputs("Fatal error: Could not allocate memory. Aborting.", stderr);
+        exit(1);
+    }
     tokens[num_tokens - 1] = NULL;
     
 
