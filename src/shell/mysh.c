@@ -100,12 +100,14 @@ Command * make_cmd_ll(char *input, int *ll_size) {
 
     tokenized = tokenizer(input);
 
-    /* Initialize pointers to create the command-struct linked list */
-    cur_cmd = NULL;
-    cmd_ll_root = NULL;
-
     /* The current command we are parsing */
     cmd = (Command *) malloc(sizeof(Command));
+    cmd->stdin_loc = NULL;
+    cmd->stdout_loc = NULL;
+    cmd->stderr_loc = NULL;
+    cmd->next = NULL;
+    cmd_ll_root = cmd;
+    cur_cmd = cmd;
 
     /* Malloc failed */
     if (cmd == NULL) {
@@ -116,10 +118,6 @@ Command * make_cmd_ll(char *input, int *ll_size) {
     i = 0;
     while (tokenized[i] != NULL) {
         if (strcmp(tokenized[i], "|") == 0) {
-            if (cmd_ll_root == NULL) {
-                cur_cmd = cmd;
-                cmd_ll_root = cmd;
-            }
             /* We are piping to a new command so create that command struct */
             cmd = (Command *) malloc(sizeof(Command));
 
