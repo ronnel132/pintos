@@ -3,29 +3,12 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "mysh.h"
+
 #define ASCII_NUL '\0'
 #define MAX_INPUT_LENGTH 500
 #define MAX_CURR_PATH 1024
 
-
-char ** tokenizer(char delimiter, char * str);
-
-/* Takes a pointer to a linked list of Command structs, and
-* executes each one of them */
-void exec(Command *cmds);
-
-typedef struct command {
-    char *process;
-    int argc;
-    char **argv;
-    char *stdin_loc;
-    char *stdout_loc;
-    char *stderr_loc;
-    struct command *next; 
-} Command;
-
-Command * make_cmd_ll(char *input, int *ll_size);
-char ** tokenizer(char delimiter, char * str);
 
 int main() {
     char *curr_path, *curr_user;
@@ -169,6 +152,62 @@ Command * make_cmd_ll(char *input, int *ll_size) {
     *ll_size++;
     
     return cmd_ll_root;
+}
+
+void exec_cmd(char *curr_path, Command *cmd, num_cmds) {
+    int i;
+    pid_t pid;
+
+    /* Inspired by: 
+        http://stackoverflow.com/questions/876605/multiple-child-process */
+
+    /* Array of children pids */
+    pid_t * pids = (pid_t *) malloc(num_cmds * sizeof(pid_t));
+    
+    for (i = 0; i < num_cmds; i++) {
+        pid = fork();
+        pids[i] = pid;
+
+        if (pid < 0) {
+            fputs("Fatal error: Could not fork. Aborting.", stderr);
+            exit(1);
+        }
+        else if (pid == 0) {
+            /* We're in child process here */
+            execve(concat("/bin", cmd->process));
+            /* TODO: error handling if we're here */
+
+            /* TODO: Fallback to exec-ing in current path */
+        }
+
+        /* Advance to next command */
+        cmd = cmd->next;
+    }
+
+    /* Wait for children (Note that we're at parent process here, since
+    * all children have exec'ed before this point
+    */
+    remaining = num_cmds;
+
+    /* While there's still children alive */
+    while (remaining != 0) {
+
+        /* For each spawned child */
+        for (i = 0; i < num_cmds; i++) {
+
+            /* If children is alive */
+            if (pids[i] != NULL) {
+                /* Wait for this child */
+                waitpid(pids[i]);
+
+                /* Set this pid to NULL to denote dead child */
+                pids[i] = NULL;
+
+                /* We have one less remaining child to wait for */
+                remaining--;
+            }
+        }
+    }
 }
 
 char ** tokenizer(char * str) {
