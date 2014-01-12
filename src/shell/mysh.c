@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 #include "mysh.h"
 
@@ -24,6 +25,9 @@ int main() {
         printf("%s:%s> ", curr_user, curr_path);
         fgets(input, MAX_INPUT_LENGTH, stdin);
 
+        /* Stripping newline from input */
+        input[strlen(input) - 1] = ASCII_NUL;
+
         if (strcmp(input, "exit") == 0) {
             return 0;
         }
@@ -35,8 +39,8 @@ int main() {
 
         else if ((strcmp(input, "cd") == 0) || 
                 (strstr(input, "cd ") - input == 0) || 
-                (strcmp(input, "chdir ") == 0) || 
-                (strstr(input, "chdir") - input == 0)) {
+                (strcmp(input, "chdir") == 0) || 
+                (strstr(input, "chdir ") - input == 0)) {
 
             printf("chmod!\n");
         }
@@ -46,6 +50,25 @@ int main() {
         
     }
     free(curr_path);
+}
+
+char * concat(char *str1, char *str2) {
+    char *buffer;
+    int i, len;
+
+    /* + 1 because of the NULL at the end */
+    len = (int) (strlen(str1) + strlen(str2) + 1);
+
+    buffer = (char*) malloc(sizeof(char *) * len);
+    for (i = 0; i < (int) strlen(str1); i++) {
+        buffer[i] = str1[i];
+    }
+    for (i = strlen(str1); i < (len - 1); i++) {
+        buffer[i] = str2[i - strlen(str1)];
+    }
+    buffer[i] = ASCII_NUL;
+
+    return buffer;
 }
 
 Command * make_cmd_ll(char *input, int *ll_size) {
@@ -135,7 +158,63 @@ Command * make_cmd_ll(char *input, int *ll_size) {
     return cmd_ll_root;
 }
 
+void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
+    int i;
+    pid_t pid;
+    int remaining;
+    int ret_val;
 
+    /* Inspired by: 
+        http://stackoverflow.com/questions/876605/multiple-child-process */
+
+    /* Array of children pids */
+    pid_t * pids = (pid_t *) malloc(num_cmds * sizeof(pid_t));
+    
+    for (i = 0; i < num_cmds; i++) {
+        pid = fork();
+        pids[i] = pid;
+
+        if (pid < 0) {
+            fputs("Fatal error: Could not fork. Aborting.", stderr);
+            exit(1);
+        }
+        else if (pid == 0) {
+            /* We're in child process here */
+            execve(concat("/bin", cmd->process), cmd->argv, NULL);
+            /* TODO: error handling if we're here */
+
+            /* TODO: Fallback to exec-ing in current path */
+        }
+
+        /* Advance to next command */
+        cmd = cmd->next;
+    }
+
+    /* Wait for children (Note that we're at parent process here, since
+    * all children have exec'ed before this point
+    */
+    remaining = num_cmds;
+
+    /* While there's still children alive */
+    while (remaining != 0) {
+
+        /* For each spawned child */
+        for (i = 0; i < num_cmds; i++) {
+
+            /* If children is alive */
+            if (pids[i] != 0) {
+                /* Wait for this child */
+                waitpid(pids[i], &ret_val, 0);
+
+                /* Set this pid to NULL to denote dead child */
+                pids[i] = 0;
+
+                /* We have one less remaining child to wait for */
+                remaining--;
+            }
+        }
+    }
+}
 
 char ** tokenizer(char * str) {
     int num_tokens;
