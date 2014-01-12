@@ -53,10 +53,10 @@ char * concat(char *str1, char *str2) {
     int i, len;
 
     /* + 1 because of the NULL at the end */
-    len = strlen(str1) + strlen(str2) + 1;
+    len = (int) (strlen(str1) + strlen(str2) + 1);
 
     buffer = (char*) malloc(sizeof(char *) * len);
-    for (i = 0; i < strlen(str1); i++) {
+    for (i = 0; i < (int) strlen(str1); i++) {
         buffer[i] = str1[i];
     }
     for (i = strlen(str1); i < (len - 1); i++) {
