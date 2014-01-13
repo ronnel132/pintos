@@ -14,7 +14,7 @@
 #define ASCII_NUL '\0'
 #define MAX_INPUT_LENGTH 1024
 
-int main() {
+int main(void) {
     char curr_path[PATH_MAX];
     char curr_user[LOGIN_NAME_MAX];
     struct passwd *pw;
