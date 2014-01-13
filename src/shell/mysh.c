@@ -27,7 +27,6 @@ int main(void) {
     int ll_size;  /* Size of the cmd linked list */
 
     /* TODO: Check for errors. */
-    getlogin_r(curr_user, LOGIN_NAME_MAX);
     pw = getpwuid(getuid());
     homedir = pw->pw_dir;
 
@@ -35,6 +34,8 @@ int main(void) {
     while (1) {
         /* Get current user and path */
         getcwd(curr_path, PATH_MAX);
+        getlogin_r(curr_user, LOGIN_NAME_MAX);
+
         /* TODO: Check for errors. */
 
         /* Print prompt */
