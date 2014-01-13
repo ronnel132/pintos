@@ -17,6 +17,10 @@ char * concat(char *str1, char *str2);
  */
 Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size);
 
+Command * init_command();
+
+void free_command(Command *cmd);
+
 char ** tokenizer(char * str);
 
 /* Takes a curr_path string, apointer to a linked list of Command structs

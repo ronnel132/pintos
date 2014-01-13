@@ -128,21 +128,10 @@ Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
     /* Initialize linked list size to 0 */
     *ll_size = 0;
 
-    /* The current command we are parsing */
-    cmd = (Command *) malloc(sizeof(Command));
-    cmd->argc = 0;
-    cmd->stdin_loc = NULL;
-    cmd->stdout_loc = NULL;
-    cmd->stderr_loc = NULL;
-    cmd->next = NULL;
+    /* Create the first command and root of our command linked list */
+    cmd = init_command();
     cmd_ll_root = cmd;
     cur_cmd = cmd;
-
-    /* Malloc failed */
-    if (cmd == NULL) {
-        fputs("Fatal error: Could not allocate memory. Aborting.\n", stderr);
-        exit(1);
-    }
 
     i = 0;
     while (tokenized[i] != NULL) {
@@ -152,20 +141,7 @@ Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
                 return NULL;
             }
             /* We are piping to a new command so create that command struct */
-            cmd = (Command *) malloc(sizeof(Command));
-
-            /* Malloc failed */
-            if (cmd == NULL) {
-                fputs("Fatal error: Could not allocate memory. Aborting.\n", stderr);
-                exit(1);
-            }
-
-            /* Initialize its fields */
-            cmd->argc = 0;
-            cmd->stdin_loc = NULL;
-            cmd->stdout_loc = NULL;
-            cmd->stderr_loc = NULL;
-            cmd->next = NULL;
+            cmd = init_command();
             cur_cmd->next = cmd;
             cur_cmd = cmd; 
             i++; 
@@ -248,6 +224,34 @@ Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
     return cmd_ll_root;
 }
 
+Command * init_command() {
+    Command * cmd;
+    cmd = (Command *) malloc(sizeof(Command));
+    if (cmd == NULL) {
+        fputs("Fatal error: Could not allocate memory. Aborting.\n", stderr);
+        exit(1);
+    }
+    cmd->process = NULL;
+    cmd->argc = 0;
+    cmd->argv = NULL;
+    cmd->stdin_loc = NULL;
+    cmd->stdout_loc = NULL;
+    cmd->stderr_loc = NULL;
+    cmd->next = NULL;
+    return cmd;
+}
+
+void free_command(Command *cmd) {
+    if (cmd != NULL) {
+        /* Most of the command structs fields are freed in the main loop,
+         * by the tokenizer. 
+         */
+        free(cmd->argv[cmd->argc]); // free the NULL at the end
+        free(cmd->argv);
+        free(cmd);
+    }
+}
+
 void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
     int i;
     pid_t pid;
@@ -256,9 +260,13 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
     int in, out, err;
     /* Array of pipe file descriptor arrays. */
     int **pipefds;
+    Command *cmd_ll_root, *nxt_cmd;
 
     /* Inspired by: 
         http://stackoverflow.com/questions/876605/multiple-child-process */
+
+    /* Store the root of the linked list. We will need this later for frees */
+    cmd_ll_root = cmd;
 
     if (num_cmds > 1) {
         /* Initialize the pipefds variable with new pipes. */
@@ -401,6 +409,14 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
                 remaining--;
             }
         }
+    }
+
+    /* Free the command structs */
+    cmd = cmd_ll_root;
+    for (i = 0; i < num_cmds; i++) {
+        nxt_cmd = cmd->next;
+        free_command(cmd);
+        cmd = nxt_cmd;
     }
 }
 
