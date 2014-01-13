@@ -7,6 +7,7 @@
 #include <limits.h>
 #include <sys/types.h>
 #include <pwd.h>
+#include <fcntl.h>
 
 #include "mysh.h"
 
@@ -69,7 +70,8 @@ int main() {
                 }
             }
         } else {
-            cmd_ll = make_cmd_ll(tokenized_input, &ll_size);
+            /* TODO: We should free the cmd_ll eventually */
+            cmd_ll = make_cmd_ll(tokenized_input, curr_path, &ll_size);
             if (cmd_ll == NULL) {
                 fputs("Invalid entry. Command not supported.\n", stderr);
             }
@@ -116,7 +118,8 @@ char * concat(char *str1, char *str2) {
     return buffer;
 }
 
-Command * make_cmd_ll(char **tokenized, int *ll_size) {
+
+Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
     int i, argv_ind;
     char **cmd_argv;
     Command *cmd, *cur_cmd, *cmd_ll_root;
@@ -177,7 +180,7 @@ Command * make_cmd_ll(char **tokenized, int *ll_size) {
                 fputs("Invalid redirect specified.\n", stderr);
                 return NULL;
             }
-            cmd->stdin_loc = strdup(tokenized[i + 1]);
+            cmd->stdin_loc = concat(concat(curr_path, "/"), strdup(tokenized[i + 1]));
             i = i + 2;
         }
         else if (strcmp(tokenized[i], ">") == 0) {
@@ -185,7 +188,7 @@ Command * make_cmd_ll(char **tokenized, int *ll_size) {
                 fputs("Invalid redirect specified.\n", stderr);
                 return NULL;
             }
-            cmd->stdout_loc = strdup(tokenized[i + 1]);
+            cmd->stdout_loc = concat(concat(curr_path, "/"), strdup(tokenized[i + 1]));
             i = i + 2;
         }
         else {
@@ -249,7 +252,9 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
     pid_t pid;
     int remaining;
     int ret_val;
-    int pipefd[2];
+    int in, out, err;
+
+//     int pipefd[2];
 
     /* Inspired by: 
         http://stackoverflow.com/questions/876605/multiple-child-process */
@@ -267,10 +272,10 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
         pid = fork();
         pids[i] = pid;
         
-        if (pipe(pipefd) == -1) {
-            fputs("Fatal error: Could not pipe. Aborting.\n", stderr);
-            exit(1);
-        }
+//         if (pipe(pipefd) == -1) {
+//             fputs("Fatal error: Could not pipe. Aborting.\n", stderr);
+//             exit(1);
+//         }
 
         if (pid < 0) {
             fputs("Fatal error: Could not fork. Aborting.\n", stderr);
@@ -278,15 +283,40 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
         }
         else if (pid == 0) {
             /* We're in child process here */
+
+            /* Set up stdin, stdout, stderr. Then redirect stdin/out/err.
+            *  Then close these fh-s, now stdin/out/err are pointing
+            *  to these locations; no need to leak fhs
+            */
+
+            /* TODO: Handle failures */
+            /* TODO: Check created file permissions */
+
+            if (cmd->stdin_loc != NULL) {
+                in = open(cmd->stdin_loc, O_RDONLY);
+                dup2(in, STDIN_FILENO);
+                close(in);
+            }
+
+            if (cmd->stdout_loc != NULL) {
+                out = open(cmd->stdout_loc, O_CREAT | O_RDWR);
+                dup2(out, STDOUT_FILENO);
+                close(out);
+            }
+
+            if (cmd->stderr_loc != NULL) {
+                err = open(cmd->stderr_loc, O_CREAT | O_RDWR);
+                dup2(err, STDERR_FILENO);
+                close(err);
+            }
+
+
+
+            /* See if cmd is in /bin/ */
             /* Close the write end, because the child is only using the read
              * end of the pipe.
              */
-            close(pipefd[1]); 
-            dup2(pipefd[0], STDIN_FILENO);
-            close(pipefd[0]);
             
-            /* TODO: Set up redirects here? */
-
             execve(concat("/bin/", cmd->process), cmd->argv, NULL);
 
             /* If we're here, execve failed. Let's try to run it on
@@ -307,10 +337,6 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
          * the pipe.
          */
         else {
-            close(pipefd[0]);
-            dup2(pipefd[1], STDOUT_FILENO);
-            close(pipefd[1]);
-
             /* Advance to next command */
             cmd = cmd->next;
         }
