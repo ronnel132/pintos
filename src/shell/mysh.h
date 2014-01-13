@@ -15,7 +15,7 @@ char * concat(char *str1, char *str2);
  * representing the sequence of commands specified by the user through 
  * redirects and pipes.
  */
-Command * make_cmd_ll(char **tokenized, int *ll_size);
+Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size);
 
 char ** tokenizer(char * str);
 

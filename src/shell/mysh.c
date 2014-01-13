@@ -70,7 +70,8 @@ int main() {
                 }
             }
         } else {
-            cmd_ll = make_cmd_ll(tokenized_input, &ll_size);
+            /* TODO: We should free the cmd_ll eventually */
+            cmd_ll = make_cmd_ll(tokenized_input, curr_path, &ll_size);
             if (cmd_ll == NULL) {
                 fputs("Invalid entry. Command not supported.\n", stderr);
             }
@@ -117,7 +118,8 @@ char * concat(char *str1, char *str2) {
     return buffer;
 }
 
-Command * make_cmd_ll(char **tokenized, int *ll_size) {
+
+Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
     int i, argv_ind;
     char **cmd_argv;
     Command *cmd, *cur_cmd, *cmd_ll_root;
@@ -178,7 +180,7 @@ Command * make_cmd_ll(char **tokenized, int *ll_size) {
                 fputs("Invalid redirect specified.\n", stderr);
                 return NULL;
             }
-            cmd->stdin_loc = strdup(tokenized[i + 1]);
+            cmd->stdin_loc = concat(concat(curr_path, "/"), strdup(tokenized[i + 1]));
             i = i + 2;
         }
         else if (strcmp(tokenized[i], ">") == 0) {
@@ -186,7 +188,7 @@ Command * make_cmd_ll(char **tokenized, int *ll_size) {
                 fputs("Invalid redirect specified.\n", stderr);
                 return NULL;
             }
-            cmd->stdout_loc = strdup(tokenized[i + 1]);
+            cmd->stdout_loc = concat(concat(curr_path, "/"), strdup(tokenized[i + 1]));
             i = i + 2;
         }
         else {
@@ -251,6 +253,7 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
     int remaining;
     int ret_val;
     int in, out, err;
+
 //     int pipefd[2];
 
     /* Inspired by: 
@@ -281,23 +284,31 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
         else if (pid == 0) {
             /* We're in child process here */
 
-            /* Set up stdin, stdout, stderr */
-            /* TODO: Handle failures */
-            in = open(cmd->stdout_loc, O_RDONLY);
-            out = open(cmd->stdin_loc, O_WRONLY);
-            err = open(cmd->stderr_loc, O_WRONLY);
-
-            /* Redirect stdin/out/err */
-            dup2(in, STDIN_FILENO);
-            dup2(out, STDOUT_FILENO);
-            dup2(err, STDERR_FILENO);
-
-            /* Close these fh-s, now stdin/out/err are pointing
+            /* Set up stdin, stdout, stderr. Then redirect stdin/out/err.
+            *  Then close these fh-s, now stdin/out/err are pointing
             *  to these locations; no need to leak fhs
             */
-            close(in);
-            close(out);
-            close(err);
+
+            /* TODO: Handle failures */
+
+            if (cmd->stdin_loc != NULL) {
+                in = open(cmd->stdin_loc, O_RDONLY);
+                dup2(in, STDIN_FILENO);
+                close(in);
+            }
+
+            if (cmd->stdout_loc != NULL) {
+                out = open(cmd->stdout_loc, O_WRONLY | O_CREAT);
+                dup2(out, STDOUT_FILENO);
+                close(out);
+            }
+
+            if (cmd->stderr_loc != NULL) {
+                err = open(cmd->stderr_loc, O_WRONLY | O_CREAT);
+                dup2(err, STDERR_FILENO);
+                close(err);
+            }
+
 
 
             /* See if cmd is in /bin/ */
