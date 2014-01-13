@@ -319,6 +319,8 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
             */
 
             /* Child should close the write end of the pipe */
+            /* TODO: Properly manage pipes. We don't need to close pipes that
+            *  were never opened, and we need to close ALL relevant handlers */
             close(pipefds[i][1]);
 
             /* TODO: Handle failures */
