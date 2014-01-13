@@ -418,12 +418,20 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
     }
 
     /* Free the command structs */
-//     cmd = cmd_ll_root;
-//     for (i = 0; i < num_cmds; i++) {
-//         nxt_cmd = cmd->next;
-//         free_command(cmd);
-//         cmd = nxt_cmd;
-//     }
+    cmd = cmd_ll_root;
+    for (i = 0; i < num_cmds; i++) {
+        nxt_cmd = cmd->next;
+        free_command(cmd);
+        cmd = nxt_cmd;
+    }
+
+    /* Free the pipe array */
+    if (num_cmds > 1) {
+        for (i = 0; i < (num_cmds - 1); i++) {
+            free(pipefds[i]);
+        }
+        free(pipefds);
+    }
 }
 
 char ** tokenizer(char * str) {
