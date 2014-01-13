@@ -219,6 +219,7 @@ Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
     }
     /* Set the last command struct's argv */
     cur_cmd->argv = cmd_argv;
+    cur_cmd->argv[cur_cmd->argc] = NULL;
     (*ll_size)++;
     
     return cmd_ll_root;
