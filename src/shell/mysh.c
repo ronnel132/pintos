@@ -21,7 +21,7 @@ int main() {
     char *homedir;
 
     char input[MAX_INPUT_LENGTH];
-    char **tokenized_input;
+    char **tokenized_input, **tokenized_it;
 
     Command *cmd_ll;  /* The cmd linked list */
     int ll_size;  /* Size of the cmd linked list */
@@ -70,9 +70,22 @@ int main() {
                 }
             }
         } else {
-            cmd_ll = make_cmd_ll(input, &ll_size);
-            exec_cmd(curr_path, cmd_ll, ll_size);
+            cmd_ll = make_cmd_ll(tokenized_input, &ll_size);
+            if (cmd_ll == NULL) {
+                fputs("Invalid entry. Command not supported.\n", stderr);
+            }
+            else {
+                exec_cmd(curr_path, cmd_ll, ll_size);
+            }
         }
+
+        /* Free tokenized input */
+        tokenized_it = tokenized_input;
+        while (*tokenized_it != NULL) {
+            free(*tokenized_it);
+            tokenized_it++;
+        }
+        free(tokenized_input);
     }
 
     return 0;
@@ -104,19 +117,14 @@ char * concat(char *str1, char *str2) {
     return buffer;
 }
 
-Command * make_cmd_ll(char *input, int *ll_size) {
+Command * make_cmd_ll(char **tokenized, int *ll_size) {
     int i, argv_ind;
-    char **tokenized, **cmd_argv;
+    char **cmd_argv;
     Command *cmd, *cur_cmd, *cmd_ll_root;
 
-    if (strlen(input) == 0) {
-        return NULL;
-    }
 
-    /* Initialize size to 0 */
+    /* Initialize linked list size to 0 */
     *ll_size = 0;
-
-    tokenized = tokenizer(input);
 
     /* The current command we are parsing */
     cmd = (Command *) malloc(sizeof(Command));
@@ -136,6 +144,10 @@ Command * make_cmd_ll(char *input, int *ll_size) {
     i = 0;
     while (tokenized[i] != NULL) {
         if (strcmp(tokenized[i], "|") == 0) {
+            if (tokenized[i + 1] == NULL) {
+                fputs("Invalid pipe specified.\n", stderr);
+                return NULL;
+            }
             /* We are piping to a new command so create that command struct */
             cmd = (Command *) malloc(sizeof(Command));
 
@@ -158,15 +170,23 @@ Command * make_cmd_ll(char *input, int *ll_size) {
         }
         
         if ((i == 0) || (strcmp(tokenized[i - 1], "|") == 0)) {
-            cmd->process = tokenized[i];
+            cmd->process = strdup(tokenized[i]);
         }
 
         if (strcmp(tokenized[i], "<") == 0) {
-            cmd->stdin_loc = tokenized[i + 1];
+            if (tokenized[i + 1] == NULL) {
+                fputs("Invalid redirect specified.\n", stderr);
+                return NULL;
+            }
+            cmd->stdin_loc = strdup(tokenized[i + 1]);
             i = i + 2;
         }
         else if (strcmp(tokenized[i], ">") == 0) {
-            cmd->stdout_loc = tokenized[i + 1];
+            if (tokenized[i + 1] == NULL) {
+                fputs("Invalid redirect specified.\n", stderr);
+                return NULL;
+            }
+            cmd->stdout_loc = strdup(tokenized[i + 1]);
             i = i + 2;
         }
         else {
@@ -207,15 +227,13 @@ Command * make_cmd_ll(char *input, int *ll_size) {
         }
         if (strcmp(tokenized[i], ">") == 0 
             || strcmp(tokenized[i], "<") == 0) {
-            free(tokenized[i]);
             i = i + 2;
         }
         else if (strcmp(tokenized[i], "|") == 0) {
-            free(tokenized[i]);
             i++;
         }
         else {
-            cmd_argv[argv_ind] = tokenized[i];
+            cmd_argv[argv_ind] = strdup(tokenized[i]);
             i++;
             argv_ind++;
         }
@@ -233,6 +251,7 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
     int remaining;
     int ret_val;
     int in, out, err;
+//     int pipefd[2];
 
     /* Inspired by: 
         http://stackoverflow.com/questions/876605/multiple-child-process */
@@ -249,6 +268,11 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
     for (i = 0; i < num_cmds; i++) {
         pid = fork();
         pids[i] = pid;
+        
+        if (pipe(pipefd) == -1) {
+            fputs("Fatal error: Could not pipe. Aborting.\n", stderr);
+            exit(1);
+        }
 
         if (pid < 0) {
             fputs("Fatal error: Could not fork. Aborting.\n", stderr);
@@ -277,6 +301,15 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
 
 
             /* See if cmd is in /bin/ */
+            /* Close the write end, because the child is only using the read
+             * end of the pipe.
+             */
+//             close(pipefd[1]); 
+//             dup2(pipefd[0], STDIN_FILENO);
+//             close(pipefd[0])
+            
+            /* TODO: Set up redirects here? */
+
             execve(concat("/bin/", cmd->process), cmd->argv, NULL);
 
             /* If we're here, execve failed. Let's try to run it on
@@ -292,6 +325,13 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
             /* TODO: If one command fails, should all of them fail? */
 
         }
+        /* We're in the parent process here */
+        /* Close the read end, because the parent process only writes to
+         * the pipe.
+         */
+        close(pipefd[0]);
+        dup2(pipefd[1], STDOUT_FILENO);
+        close(pipefd[1]);
 
         /* Advance to next command */
         cmd = cmd->next;

@@ -11,7 +11,11 @@ typedef struct command {
 /* Concatenates two strings str1 and str2 */
 char * concat(char *str1, char *str2);
 
-Command * make_cmd_ll(char *input, int *ll_size);
+/* Takes in a tokenized input, returns a linked list of Command structs
+ * representing the sequence of commands specified by the user through 
+ * redirects and pipes.
+ */
+Command * make_cmd_ll(char **tokenized, int *ll_size);
 
 char ** tokenizer(char * str);
 
