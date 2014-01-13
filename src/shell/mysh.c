@@ -341,9 +341,11 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
             if (num_cmds > 1) {
                 if ((i == 0) && cmd->stdout_loc == NULL) {
                     dup2(pipefds[0][1], STDOUT_FILENO);
+                    close(pipefds[0][1]);
                 }
                 else if ((i == num_cmds - 1) && cmd->stdin_loc == NULL) {
                     dup2(pipefds[num_cmds - 2][0], STDIN_FILENO);
+                    close(pipefds[num_cmds - 2][0]);
                 }
                 else {
                     /* Since this command is in-between two pipes, it's STDIN 
@@ -352,7 +354,10 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
                      */
                     if (cmd->stdin_loc == NULL && cmd->stdout_loc == NULL) {
                         dup2(pipefds[i - 1][0], STDIN_FILENO);
+                        close(pipefds[i - 1][0]);
+
                         dup2(pipefds[i][1], STDOUT_FILENO);
+                        close(pipefds[i][1]);
                     }
                 }
             }
