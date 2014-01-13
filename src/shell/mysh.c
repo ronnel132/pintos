@@ -130,6 +130,7 @@ Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
 
     /* The current command we are parsing */
     cmd = (Command *) malloc(sizeof(Command));
+    cmd->argc = 0;
     cmd->stdin_loc = NULL;
     cmd->stdout_loc = NULL;
     cmd->stderr_loc = NULL;
@@ -253,11 +254,34 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
     int remaining;
     int ret_val;
     int in, out, err;
-
-//     int pipefd[2];
+    /* Array of pipe file descriptor arrays. */
+    int **pipefds;
 
     /* Inspired by: 
         http://stackoverflow.com/questions/876605/multiple-child-process */
+
+    if (num_cmds > 1) {
+        /* Initialize the pipefds variable with new pipes. */
+        // Number of will be num_cmds - 1: One pipe between each pair adjacent pair of commands.
+        pipefds = (int **) malloc(sizeof(int *) * (num_cmds - 1));
+
+        if (pipefds == NULL) {
+            fputs("Failure to create pipes. Aborting.\n", stderr);
+            exit(1);
+        }
+
+        for (i = 0; i < (num_cmds - 1); i++) {
+            pipefds[i] = (int *) malloc(sizeof(int) * 2);
+            if (pipefds[i] == NULL) {
+                fputs("Failure to create pipe. Aborting.\n", stderr);
+                exit(1);
+            }
+            if (pipe(pipefds[i]) == -1) {
+                fputs("Failure to create pipe. Aborting.\n", stderr);
+                exit(1);
+            }
+        }
+    }
 
     /* Array of children pids */
     pid_t * pids = (pid_t *) malloc(num_cmds * sizeof(pid_t));
@@ -272,11 +296,6 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
         pid = fork();
         pids[i] = pid;
         
-//         if (pipe(pipefd) == -1) {
-//             fputs("Fatal error: Could not pipe. Aborting.\n", stderr);
-//             exit(1);
-//         }
-
         if (pid < 0) {
             fputs("Fatal error: Could not fork. Aborting.\n", stderr);
             exit(1);
@@ -310,7 +329,25 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
                 close(err);
             }
 
-
+            /* Set up piping between commands */
+            if (num_cmds > 1) {
+                if ((i == 0) && cmd->stdout_loc == NULL) {
+                    dup2(pipefds[0][1], STDOUT_FILENO);
+                }
+                else if ((i == num_cmds - 1) && cmd->stdin_loc == NULL) {
+                    dup2(pipefds[num_cmds - 2][0], STDIN_FILENO);
+                }
+                else {
+                    /* Since this command is in-between two pipes, it's STDIN 
+                     * and STDOUT are provided by the commands before and
+                     * after this one.
+                     */
+                    if (cmd->stdin_loc == NULL && cmd->stdout_loc == NULL) {
+                        dup2(pipefds[i - 1][0], STDIN_FILENO);
+                        dup2(pipefds[i][1], STDOUT_FILENO);
+                    }
+                }
+            }
 
             /* See if cmd is in /bin/ */
             /* Close the write end, because the child is only using the read
@@ -349,7 +386,6 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
 
     /* While there's still children alive */
     while (remaining != 0) {
-
         /* For each spawned child */
         for (i = 0; i < num_cmds; i++) {
 
