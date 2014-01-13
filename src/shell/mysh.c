@@ -283,7 +283,7 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
              */
             close(pipefd[1]); 
             dup2(pipefd[0], STDIN_FILENO);
-            close(pipefd[0])
+            close(pipefd[0]);
             
             /* TODO: Set up redirects here? */
 
@@ -306,12 +306,14 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
         /* Close the read end, because the parent process only writes to
          * the pipe.
          */
-        close(pipefd[0]);
-        dup2(pipefd[1], STDOUT_FILENO);
-        close(pipefd[1]);
+        else {
+            close(pipefd[0]);
+            dup2(pipefd[1], STDOUT_FILENO);
+            close(pipefd[1]);
 
-        /* Advance to next command */
-        cmd = cmd->next;
+            /* Advance to next command */
+            cmd = cmd->next;
+        }
     }
 
     /* Wait for children (Note that we're at parent process here, since
