@@ -317,6 +317,9 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
             *  to these locations; no need to leak fhs
             */
 
+            /* Child should close the write end of the pipe */
+            close(pipefds[i][1]);
+
             /* TODO: Handle failures */
             /* TODO: Check created file permissions */
 
@@ -388,6 +391,8 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
          * the pipe.
          */
         else {
+            close(pipefds[0][0]);
+
             /* Advance to next command */
             cmd = cmd->next;
         }
