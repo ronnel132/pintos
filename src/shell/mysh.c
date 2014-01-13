@@ -269,10 +269,10 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
         pid = fork();
         pids[i] = pid;
         
-        if (pipe(pipefd) == -1) {
-            fputs("Fatal error: Could not pipe. Aborting.\n", stderr);
-            exit(1);
-        }
+//         if (pipe(pipefd) == -1) {
+//             fputs("Fatal error: Could not pipe. Aborting.\n", stderr);
+//             exit(1);
+//         }
 
         if (pid < 0) {
             fputs("Fatal error: Could not fork. Aborting.\n", stderr);
@@ -329,9 +329,9 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
         /* Close the read end, because the parent process only writes to
          * the pipe.
          */
-        close(pipefd[0]);
-        dup2(pipefd[1], STDOUT_FILENO);
-        close(pipefd[1]);
+//         close(pipefd[0]);
+//         dup2(pipefd[1], STDOUT_FILENO);
+//         close(pipefd[1]);
 
         /* Advance to next command */
         cmd = cmd->next;
