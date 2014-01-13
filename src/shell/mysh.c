@@ -290,6 +290,7 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
             */
 
             /* TODO: Handle failures */
+            /* TODO: Check created file permissions */
 
             if (cmd->stdin_loc != NULL) {
                 in = open(cmd->stdin_loc, O_RDONLY);
@@ -304,7 +305,7 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
             }
 
             if (cmd->stderr_loc != NULL) {
-                err = open(cmd->stderr_loc, O_CREAT, O_RDWR);
+                err = open(cmd->stderr_loc, O_CREAT | O_RDWR);
                 dup2(err, STDERR_FILENO);
                 close(err);
             }
