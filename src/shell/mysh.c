@@ -7,6 +7,7 @@
 #include <limits.h>
 #include <sys/types.h>
 #include <pwd.h>
+#include <fcntl.h>
 
 #include "mysh.h"
 
@@ -231,6 +232,7 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
     pid_t pid;
     int remaining;
     int ret_val;
+    int in, out, err;
 
     /* Inspired by: 
         http://stackoverflow.com/questions/876605/multiple-child-process */
@@ -254,6 +256,27 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
         }
         else if (pid == 0) {
             /* We're in child process here */
+
+            /* Set up stdin, stdout, stderr */
+            /* TODO: Handle failures */
+            in = open(cmd->stdout_loc, O_RDONLY);
+            out = open(cmd->stdin_loc, O_WRONLY);
+            err = open(cmd->stderr_loc, O_WRONLY);
+
+            /* Redirect stdin/out/err */
+            dup2(in, STDIN_FILENO);
+            dup2(out, STDOUT_FILENO);
+            dup2(err, STDERR_FILENO);
+
+            /* Close these fh-s, now stdin/out/err are pointing
+            *  to these locations; no need to leak fhs
+            */
+            close(in);
+            close(out);
+            close(err);
+
+
+            /* See if cmd is in /bin/ */
             execve(concat("/bin/", cmd->process), cmd->argv, NULL);
 
             /* If we're here, execve failed. Let's try to run it on
