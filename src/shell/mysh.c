@@ -298,13 +298,13 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
             }
 
             if (cmd->stdout_loc != NULL) {
-                out = open(cmd->stdout_loc, O_WRONLY | O_CREAT);
+                out = open(cmd->stdout_loc, O_CREAT | O_RDWR);
                 dup2(out, STDOUT_FILENO);
                 close(out);
             }
 
             if (cmd->stderr_loc != NULL) {
-                err = open(cmd->stderr_loc, O_WRONLY | O_CREAT);
+                err = open(cmd->stderr_loc, O_CREAT, O_RDWR);
                 dup2(err, STDERR_FILENO);
                 close(err);
             }
