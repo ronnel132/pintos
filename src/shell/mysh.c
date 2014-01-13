@@ -249,6 +249,7 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
     pid_t pid;
     int remaining;
     int ret_val;
+    int pipefd[2];
 
     /* Inspired by: 
         http://stackoverflow.com/questions/876605/multiple-child-process */
@@ -265,6 +266,11 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
     for (i = 0; i < num_cmds; i++) {
         pid = fork();
         pids[i] = pid;
+        
+        if (pipe(pipefd) == -1) {
+            fputs("Fatal error: Could not pipe. Aborting.\n", stderr);
+            exit(1);
+        }
 
         if (pid < 0) {
             fputs("Fatal error: Could not fork. Aborting.\n", stderr);
@@ -272,6 +278,15 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
         }
         else if (pid == 0) {
             /* We're in child process here */
+            /* Close the write end, because the child is only using the read
+             * end of the pipe.
+             */
+            close(pipefd[1]); 
+            dup2(pipefd[0], STDIN_FILENO);
+            close(pipefd[0])
+            
+            /* TODO: Set up redirects here? */
+
             execve(concat("/bin/", cmd->process), cmd->argv, NULL);
 
             /* If we're here, execve failed. Let's try to run it on
@@ -287,6 +302,13 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
             /* TODO: If one command fails, should all of them fail? */
 
         }
+        /* We're in the parent process here */
+        /* Close the read end, because the parent process only writes to
+         * the pipe.
+         */
+        close(pipefd[0]);
+        dup2(pipefd[1], STDOUT_FILENO);
+        close(pipefd[1]);
 
         /* Advance to next command */
         cmd = cmd->next;
