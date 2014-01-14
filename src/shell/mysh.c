@@ -280,19 +280,19 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
     
     for (i = 0; i < num_cmds; i++) {
 
+        /* Only set up pipes if there is more than one command. */
         if (num_cmds > 1) {
+            /* If i is 0, then we only need to set up pipefd, because there 
+             * is no previous pipe (prev_pipefd) yet.
+             */
             if (i == 0) {
                 pipe(pipefd);
             }
             else if (i == num_cmds - 1) {
-                close(prev_pipefd[0]);
-                close(prev_pipefd[1]);
                 prev_pipefd[0] = pipefd[0];
                 prev_pipefd[1] = pipefd[1];
             }
             else {
-                close(prev_pipefd[0]);
-                close(prev_pipefd[1]);
                 prev_pipefd[0] = pipefd[0];
                 prev_pipefd[1] = pipefd[1];
                 pipe(pipefd);
@@ -392,7 +392,7 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
          */
         else {
             if (num_cmds > 1) {
-                if (i == num_cmds - 1) {
+                if (i != 0) {
                     close(prev_pipefd[0]);
                     close(prev_pipefd[1]);
                 }
