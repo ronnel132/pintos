@@ -285,10 +285,14 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
                 pipe(pipefd);
             }
             else if (i == num_cmds - 1) {
+                close(prev_pipefd[0]);
+                close(prev_pipefd[1]);
                 prev_pipefd[0] = pipefd[0];
                 prev_pipefd[1] = pipefd[1];
             }
             else {
+                close(prev_pipefd[0]);
+                close(prev_pipefd[1]);
                 prev_pipefd[0] = pipefd[0];
                 prev_pipefd[1] = pipefd[1];
                 pipe(pipefd);
