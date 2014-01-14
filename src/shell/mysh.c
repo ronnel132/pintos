@@ -259,8 +259,8 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
     int remaining;
     int ret_val;
     int in, out, err;
-    /* Array of pipe file descriptor arrays. */
-    int **pipefds;
+    int pipefd[2];
+    int prev_pipefd[2];
     Command *cmd_ll_root, *nxt_cmd;
 
     /* Inspired by: 
@@ -268,29 +268,6 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
 
     /* Store the root of the linked list. We will need this later for frees */
     cmd_ll_root = cmd;
-
-    if (num_cmds > 1) {
-        /* Initialize the pipefds variable with new pipes. */
-        // Number of will be num_cmds - 1: One pipe between each pair adjacent pair of commands.
-        pipefds = (int **) malloc(sizeof(int *) * (num_cmds - 1));
-
-        if (pipefds == NULL) {
-            fputs("Failure to create pipes. Aborting.\n", stderr);
-            exit(1);
-        }
-
-        for (i = 0; i < (num_cmds - 1); i++) {
-            pipefds[i] = (int *) malloc(sizeof(int) * 2);
-            if (pipefds[i] == NULL) {
-                fputs("Failure to create pipe. Aborting.\n", stderr);
-                exit(1);
-            }
-            if (pipe(pipefds[i]) == -1) {
-                fputs("Failure to create pipe. Aborting.\n", stderr);
-                exit(1);
-            }
-        }
-    }
 
     /* Array of children pids */
     pid_t * pids = (pid_t *) malloc(num_cmds * sizeof(pid_t));
@@ -302,9 +279,28 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
     }
     
     for (i = 0; i < num_cmds; i++) {
+
+        if (num_cmds > 1) {
+            if (i == 0) {
+                pipe(pipefd);
+            }
+            else if (i == num_cmds - 1) {
+                prev_pipefd[0] = pipefd[0];
+                prev_pipefd[1] = pipefd[1];
+            }
+            else {
+                prev_pipefd[0] = pipefd[0];
+                prev_pipefd[1] = pipefd[1];
+                pipe(pipefd);
+            }
+        }
         pid = fork();
         pids[i] = pid;
-        
+
+        /* Create the pipe for communication between the ith and (i + 1)th
+         * processes. 
+         */
+
         if (pid < 0) {
             fputs("Fatal error: Could not fork. Aborting.\n", stderr);
             exit(1);
@@ -316,13 +312,6 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
             *  Then close these fh-s, now stdin/out/err are pointing
             *  to these locations; no need to leak fhs
             */
-
-            /* Child should close the write end of the pipe */
-            /* TODO: Properly manage pipes. We don't need to close pipes that
-            *  were never opened, and we need to close ALL relevant handlers */
-            if (num_cmds > 1) {
-                close(pipefds[i][1]);
-            }
 
             /* TODO: Handle failures */
             /* TODO: Check created file permissions */
@@ -345,30 +334,27 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
                 close(err);
             }
 
-            /* Set up piping between commands */
             if (num_cmds > 1) {
-                if ((i == 0) && cmd->stdout_loc == NULL) {
-                    dup2(pipefds[0][1], STDOUT_FILENO);
-                    close(pipefds[0][1]);
+                if (i == 0) {
+                    close(pipefd[0]);
+                    dup2(pipefd[1], STDOUT_FILENO);
+                    close(pipefd[1]);
                 }
-                else if ((i == num_cmds - 1) && cmd->stdin_loc == NULL) {
-                    dup2(pipefds[num_cmds - 2][0], STDIN_FILENO);
-                    close(pipefds[num_cmds - 2][0]);
+                else if (i == num_cmds - 1) {
+                    close(prev_pipefd[1]);
+                    dup2(prev_pipefd[0], STDIN_FILENO);
+                    close(prev_pipefd[0]);
                 }
                 else {
-                    /* Since this command is in-between two pipes, it's STDIN 
-                     * and STDOUT are provided by the commands before and
-                     * after this one.
-                     */
-                    if (cmd->stdin_loc == NULL && cmd->stdout_loc == NULL) {
-                        dup2(pipefds[i - 1][0], STDIN_FILENO);
-                        close(pipefds[i - 1][0]);
-
-                        dup2(pipefds[i][1], STDOUT_FILENO);
-                        close(pipefds[i][1]);
-                    }
+                    close(prev_pipefd[1]);
+                    close(pipefd[0]);
+                    dup2(prev_pipefd[0], STDIN_FILENO);
+                    dup2(pipefd[1], STDOUT_FILENO);
+                    close(prev_pipefd[0]);
+                    close(pipefd[1]);
                 }
             }
+
 
             /* See if cmd is in /bin/ */
             /* Close the write end, because the child is only using the read
@@ -402,7 +388,10 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
          */
         else {
             if (num_cmds > 1) {
-                close(pipefds[0][0]);
+                if (i == num_cmds - 1) {
+                    close(prev_pipefd[0]);
+                    close(prev_pipefd[1]);
+                }
             }
             /* Advance to next command */
             cmd = cmd->next;
@@ -439,14 +428,6 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
         nxt_cmd = cmd->next;
         free_command(cmd);
         cmd = nxt_cmd;
-    }
-
-    /* Free the pipe array */
-    if (num_cmds > 1) {
-        for (i = 0; i < (num_cmds - 1); i++) {
-            free(pipefds[i]);
-        }
-        free(pipefds);
     }
 }
 
