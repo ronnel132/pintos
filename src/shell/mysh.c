@@ -71,7 +71,6 @@ int main(void) {
                 }
             }
         } else {
-            /* TODO: We should free the cmd_ll eventually */
             cmd_ll = make_cmd_ll(tokenized_input, curr_path, &ll_size);
             if (cmd_ll == NULL) {
                 fputs("Invalid entry. Command not supported.\n", stderr);
@@ -321,7 +320,9 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
             /* Child should close the write end of the pipe */
             /* TODO: Properly manage pipes. We don't need to close pipes that
             *  were never opened, and we need to close ALL relevant handlers */
-            close(pipefds[i][1]);
+            if (num_cmds > 1) {
+                close(pipefds[i][1]);
+            }
 
             /* TODO: Handle failures */
             /* TODO: Check created file permissions */
@@ -333,13 +334,13 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
             }
 
             if (cmd->stdout_loc != NULL) {
-                out = open(cmd->stdout_loc, O_CREAT | O_RDWR);
+                out = open(cmd->stdout_loc, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
                 dup2(out, STDOUT_FILENO);
                 close(out);
             }
 
             if (cmd->stderr_loc != NULL) {
-                err = open(cmd->stderr_loc, O_CREAT | O_RDWR);
+                err = open(cmd->stderr_loc, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
                 dup2(err, STDERR_FILENO);
                 close(err);
             }
@@ -394,8 +395,9 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
          * the pipe.
          */
         else {
-            close(pipefds[0][0]);
-
+            if (num_cmds > 1) {
+                close(pipefds[0][0]);
+            }
             /* Advance to next command */
             cmd = cmd->next;
         }
