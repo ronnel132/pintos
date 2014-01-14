@@ -374,6 +374,12 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
             execve(concat("/bin/", cmd->process), cmd->argv, NULL);
 
             /* If we're here, execve failed. Let's try to run it on
+            *  /usr/bin/
+            */
+
+            execve(concat("/usr/bin/", cmd->process), cmd->argv, NULL);
+
+            /* If we're here, execve failed. Let's try to run it on
             *  current wd
             */
 
