@@ -384,6 +384,13 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
             }
 
 
+            /* Yeah, concat() mallocs, but we found no good way to
+            *  free that pointer because of execve(). Anyway the children should
+            *  exit at some point, so this memory leak isn't really an issue in
+            *  the long run, just each child will consume a few more bytes in the
+            *  heap during it's lifespan
+            */
+
             /* See if cmd is in /bin/ */
             /* Close the write end, because the child is only using the read
              * end of the pipe.
