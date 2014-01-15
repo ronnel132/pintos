@@ -286,7 +286,10 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
              * is no previous pipe (prev_pipefd) yet.
              */
             if (i == 0) {
-                pipe(pipefd);
+                if (pipe(pipefd) == -1) {
+                    fputs("Fatal error: Unable to create pipe. Aborting.\n", stderr);
+                    exit(1);
+                }
             }
             else if (i == num_cmds - 1) {
                 prev_pipefd[0] = pipefd[0];
@@ -295,7 +298,10 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
             else {
                 prev_pipefd[0] = pipefd[0];
                 prev_pipefd[1] = pipefd[1];
-                pipe(pipefd);
+                if (pipe(pipefd) == -1) {
+                    fputs("Fatal error: Unable to create pipe. Aborting.\n", stderr);
+                    exit(1);
+                }
             }
         }
         pid = fork();
@@ -321,7 +327,7 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
             /* TODO: Check created file permissions */
 
             if (cmd->stdin_loc != NULL) {
-                in = open(cmd->stdin_loc, O_RDONLY);
+                in = open(cmd->stdin_loc, O_RDWR, S_IRUSR, S_IWUSR);
                 dup2(in, STDIN_FILENO);
                 close(in);
             }
