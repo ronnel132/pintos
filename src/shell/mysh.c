@@ -410,13 +410,10 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
             /* TODO: If one command fails, should all of them fail? */
 
         }
-        /* We're in the parent process here */
-        /* Close the read end, because the parent process only writes to
-         * the pipe.
-         */
         else {
             if (num_cmds > 1) {
                 if (i != 0) {
+                    /* In parent we always close the pipe, it doesn't use it */
                     close(prev_pipefd[0]);
                     close(prev_pipefd[1]);
                 }
