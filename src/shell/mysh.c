@@ -170,7 +170,7 @@ Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
         }
         else {
             i++;
-            cmd->argc++;
+            (cmd->argc)++;
         }
     }
     
@@ -193,7 +193,7 @@ Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
             cur_cmd->argv[argv_ind] = NULL;
             cur_cmd = cur_cmd->next;
             cmd_argv = (char **) malloc(sizeof(char *) * 
-                (cmd_ll_root->argc + 1));
+                (cur_cmd->argc + 1));
 
             /* Malloc failed */
             if (cmd_argv == NULL) {
@@ -243,11 +243,14 @@ Command * init_command() {
 }
 
 void free_command(Command *cmd) {
+    int i;
     if (cmd != NULL) {
         /* Most of the command structs fields are freed in the main loop,
          * by the tokenizer. 
          */
-        free(cmd->argv[cmd->argc]); // free the NULL at the end
+        for (i = 0; i < cmd->argc; i++) {
+            free(cmd->argv[i]);
+        }
         free(cmd->argv);
         free(cmd);
     }
