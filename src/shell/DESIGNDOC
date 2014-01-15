@@ -67,7 +67,7 @@ copy pipefd into an int[2] array called prev_pipefd. We then initialize a
 new pipe with pipefd. Then, child "b" is forked. We dup2 the read end of 
 prev_pipefd (which is piping data from child "a") into STDIN_FILENO. We dup2 
 the write end of pipefd into child "b"'s STDOUT_FILENO. In the parent process 
-after forking child "b", we close prev_pipefd (since we don't need it anymore)
+after forking child "b", we close prev_pipefd (since we don't need it)
 and then before forking child "c", we copy pipefd into prev_pipefd, and since
 we have reached the last command now, we don't create any more pipes. After
 forking child "c", we dup2 prev_pipefd (which is piping data out of child "b")
