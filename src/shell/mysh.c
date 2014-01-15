@@ -15,13 +15,15 @@
 #define MAX_INPUT_LENGTH 1024
 
 int main(void) {
+    int i;
     char curr_path[PATH_MAX];
     char curr_user[LOGIN_NAME_MAX];
     struct passwd *pw;
     char *homedir;
 
     char input[MAX_INPUT_LENGTH];
-    char **tokenized_input, **tokenized_it;
+    char **tokenized_input;
+//     **tokenized_it;
 
     Command *cmd_ll;  /* The cmd linked list */
     int ll_size;  /* Size of the cmd linked list */
@@ -81,13 +83,22 @@ int main(void) {
         }
 
         /* Free tokenized input */
-        tokenized_it = tokenized_input;
-        while (*tokenized_it != NULL) {
-            free(*tokenized_it);
-            tokenized_it++;
+        i = 0;
+        while (tokenized_input[i] != NULL) {
+            free(tokenized_input[i]);
+            i++;
         }
         free(tokenized_input);
     }
+    /* Try to free tokenized_input again just in case we broke from the while 
+     * loop above without freeing. 
+     */
+    i = 0;
+    while (tokenized_input[i] != NULL) {
+        free(tokenized_input[i]);
+        i++;
+    }
+    free(tokenized_input);
 
     return 0;
 }

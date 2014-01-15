@@ -1,0 +1,217 @@
+USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root         1  0.0  0.0  24564  1820 ?        Ss   Jan11   0:01 /sbin/init
+root         2  0.0  0.0      0     0 ?        S    Jan11   0:00 [kthreadd]
+root         3  0.0  0.0      0     0 ?        S    Jan11   0:14 [ksoftirqd/0]
+root         6  0.0  0.0      0     0 ?        S    Jan11   0:02 [migration/0]
+root         7  0.0  0.0      0     0 ?        S    Jan11   0:00 [watchdog/0]
+root        20  0.0  0.0      0     0 ?        S<   Jan11   0:00 [cpuset]
+root        21  0.0  0.0      0     0 ?        S<   Jan11   0:00 [khelper]
+root        22  0.0  0.0      0     0 ?        S    Jan11   0:00 [kdevtmpfs]
+root        23  0.0  0.0      0     0 ?        S<   Jan11   0:00 [netns]
+root        25  0.0  0.0      0     0 ?        S    Jan11   0:00 [sync_supers]
+root        26  0.0  0.0      0     0 ?        S    Jan11   0:00 [bdi-default]
+root        27  0.0  0.0      0     0 ?        S<   Jan11   0:00 [kintegrityd]
+root        28  0.0  0.0      0     0 ?        S<   Jan11   0:00 [kblockd]
+root        29  0.0  0.0      0     0 ?        S<   Jan11   0:00 [ata_sff]
+root        30  0.0  0.0      0     0 ?        S    Jan11   0:00 [khubd]
+root        31  0.0  0.0      0     0 ?        S<   Jan11   0:00 [md]
+root        34  0.0  0.0      0     0 ?        S    Jan11   0:00 [khungtaskd]
+root        35  0.0  0.0      0     0 ?        S    Jan11   0:05 [kswapd0]
+root        36  0.0  0.0      0     0 ?        SN   Jan11   0:00 [ksmd]
+root        37  0.0  0.0      0     0 ?        SN   Jan11   0:00 [khugepaged]
+root        38  0.0  0.0      0     0 ?        S    Jan11   0:00 [fsnotify_mark]
+root        39  0.0  0.0      0     0 ?        S    Jan11   0:00 [ecryptfs-kthrea]
+root        40  0.0  0.0      0     0 ?        S<   Jan11   0:00 [crypto]
+root        49  0.0  0.0      0     0 ?        S<   Jan11   0:00 [kthrotld]
+root        52  0.0  0.0      0     0 ?        S    Jan11   0:00 [scsi_eh_0]
+root        53  0.0  0.0      0     0 ?        S    Jan11   0:00 [scsi_eh_1]
+root        54  0.0  0.0      0     0 ?        S    Jan11   0:00 [scsi_eh_2]
+root        55  0.0  0.0      0     0 ?        S    Jan11   0:00 [scsi_eh_3]
+root        61  0.0  0.0      0     0 ?        S<   Jan11   0:00 [binder]
+root        80  0.0  0.0      0     0 ?        S<   Jan11   0:00 [deferwq]
+root        81  0.0  0.0      0     0 ?        S<   Jan11   0:00 [charger_manager]
+root        82  0.0  0.0      0     0 ?        S<   Jan11   0:00 [devfreq_wq]
+root       236  0.0  0.0      0     0 ?        S    Jan11   0:05 [jbd2/sda6-8]
+root       237  0.0  0.0      0     0 ?        S<   Jan11   0:00 [ext4-dio-unwrit]
+root       322  0.0  0.0  17232   668 ?        S    Jan11   0:00 upstart-udev-bridge --daemon
+root       324  0.0  0.0  21864   764 ?        Ss   Jan11   0:00 /sbin/udevd --daemon
+root       409  0.0  0.0      0     0 ?        S<   Jan11   0:00 [cfg80211]
+root       446  0.0  0.0      0     0 ?        S<   Jan11   0:00 [kpsmoused]
+root       515  0.0  0.0      0     0 ?        S    13:03   0:01 [kworker/u:4]
+root       529  0.0  0.0      0     0 ?        S    13:03   0:01 [kworker/u:18]
+root       530  0.0  0.0      0     0 ?        S    13:03   0:00 [kworker/u:19]
+root       537  0.0  0.0      0     0 ?        S    16:10   0:00 [migration/1]
+root       539  0.0  0.0      0     0 ?        S    16:10   0:00 [ksoftirqd/1]
+root       540  0.0  0.0      0     0 ?        S    16:10   0:00 [watchdog/1]
+root       541  0.0  0.0      0     0 ?        S    16:10   0:00 [migration/2]
+root       542  0.0  0.0      0     0 ?        S    16:10   0:00 [kworker/2:1]
+root       543  0.0  0.0      0     0 ?        S    16:10   0:00 [ksoftirqd/2]
+root       544  0.0  0.0      0     0 ?        S    16:10   0:00 [watchdog/2]
+root       545  0.0  0.0      0     0 ?        S    16:10   0:00 [migration/3]
+root       546  0.0  0.0      0     0 ?        S    16:10   0:00 [kworker/3:1]
+root       547  0.0  0.0      0     0 ?        S    16:10   0:00 [ksoftirqd/3]
+root       548  0.0  0.0      0     0 ?        S    16:10   0:00 [watchdog/3]
+root       549  0.0  0.0      0     0 ?        S    16:10   0:00 [irq/43-mei]
+root       582  0.0  0.0      0     0 ?        S    16:10   0:02 [kworker/2:0]
+root       583  0.0  0.0      0     0 ?        S    16:10   0:00 [kworker/1:0]
+root       584  0.0  0.0      0     0 ?        S    16:10   0:01 [kworker/3:0]
+root       587  0.0  0.0      0     0 ?        S<   Jan11   0:00 [kvm-irqfd-clean]
+root       633  0.0  0.0      0     0 ?        S<   Jan11   0:00 [led_workqueue]
+root       756  0.0  0.0  15188   236 ?        S    Jan11   0:00 upstart-socket-bridge --daemon
+root       760  0.0  0.0      0     0 ?        S<   Jan11   0:00 [iwlwifi]
+root       801  0.0  0.0      0     0 ?        S    Jan11   0:01 [ips-adjust]
+root       802  0.0  0.0      0     0 ?        S    Jan11   0:12 [ips-monitor]
+root       810  0.0  0.0      0     0 ?        S<   Jan11   0:00 [hd-audio0]
+102        858  0.0  0.0  25972  2564 ?        Ss   Jan11   0:33 dbus-daemon --system --fork --activation=upstart
+root       879  0.0  0.0  79044  1440 ?        Ss   Jan11   0:00 /usr/sbin/modem-manager
+root       881  0.0  0.0  21188   908 ?        Ss   Jan11   0:00 /usr/sbin/bluetoothd
+root       889  0.0  0.1 258040  6304 ?        Ssl  Jan11   0:30 NetworkManager
+root       895  0.0  0.0      0     0 ?        S<   Jan11   0:00 [krfcommd]
+avahi      899  0.2  0.0  34156  2752 ?        S    Jan11  11:12 avahi-daemon: running [rpc.local]
+syslog     900  0.0  0.0 249472   676 ?        Sl   Jan11   0:06 rsyslogd -c5
+avahi      901  0.0  0.0  32180   108 ?        S    Jan11   0:00 avahi-daemon: chroot helper
+root       909  0.0  0.0 212476  3656 ?        Sl   Jan11   0:06 /usr/lib/policykit-1/polkitd --no-debug
+root       927  0.0  0.0      0     0 ?        S<   Jan11   0:00 [ttm_swap]
+root       928  0.0  0.0 104180  1820 ?        Ss   Jan11   0:00 /usr/sbin/cupsd -F
+root       962  0.0  0.0      0     0 ?        S<   16:10   0:00 [i2400m-usb:2-1.]
+root       963  0.0  0.0      0     0 ?        S    16:10   0:00 [i2400m-usb:2-1.]
+root       964  0.0  0.0      0     0 ?        S    16:10   0:00 [i2400m-usb:2-1.]
+root       972  0.0  0.0      0     0 ?        S    16:10   0:03 [kworker/1:1]
+root       973  0.0  0.0   7264  1548 ?        S    16:10   0:00 /sbin/dhclient -d -4 -sf /usr/lib/NetworkManager/nm-dhcp-client.action -pf /var/run/sendsigs.omit.d/network-manager.dhclient-wlan0.pid -lf /var/lib/dhcp/dhclient-27e61533-14c1-4e8e-b2f9-57799b8f0338-wlan0.lease -cf /var/run/nm-dhclient-wlan0.conf wlan0
+root       975  0.0  0.1  33240  3896 ?        Ss   Jan11   0:09 /sbin/wpa_supplicant -B -P /run/sendsigs.omit.d/wpasupplicant.pid -u -s -O /var/run/wpa_supplicant
+nobody     979  0.0  0.0  33020  1296 ?        S    16:10   0:00 /usr/sbin/dnsmasq --no-resolv --keep-in-foreground --no-hosts --bind-interfaces --pid-file=/var/run/sendsigs.omit.d/network-manager.dnsmasq.pid --listen-address=127.0.0.1 --conf-file=/var/run/nm-dns-dnsmasq.conf --cache-size=0 --proxy-dnssec
+root      1017  0.0  0.0  19984   388 tty4     Ss+  Jan11   0:00 /sbin/getty -8 38400 tty4
+root      1024  0.0  0.0  19984   388 tty5     Ss+  Jan11   0:00 /sbin/getty -8 38400 tty5
+root      1036  0.0  0.0  19984   388 tty2     Ss+  Jan11   0:00 /sbin/getty -8 38400 tty2
+root      1037  0.0  0.0  19984   388 tty3     Ss+  Jan11   0:00 /sbin/getty -8 38400 tty3
+root      1040  0.0  0.0  19984   388 tty6     Ss+  Jan11   0:00 /sbin/getty -8 38400 tty6
+root      1060  0.0  0.0   4592   792 ?        Ss   Jan11   0:00 acpid -c /etc/acpi/events -s /var/run/acpid.socket
+root      1063  0.0  0.0  15980   444 ?        Ss   Jan11   0:24 /usr/sbin/irqbalance
+ronnel    1072  0.0  0.0   4400   616 ?        Ss   16:10   0:00 /bin/sh -c gnome-terminal
+mysql     1073  0.0  0.0 615708  2380 ?        Ssl  Jan11   0:42 /usr/sbin/mysqld
+whoopsie  1074  0.0  0.0 211052  2500 ?        Ssl  Jan11   0:00 whoopsie
+ronnel    1075  0.2  0.5 540908 22212 ?        Sl   16:10   0:14 gnome-terminal
+ronnel    1082  0.0  0.0  14788   844 ?        S    16:10   0:00 gnome-pty-helper
+ronnel    1083  0.0  0.1  28492  5588 pts/0    Ss   16:10   0:00 bash
+daemon    1086  0.0  0.0  16908   104 ?        Ss   Jan11   0:00 atd
+root      1087  0.0  0.0  19112   496 ?        Ss   Jan11   0:00 cron
+root      1088  0.0  0.0 287584  2212 ?        Ssl  Jan11   0:00 lightdm
+root      1118  1.8  0.5 135640 22800 tty7     Ss+  Jan11  76:00 /usr/bin/X :0 -auth /var/run/lightdm/root/:0 -nolisten tcp vt7 -novtswitch -background none
+root      1129  0.0  0.0      0     0 ?        S<   Jan11   0:00 [iprt]
+root      1163  0.0  0.0  21860   716 ?        S    16:10   0:00 /sbin/udevd --daemon
+root      1164  0.0  0.0  21860   552 ?        S    16:10   0:00 /sbin/udevd --daemon
+ronnel    1184  2.1  6.1 924164 235220 ?       Sl   16:11   2:18 /usr/lib/chromium-browser/chromium-browser
+ronnel    1190  0.0  0.2 270656  7976 ?        S    16:11   0:01 /usr/lib/chromium-browser/chromium-browser
+ronnel    1191  0.0  0.0   6464   404 ?        S    16:11   0:00 /usr/lib/chromium-browser/chromium-browser-sandbox /usr/lib/chromium-browser/chromium-browser --type=zygote
+root      1192  0.0  0.0 136156  2624 ?        Sl   Jan11   0:02 /usr/lib/accountsservice/accounts-daemon
+ronnel    1194  0.0  0.4 289876 18652 ?        S    16:11   0:00 /usr/lib/chromium-browser/chromium-browser --type=zygote
+ronnel    1198  0.0  0.1 298072  6080 ?        S    16:11   0:00 /usr/lib/chromium-browser/chromium-browser --type=zygote
+root      1217  0.0  0.0 2091632 2912 ?        Sl   Jan11   0:02 /usr/sbin/console-kit-daemon --no-daemon
+ronnel    1303  0.0  0.9 895300 35420 ?        Sl   16:11   0:00 /usr/lib/chromium-browser/chromium-browser --type=renderer --lang=en-US --force-fieldtrials=ForceCompositingMode/disable/InfiniteCache/No/Prefetch/ContentPrefetchPrefetchOn/Prerender/PrerenderEnabled/PrerenderLoggedInPredictor/Enabled/UMA-New-Install-Uniformity-Trial/Experiment/UMA-Session-Randomized-Uniformity-Trial-5-Percent/group_15/UMA-Uniformity-Trial-1-Percent/group_50/UMA-Uniformity-Trial-10-Percent/group_06/UMA-Uniformity-Trial-20-Percent/group_02/UMA-Uniformity-Trial-5-Percent/group_02/UMA-Uniformity-Trial-50-Percent/group_01/ --extension-process --disable-accelerated-2d-canvas --disable-accelerated-video-decode --channel=1184.1.1402268926
+ronnel    1311  0.8  3.6 965536 139424 ?       Sl   16:11   0:51 /usr/lib/chromium-browser/chromium-browser --type=renderer --lang=en-US --force-fieldtrials=ForceCompositingMode/disable/InfiniteCache/No/Prefetch/ContentPrefetchPrefetchOn/Prerender/PrerenderEnabled/PrerenderLoggedInPredictor/Enabled/UMA-New-Install-Uniformity-Trial/Experiment/UMA-Session-Randomized-Uniformity-Trial-5-Percent/group_15/UMA-Uniformity-Trial-1-Percent/group_50/UMA-Uniformity-Trial-10-Percent/group_06/UMA-Uniformity-Trial-20-Percent/group_02/UMA-Uniformity-Trial-5-Percent/group_02/UMA-Uniformity-Trial-50-Percent/group_01/ --extension-process --disable-accelerated-2d-canvas --disable-accelerated-video-decode --channel=1184.2.568672569
+ronnel    1318  0.0  0.9 893220 34604 ?        Sl   16:11   0:05 /usr/lib/chromium-browser/chromium-browser --type=renderer --lang=en-US --force-fieldtrials=ForceCompositingMode/disable/InfiniteCache/No/Prefetch/ContentPrefetchPrefetchOn/Prerender/PrerenderEnabled/PrerenderLoggedInPredictor/Enabled/UMA-New-Install-Uniformity-Trial/Experiment/UMA-Session-Randomized-Uniformity-Trial-5-Percent/group_15/UMA-Uniformity-Trial-1-Percent/group_50/UMA-Uniformity-Trial-10-Percent/group_06/UMA-Uniformity-Trial-20-Percent/group_02/UMA-Uniformity-Trial-5-Percent/group_02/UMA-Uniformity-Trial-50-Percent/group_01/ --extension-process --disable-accelerated-2d-canvas --disable-accelerated-video-decode --channel=1184.3.1717931815
+ronnel    1324  0.1  0.8 890148 30972 ?        Sl   16:11   0:08 /usr/lib/chromium-browser/chromium-browser --type=renderer --lang=en-US --force-fieldtrials=ForceCompositingMode/disable/InfiniteCache/No/Prefetch/ContentPrefetchPrefetchOn/Prerender/PrerenderEnabled/PrerenderLoggedInPredictor/Enabled/UMA-New-Install-Uniformity-Trial/Experiment/UMA-Session-Randomized-Uniformity-Trial-5-Percent/group_15/UMA-Uniformity-Trial-1-Percent/group_50/UMA-Uniformity-Trial-10-Percent/group_06/UMA-Uniformity-Trial-20-Percent/group_02/UMA-Uniformity-Trial-5-Percent/group_02/UMA-Uniformity-Trial-50-Percent/group_01/ --extension-process --disable-accelerated-2d-canvas --disable-accelerated-video-decode --channel=1184.4.1994938150
+root      1331  0.0  0.0 220576  3820 ?        Sl   Jan11   0:04 /usr/lib/upower/upowerd
+ronnel    1347  0.0  0.9 902612 34720 ?        Sl   16:11   0:00 /usr/lib/chromium-browser/chromium-browser --type=renderer --lang=en-US --force-fieldtrials=ForceCompositingMode/disable/InfiniteCache/No/Prefetch/ContentPrefetchPrefetchOn/Prerender/PrerenderEnabled/PrerenderLoggedInPredictor/Enabled/UMA-New-Install-Uniformity-Trial/Experiment/UMA-Session-Randomized-Uniformity-Trial-5-Percent/group_15/UMA-Uniformity-Trial-1-Percent/group_50/UMA-Uniformity-Trial-10-Percent/group_06/UMA-Uniformity-Trial-20-Percent/group_02/UMA-Uniformity-Trial-5-Percent/group_02/UMA-Uniformity-Trial-50-Percent/group_01/ --extension-process --disable-accelerated-2d-canvas --disable-accelerated-video-decode --channel=1184.5.2104021581
+ronnel    1353  0.0  0.7 889156 28248 ?        Sl   16:11   0:00 /usr/lib/chromium-browser/chromium-browser --type=renderer --lang=en-US --force-fieldtrials=ForceCompositingMode/disable/InfiniteCache/No/Prefetch/ContentPrefetchPrefetchOn/Prerender/PrerenderEnabled/PrerenderLoggedInPredictor/Enabled/UMA-New-Install-Uniformity-Trial/Experiment/UMA-Session-Randomized-Uniformity-Trial-5-Percent/group_15/UMA-Uniformity-Trial-1-Percent/group_50/UMA-Uniformity-Trial-10-Percent/group_06/UMA-Uniformity-Trial-20-Percent/group_02/UMA-Uniformity-Trial-5-Percent/group_02/UMA-Uniformity-Trial-50-Percent/group_01/ --extension-process --disable-accelerated-2d-canvas --disable-accelerated-video-decode --channel=1184.6.282263663
+ronnel    1357  0.0  0.7 889124 30324 ?        Sl   16:11   0:00 /usr/lib/chromium-browser/chromium-browser --type=renderer --lang=en-US --force-fieldtrials=ForceCompositingMode/disable/InfiniteCache/No/Prefetch/ContentPrefetchPrefetchOn/Prerender/PrerenderEnabled/PrerenderLoggedInPredictor/Enabled/UMA-New-Install-Uniformity-Trial/Experiment/UMA-Session-Randomized-Uniformity-Trial-5-Percent/group_15/UMA-Uniformity-Trial-1-Percent/group_50/UMA-Uniformity-Trial-10-Percent/group_06/UMA-Uniformity-Trial-20-Percent/group_02/UMA-Uniformity-Trial-5-Percent/group_02/UMA-Uniformity-Trial-50-Percent/group_01/ --extension-process --disable-accelerated-2d-canvas --disable-accelerated-video-decode --channel=1184.7.1056495581
+root      1392  0.0  0.0 202268  2332 ?        Ss   Jan11   0:04 /usr/sbin/apache2 -k start
+root      1424  0.0  0.0 171504  1828 ?        Sl   Jan11   0:00 lightdm --session-child 12 19
+rtkit     1479  0.0  0.0 168872   668 ?        SNl  Jan11   0:01 /usr/lib/rtkit/rtkit-daemon
+ronnel    1494  1.0  7.1 1210592 275864 ?      Sl   16:12   1:09 /usr/lib/chromium-browser/chromium-browser --type=renderer --lang=en-US --force-fieldtrials=ForceCompositingMode/disable/InfiniteCache/No/Prefetch/ContentPrefetchPrefetchOn/Prerender/PrerenderEnabled/PrerenderFromOmnibox/OmniboxPrerenderDisabled/PrerenderLoggedInPredictor/Enabled/UMA-New-Install-Uniformity-Trial/Experiment/UMA-Session-Randomized-Uniformity-Trial-5-Percent/group_15/UMA-Uniformity-Trial-1-Percent/group_50/UMA-Uniformity-Trial-10-Percent/group_06/UMA-Uniformity-Trial-20-Percent/group_02/UMA-Uniformity-Trial-5-Percent/group_02/UMA-Uniformity-Trial-50-Percent/group_01/ --disable-accelerated-2d-canvas --disable-accelerated-video-decode --channel=1184.10.1868541834
+ronnel    1510  0.9  4.0 1048032 157000 ?      Sl   16:12   0:59 /usr/lib/chromium-browser/chromium-browser --type=renderer --lang=en-US --force-fieldtrials=ForceCompositingMode/disable/InfiniteCache/No/Prefetch/ContentPrefetchPrefetchOn/Prerender/PrerenderEnabled/PrerenderFromOmnibox/OmniboxPrerenderDisabled/PrerenderLoggedInPredictor/Enabled/UMA-New-Install-Uniformity-Trial/Experiment/UMA-Session-Randomized-Uniformity-Trial-5-Percent/group_15/UMA-Uniformity-Trial-1-Percent/group_50/UMA-Uniformity-Trial-10-Percent/group_06/UMA-Uniformity-Trial-20-Percent/group_02/UMA-Uniformity-Trial-5-Percent/group_02/UMA-Uniformity-Trial-50-Percent/group_01/ --disable-accelerated-2d-canvas --disable-accelerated-video-decode --channel=1184.11.2095982719
+ronnel    1518  0.0  0.6 336388 23044 ?        Sl   16:12   0:03 /usr/lib/chromium-browser/chromium-browser --type=plugin --plugin-path=/opt/google/talkplugin/libnpgoogletalk.so --lang=en-US --channel=1184.12.2115304594
+ronnel    1523  0.0  0.3 470556 13288 ?        Sl   16:12   0:01 /opt/google/talkplugin/GoogleTalkPlugin
+root      1592  0.0  0.0  19984   388 tty1     Ss+  Jan11   0:00 /sbin/getty -8 38400 tty1
+colord    1595  0.0  0.0 499140  3416 ?        Sl   Jan11   0:00 /usr/lib/x86_64-linux-gnu/colord/colord
+ronnel    1602  0.1  1.6 395160 64984 ?        Sl   16:12   0:07 /usr/lib/chromium-browser/chromium-browser --type=gpu-process --channel=1184.14.1677903867 --supports-dual-gpus=false --gpu-driver-bug-workarounds=0,6,20 --gpu-vendor-id=0x8086 --gpu-device-id=0x0046 --gpu-driver-vendor=Mesa --gpu-driver-version=9.0.3
+ronnel    1606  0.0  0.1 332924  6872 ?        S    16:12   0:00 /usr/lib/chromium-browser/chromium-browser --type=gpu-process --channel=1184.14.1677903867 --supports-dual-gpus=false --gpu-driver-bug-workarounds=0,6,20 --gpu-vendor-id=0x8086 --gpu-device-id=0x0046 --gpu-driver-vendor=Mesa --gpu-driver-version=9.0.3
+ronnel    1659  0.0  2.5 963108 96920 ?        Sl   16:16   0:04 /usr/lib/chromium-browser/chromium-browser --type=renderer --lang=en-US --force-fieldtrials=ForceCompositingMode/disable/InfiniteCache/No/Prefetch/ContentPrefetchPrefetchOn/Prerender/PrerenderEnabled/PrerenderFromOmnibox/OmniboxPrerenderDisabled/PrerenderLoggedInPredictor/Enabled/UMA-New-Install-Uniformity-Trial/Experiment/UMA-Session-Randomized-Uniformity-Trial-5-Percent/group_15/UMA-Uniformity-Trial-1-Percent/group_50/UMA-Uniformity-Trial-10-Percent/group_06/UMA-Uniformity-Trial-20-Percent/group_02/UMA-Uniformity-Trial-5-Percent/group_02/UMA-Uniformity-Trial-50-Percent/group_01/ --disable-accelerated-2d-canvas --disable-accelerated-video-decode --channel=1184.16.1124698860
+ronnel    1699  0.0  0.1 474800  4100 ?        Sl   Jan11   0:01 /usr/bin/gnome-keyring-daemon --daemonize --login
+ronnel    1710  0.0  0.1 402264  5996 ?        Ssl  Jan11   0:02 gnome-session --session=ubuntu
+ronnel    1767  0.4  2.8 981112 110952 ?       Sl   16:21   0:27 /usr/lib/chromium-browser/chromium-browser --type=renderer --lang=en-US --force-fieldtrials=ForceCompositingMode/disable/InfiniteCache/No/Prefetch/ContentPrefetchPrefetchOn/Prerender/PrerenderEnabled/PrerenderFromOmnibox/OmniboxPrerenderDisabled/PrerenderLoggedInPredictor/Enabled/UMA-New-Install-Uniformity-Trial/Experiment/UMA-Session-Randomized-Uniformity-Trial-5-Percent/group_15/UMA-Uniformity-Trial-1-Percent/group_50/UMA-Uniformity-Trial-10-Percent/group_06/UMA-Uniformity-Trial-20-Percent/group_02/UMA-Uniformity-Trial-5-Percent/group_02/UMA-Uniformity-Trial-50-Percent/group_01/ --disable-accelerated-2d-canvas --disable-accelerated-video-decode --channel=1184.18.761619764
+ronnel    1774  6.8  2.9 772220 114048 ?       Sl   16:21   6:38 /usr/lib/chromium-browser/chromium-browser --type=plugin --plugin-path=/usr/lib/flashplugin-installer/libflashplayer.so --lang=en-US --channel=1184.19.517364720
+ronnel    1802  0.0  0.0  12568    32 ?        Ss   Jan11   0:00 /usr/bin/ssh-agent /usr/bin/dbus-launch --exit-with-session gnome-session --session=ubuntu
+ronnel    1805  0.0  0.0  26560   360 ?        S    Jan11   0:00 /usr/bin/dbus-launch --exit-with-session gnome-session --session=ubuntu
+ronnel    1806  0.0  0.0  28076  3308 ?        Ss   Jan11   0:56 //bin/dbus-daemon --fork --print-pid 5 --print-address 7 --session
+ronnel    1816  0.0  0.3 1158592 13144 ?       Sl   Jan11   0:48 /usr/lib/gnome-settings-daemon/gnome-settings-daemon
+ronnel    1824  0.0  0.0  52380  1256 ?        S    Jan11   0:00 /usr/lib/gvfs/gvfsd
+ronnel    1826  0.0  0.0 285904  1352 ?        Sl   Jan11   0:00 /usr/lib/gvfs//gvfs-fuse-daemon -f /home/ronnel/.gvfs
+ronnel    1833  0.8  1.8 1403384 69256 ?       Sl   Jan11  32:09 compiz
+ronnel    1836  0.0  0.0  57832  2024 ?        S    Jan11   0:00 /usr/lib/x86_64-linux-gnu/gconf/gconfd-2
+ronnel    1842  0.0  0.0  20312   532 ?        S    Jan11   1:02 syndaemon -i 2.0 -K -R -t
+ronnel    1847  0.2  0.1 434892  4300 ?        Sl   Jan11   8:09 /usr/bin/pulseaudio --start --log-target=syslog
+ronnel    1849  0.0  0.0  46232  1084 ?        S    Jan11   0:00 /usr/lib/gvfs/gvfsd-metadata
+ronnel    1850  0.0  0.1 460372  5032 ?        Sl   Jan11   0:01 /usr/lib/gnome-settings-daemon/gnome-fallback-mount-helper
+ronnel    1852  0.0  0.1 446232  6848 ?        Sl   Jan11   0:01 bluetooth-applet
+ronnel    1853  0.0  0.1 314960  4864 ?        Sl   Jan11   0:01 /usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1
+ronnel    1854  0.0  0.7 1088620 28620 ?       Sl   Jan11   1:04 nm-applet
+ronnel    1857  0.0  0.5 914808 22808 ?        Sl   Jan11   0:59 nautilus -n
+ronnel    1870  0.0  0.0  80788  2816 ?        S    Jan11   0:00 /usr/lib/gvfs/gvfs-gdu-volume-monitor
+root      1872  0.0  0.0 193384  2756 ?        Sl   Jan11   0:02 /usr/lib/udisks/udisks-daemon
+root      1873  0.0  0.0  45520   220 ?        S    Jan11   0:00 udisks-daemon: not polling any devices
+ronnel    1880  0.0  0.0  60336  1512 ?        S    Jan11   0:00 /usr/lib/gvfs/gvfs-gphoto2-volume-monitor
+ronnel    1882  0.0  0.0 142080  1380 ?        Sl   Jan11   0:06 /usr/lib/gvfs/gvfs-afc-volume-monitor
+ronnel    1886  0.0  0.0  69476  2128 ?        S    Jan11   0:00 /usr/lib/gvfs/gvfsd-trash --spawner :1.6 /org/gtk/gvfs/exec_spaw/0
+ronnel    1903  0.0  0.0  95960   832 ?        S    Jan11   0:00 /usr/lib/pulseaudio/pulse/gconf-helper
+ronnel    1909  0.0  0.0  52540  1188 ?        S    Jan11   0:00 /usr/lib/gvfs/gvfsd-burn --spawner :1.6 /org/gtk/gvfs/exec_spaw/1
+ronnel    1918  0.0  0.2 433796  9140 ?        Sl   Jan11   0:47 /usr/lib/bamf/bamfdaemon
+ronnel    1937  0.0  0.2 374480 10928 ?        Sl   Jan11   0:08 /usr/lib/notify-osd/notify-osd
+ronnel    1951  0.0  0.0   4400   280 ?        Ss   Jan11   0:00 /bin/sh -c /usr/bin/compiz-decorator
+ronnel    1952  0.0  0.2 336060  9292 ?        Sl   Jan11   0:34 /usr/bin/gtk-window-decorator
+ronnel    2033  0.0  0.1 322224  7392 ?        Sl   Jan11   0:11 /usr/bin/gnome-screensaver --no-daemon
+ronnel    2037  0.0  0.8 574676 30828 ?        Sl   Jan11   2:22 /usr/lib/unity/unity-panel-service
+ronnel    2039  0.0  0.1 375244  5716 ?        Sl   Jan11   2:00 /usr/lib/indicator-appmenu/hud-service
+ronnel    2048  0.0  0.1 656068  3916 ?        Sl   Jan11   0:00 /usr/lib/indicator-messages/indicator-messages-service
+ronnel    2051  0.0  0.0 561248  2996 ?        Sl   Jan11   0:26 /usr/lib/indicator-application/indicator-application-service
+ronnel    2061  0.0  0.1 638496  4024 ?        Sl   Jan11   0:00 /usr/lib/indicator-datetime/indicator-datetime-service
+ronnel    2064  0.0  0.0 537056  3440 ?        Sl   Jan11   0:00 /usr/lib/indicator-sound/indicator-sound-service
+ronnel    2066  0.0  0.1 431204  5600 ?        Sl   Jan11   0:01 /usr/lib/indicator-printers/indicator-printers-service
+ronnel    2072  0.0  0.0 614240  3776 ?        Sl   Jan11   0:00 /usr/lib/indicator-session/indicator-session-service
+ronnel    2091  0.0  0.0  47864  1784 ?        S    Jan11   0:00 /usr/lib/geoclue/geoclue-master
+ronnel    2099  0.0  0.1 161864  4920 ?        S    Jan11   0:06 /usr/lib/ubuntu-geoip/ubuntu-geoip-provider
+ronnel    2115  0.0  0.1 339096  5312 ?        Sl   Jan11   0:01 /usr/lib/gnome-disk-utility/gdu-notification-daemon
+ronnel    2142  0.0  0.1  28448  5536 pts/4    Ss+  16:35   0:00 bash
+ronnel    2253  0.0  0.1 431648  5212 ?        Sl   Jan11   0:00 telepathy-indicator
+ronnel    2260  0.0  0.1 337568  5344 ?        Sl   Jan11   0:07 /usr/lib/telepathy/mission-control-5
+ronnel    2270  0.0  0.0 404372  3092 ?        Sl   Jan11   0:00 /usr/lib/gnome-online-accounts/goa-daemon
+ronnel    2275  0.0  0.1 501128  4832 ?        Sl   Jan11   0:03 /usr/lib/unity-lens-applications/unity-applications-daemon
+ronnel    2277  0.0  0.1 879012  3916 ?        Sl   Jan11   0:02 /usr/lib/unity-lens-files/unity-files-daemon
+ronnel    2279  0.0  0.0 742628  2964 ?        Sl   Jan11   0:00 /usr/lib/unity-lens-music/unity-music-daemon
+ronnel    2281  0.0  0.1 453688  7576 ?        Sl   Jan11   0:00 /usr/bin/python /usr/lib/unity-lens-video/unity-lens-video
+ronnel    2303  0.0  0.1 361616  4420 ?        Sl   Jan11   0:01 /usr/bin/zeitgeist-daemon
+ronnel    2307  1.1  2.7 1004912 105992 ?      Sl   16:39   0:53 /usr/lib/chromium-browser/chromium-browser --type=renderer --lang=en-US --force-fieldtrials=ForceCompositingMode/disable/InfiniteCache/No/Prefetch/ContentPrefetchPrefetchOn/Prerender/PrerenderEnabled/PrerenderFromOmnibox/OmniboxPrerenderDisabled/PrerenderLoggedInPredictor/Enabled/UMA-New-Install-Uniformity-Trial/Experiment/UMA-Session-Randomized-Uniformity-Trial-5-Percent/group_15/UMA-Uniformity-Trial-1-Percent/group_50/UMA-Uniformity-Trial-10-Percent/group_06/UMA-Uniformity-Trial-20-Percent/group_02/UMA-Uniformity-Trial-5-Percent/group_02/UMA-Uniformity-Trial-50-Percent/group_01/ --disable-accelerated-2d-canvas --disable-accelerated-video-decode --channel=1184.21.105361804
+ronnel    2315  0.0  0.2 255748 10152 ?        Sl   Jan11   0:00 /usr/lib/zeitgeist/zeitgeist-fts
+ronnel    2317  0.0  0.1 427228  4192 ?        Sl   Jan11   0:02 zeitgeist-datahub
+ronnel    2325  0.0  0.0  11380     0 ?        S    Jan11   0:00 /bin/cat
+ronnel    2332  0.0  0.0 586412  1800 ?        Sl   Jan11   0:00 /usr/lib/unity-lens-music/unity-musicstore-daemon
+ronnel    2363  0.0  0.2 547324  8392 ?        Sl   Jan11   0:00 /usr/bin/python /usr/lib/unity-scope-video-remote/unity-scope-video-remote
+ronnel    2411  0.0  0.2 326256  9076 ?        Sl   Jan11   0:01 /usr/bin/python /usr/lib/ubuntuone-client/ubuntuone-syncdaemon
+ronnel    2465  0.0  0.2 415140  9024 ?        Sl   Jan11   0:04 update-notifier
+root      2478  0.0  0.1  95392  4108 ?        S    Jan11   0:00 /usr/bin/python /usr/lib/system-service/system-service-d
+ronnel    2502  0.0  0.0 262180  1744 ?        Sl   Jan11   0:00 /usr/lib/dconf/dconf-service
+ronnel    2539  0.0  0.0 294704  2508 ?        Sl   Jan11   0:00 /usr/lib/deja-dup/deja-dup/deja-dup-monitor
+ronnel    2727  0.0  1.9 943000 74148 ?        Sl   17:00   0:02 /usr/lib/chromium-browser/chromium-browser --type=renderer --lang=en-US --force-fieldtrials=ForceCompositingMode/disable/InfiniteCache/No/Prefetch/ContentPrefetchPrefetchOn/Prerender/PrerenderEnabled/PrerenderFromOmnibox/OmniboxPrerenderDisabled/PrerenderLoggedInPredictor/Enabled/UMA-New-Install-Uniformity-Trial/Experiment/UMA-Session-Randomized-Uniformity-Trial-5-Percent/group_15/UMA-Uniformity-Trial-1-Percent/group_50/UMA-Uniformity-Trial-10-Percent/group_06/UMA-Uniformity-Trial-20-Percent/group_02/UMA-Uniformity-Trial-5-Percent/group_02/UMA-Uniformity-Trial-50-Percent/group_01/ --disable-accelerated-2d-canvas --disable-accelerated-video-decode --channel=1184.23.1410482166
+ronnel    2924  1.6  3.1 1004684 120132 ?      Sl   17:07   0:49 /usr/lib/chromium-browser/chromium-browser --type=renderer --lang=en-US --force-fieldtrials=ForceCompositingMode/disable/InfiniteCache/No/Prefetch/ContentPrefetchPrefetchOn/Prerender/PrerenderEnabled/PrerenderFromOmnibox/OmniboxPrerenderDisabled/PrerenderLoggedInPredictor/Enabled/UMA-New-Install-Uniformity-Trial/Experiment/UMA-Session-Randomized-Uniformity-Trial-5-Percent/group_15/UMA-Uniformity-Trial-1-Percent/group_50/UMA-Uniformity-Trial-10-Percent/group_06/UMA-Uniformity-Trial-20-Percent/group_02/UMA-Uniformity-Trial-5-Percent/group_02/UMA-Uniformity-Trial-50-Percent/group_01/ --disable-accelerated-2d-canvas --disable-accelerated-video-decode --channel=1184.26.814813348
+ronnel    2988  0.0  2.0 938444 77996 ?        Sl   17:11   0:02 /usr/lib/chromium-browser/chromium-browser --type=renderer --lang=en-US --force-fieldtrials=ForceCompositingMode/disable/InfiniteCache/No/Prefetch/ContentPrefetchPrefetchOn/Prerender/PrerenderEnabled/PrerenderFromOmnibox/OmniboxPrerenderDisabled/PrerenderLoggedInPredictor/Enabled/UMA-New-Install-Uniformity-Trial/Experiment/UMA-Session-Randomized-Uniformity-Trial-5-Percent/group_15/UMA-Uniformity-Trial-1-Percent/group_50/UMA-Uniformity-Trial-10-Percent/group_06/UMA-Uniformity-Trial-20-Percent/group_02/UMA-Uniformity-Trial-5-Percent/group_02/UMA-Uniformity-Trial-50-Percent/group_01/ --disable-accelerated-2d-canvas --disable-accelerated-video-decode --channel=1184.27.1022323112
+ronnel    3030  0.0  2.1 939344 82564 ?        Sl   17:13   0:02 /usr/lib/chromium-browser/chromium-browser --type=renderer --lang=en-US --force-fieldtrials=ForceCompositingMode/disable/InfiniteCache/No/Prefetch/ContentPrefetchPrefetchOn/Prerender/PrerenderEnabled/PrerenderFromOmnibox/OmniboxPrerenderDisabled/PrerenderLoggedInPredictor/Enabled/UMA-New-Install-Uniformity-Trial/Experiment/UMA-Session-Randomized-Uniformity-Trial-5-Percent/group_15/UMA-Uniformity-Trial-1-Percent/group_50/UMA-Uniformity-Trial-10-Percent/group_06/UMA-Uniformity-Trial-20-Percent/group_02/UMA-Uniformity-Trial-5-Percent/group_02/UMA-Uniformity-Trial-50-Percent/group_01/ --disable-accelerated-2d-canvas --disable-accelerated-video-decode --channel=1184.28.962461339
+ronnel    3160  0.3  2.2 965212 87728 ?        Sl   17:25   0:06 /usr/lib/chromium-browser/chromium-browser --type=renderer --lang=en-US --force-fieldtrials=ForceCompositingMode/disable/InfiniteCache/No/Prefetch/ContentPrefetchPrefetchOn/Prerender/PrerenderEnabled/PrerenderFromOmnibox/OmniboxPrerenderDisabled/PrerenderLoggedInPredictor/Enabled/UMA-New-Install-Uniformity-Trial/Experiment/UMA-Session-Randomized-Uniformity-Trial-5-Percent/group_15/UMA-Uniformity-Trial-1-Percent/group_50/UMA-Uniformity-Trial-10-Percent/group_06/UMA-Uniformity-Trial-20-Percent/group_02/UMA-Uniformity-Trial-5-Percent/group_02/UMA-Uniformity-Trial-50-Percent/group_01/ --disable-accelerated-2d-canvas --disable-accelerated-video-decode --channel=1184.29.1576542529
+ronnel    3218  0.1  2.2 943792 85932 ?        Sl   17:28   0:03 /usr/lib/chromium-browser/chromium-browser --type=renderer --lang=en-US --force-fieldtrials=ForceCompositingMode/disable/InfiniteCache/No/Prefetch/ContentPrefetchPrefetchOn/Prerender/PrerenderEnabled/PrerenderFromOmnibox/OmniboxPrerenderDisabled/PrerenderLoggedInPredictor/Enabled/UMA-New-Install-Uniformity-Trial/Experiment/UMA-Session-Randomized-Uniformity-Trial-5-Percent/group_15/UMA-Uniformity-Trial-1-Percent/group_50/UMA-Uniformity-Trial-10-Percent/group_06/UMA-Uniformity-Trial-20-Percent/group_02/UMA-Uniformity-Trial-5-Percent/group_02/UMA-Uniformity-Trial-50-Percent/group_01/ --disable-accelerated-2d-canvas --disable-accelerated-video-decode --channel=1184.30.591806217
+root      5128  0.0  0.0      0     0 ?        S    17:30   0:00 [kworker/0:2]
+ronnel    5138  0.8  2.2 951872 87884 ?        Sl   17:30   0:14 /usr/lib/chromium-browser/chromium-browser --type=renderer --lang=en-US --force-fieldtrials=ForceCompositingMode/disable/InfiniteCache/No/Prefetch/ContentPrefetchPrefetchOn/Prerender/PrerenderEnabled/PrerenderFromOmnibox/OmniboxPrerenderDisabled/PrerenderLoggedInPredictor/Enabled/UMA-New-Install-Uniformity-Trial/Experiment/UMA-Session-Randomized-Uniformity-Trial-5-Percent/group_15/UMA-Uniformity-Trial-1-Percent/group_50/UMA-Uniformity-Trial-10-Percent/group_06/UMA-Uniformity-Trial-20-Percent/group_02/UMA-Uniformity-Trial-5-Percent/group_02/UMA-Uniformity-Trial-50-Percent/group_01/ --disable-accelerated-2d-canvas --disable-accelerated-video-decode --channel=1184.31.2124611561
+ronnel    5306  0.4  1.8 947148 70208 ?        Sl   17:44   0:04 /usr/lib/chromium-browser/chromium-browser --type=renderer --lang=en-US --force-fieldtrials=ForceCompositingMode/disable/InfiniteCache/No/Prefetch/ContentPrefetchPrefetchOn/Prerender/PrerenderEnabled/PrerenderFromOmnibox/OmniboxPrerenderDisabled/PrerenderLoggedInPredictor/Enabled/UMA-New-Install-Uniformity-Trial/Experiment/UMA-Session-Randomized-Uniformity-Trial-5-Percent/group_15/UMA-Uniformity-Trial-1-Percent/group_50/UMA-Uniformity-Trial-10-Percent/group_06/UMA-Uniformity-Trial-20-Percent/group_02/UMA-Uniformity-Trial-5-Percent/group_02/UMA-Uniformity-Trial-50-Percent/group_01/ --disable-accelerated-2d-canvas --disable-accelerated-video-decode --channel=1184.33.1436004005
+root      5333  0.0  0.0      0     0 ?        S    17:47   0:00 [kworker/0:0]
+root      5418  0.0  0.0      0     0 ?        S    17:53   0:00 [kworker/0:1]
+ronnel    5473  0.6  0.7  92416 28696 pts/0    S+   17:57   0:00 /usr/bin/valgrind.bin --tool=memcheck ./mysh
+ronnel    5493  0.0  0.0  15284  1152 pts/0    R+   17:58   0:00 ps aux
+www-data 17581  0.0  0.0 202316  1284 ?        S    Jan13   0:00 /usr/sbin/apache2 -k start
+www-data 17582  0.0  0.0 202316  1268 ?        S    Jan13   0:00 /usr/sbin/apache2 -k start
+www-data 17583  0.0  0.0 202316  1268 ?        S    Jan13   0:00 /usr/sbin/apache2 -k start
+www-data 17584  0.0  0.0 202316  1268 ?        S    Jan13   0:00 /usr/sbin/apache2 -k start
+www-data 17585  0.0  0.0 202316  1268 ?        S    Jan13   0:00 /usr/sbin/apache2 -k start
+ronnel   18137  0.0  0.0 293092  2256 ?        Sl   Jan13   0:00 /usr/lib/at-spi2-core/at-spi-bus-launcher
+ronnel   18213  0.0  0.0 541112  2496 ?        Sl   Jan13   0:00 /usr/lib/evolution/e-addressbook-factory
+ronnel   18276  0.0  0.0 236552  2900 ?        Sl   Jan13   0:00 /usr/lib/gvfs/gvfsd-http --spawner :1.6 /org/gtk/gvfs/exec_spaw/2
+ronnel   22054 78.9  1.7 119548 68944 ?        Rl   Jan13 1257:03 racket
+ronnel   30492  0.0  2.6 675140 102000 ?       SNl  07:50   0:26 /usr/bin/python /usr/bin/update-manager --no-focus-on-map
+root     30642  0.0  0.0      0     0 ?        S    12:07   0:00 [flush-8:0]
