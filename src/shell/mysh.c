@@ -259,10 +259,14 @@ void free_command(Command *cmd) {
         /* Most of the command structs fields are freed in the main loop,
          * by the tokenizer. 
          */
+        free(cmd->process);
         for (i = 0; i < cmd->argc; i++) {
             free(cmd->argv[i]);
         }
         free(cmd->argv);
+        free(cmd->stdin_loc);
+        free(cmd->stdout_loc);
+        free(cmd->stderr_loc);
         free(cmd);
     }
 }
@@ -445,6 +449,8 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
             }
         }
     }
+
+    free(pids);
 
     /* Free the command structs */
     cmd = cmd_ll_root;
