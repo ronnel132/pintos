@@ -1,0 +1,119 @@
+			+------------------+
+			|      CS 124      |
+			| PROJECT 1: SHELL |
+			|  DESIGN DOCUMENT |
+			+------------------+
+				   
+---- GROUP ----
+
+>> Fill in the names and email addresses of your group members.
+
+Aleksander Bello <abello@caltech.edu>
+Ronnel Boettcher <ronnel@caltech.edu>
+Archan Luhar     <archanl@gmail.com>
+
+>> Specify how many late tokens you are using on this assignment: 0
+
+>> What is the Git repository and commit hash for your submission?
+
+   Repository URL:  
+   commit ...
+
+---- PRELIMINARIES ----
+
+>> If you have any preliminary comments on your submission, notes for the
+>> TAs, or extra credit, please give them here.
+
+>> Please cite any offline or online sources you consulted while
+>> preparing your submission, other than the Pintos documentation, course
+>> text, lecture notes, and course instructors.
+
+			   COMMAND SHELL
+			   =============
+
+---- DATA STRUCTURES ----
+
+>> A1: Describe how your command shell manages parsing and executing
+>> commands that contain arguments and pipes, using the example
+>> command "a arg1 arg2 | b arg1 | c arg1 arg2 arg3".  How does your
+>> shell internally represent such a command?
+
+>> A2: Now, given the command:
+>> "a arg1 arg2 < inp.txt | b arg1 | c arg1 arg2 arg3 > out.txt"
+>> Briefly explain specifically how the redirections are parsed and
+>> represented, and by what processes.
+
+---- ALGORITHMS ----
+
+>> A3: Illustrate how you solved the problem of setting up
+>> redirection in a simple command like "a < inp.txt > out.txt", by
+>> describing what process takes care of the redirection and when.
+
+>> A4: Illustrate how you solved the problem of setting up the pipes
+>> between multiple operations in a single command, by describing
+>> what each process is responsible for.  For example, given the
+>> command "a | b | c", describe the sequence of steps in setting up
+>> the processes and their pipes, starting with your command shell's
+>> process, and going through the execution of programs a, b and c.
+>> Keep your description of each process' responsibilities limited to
+>> ~25 words or less.
+
+For the example given above, piping would work as follows: Before any child
+process is forked, the parent process initializes an int[2] array called 
+pipefd with the pipe() system call. Child "a" is forked, and we dup2 the 
+write end pipefd into "a"'s STDOUT_FILENO. We close the read end of pipefd
+sinc we do not need it. In the parent process after "a" is forked, we move
+copy pipefd into an int[2] array called prev_pipefd. We then initialize a 
+new pipe with pipefd. Then, child "b" is forked. We dup2 the read end of 
+prev_pipefd (which is piping data from child "a") into STDIN_LOC. We dup2 
+the write end of pipefd into child "b"'s STDOUT_LOC. In the parent process 
+after forking child "b", we close prev_pipefd (since we don't need it anymore)
+and then before forking child "c", we copy pipefd into prev_pipefd, and since
+we have reached the last command now, we don't create any more pipes. After
+forking child "c", we dup2 prev_pipefd (which is piping data out of child "b")
+into child "c"'s STDIN_LOC. 
+
+This process would be repeated if there were additional pipes: i.e., the 
+process of creating a new pipe every iteration, and moving the current 
+pipefd to prev_pipefd, then using dup2 to direct output between adjacent
+child processes. 
+
+>> A5: Similarly, describe the details of how terminated processes are
+>> reaped in the example command "a | b | c".
+
+>> A6: Similarly, describe which processes are responsible for setting
+>> up the redirections in the example command
+>> "a < inp.txt | b | c > out.txt".
+
+---- RATIONALE ----
+
+>> A?: Why do the chdir and exit commands have to be implemented as
+>> built-in functions, rather than external programs?
+
+>> A6: Why did you choose this design?  In what ways is it superior to
+>> another design you considered?
+
+			  SURVEY QUESTIONS
+			  ================
+
+Answering these questions is optional, but it will help us improve the
+course in future quarters.  Feel free to tell us anything you
+want--these questions are just to spur your thoughts.  You may also
+choose to respond anonymously in the feedback survey on the course
+website.
+
+>> In your opinion, was this assignment, or any one of the three problems
+>> in it, too easy or too hard?  Did it take too long or too little time?
+
+>> Did you find that working on a particular part of the assignment gave
+>> you greater insight into some aspect of OS design?
+
+>> Is there some particular fact or hint we should give students in
+>> future quarters to help them solve the problems?  Conversely, did you
+>> find any of our guidance to be misleading?
+
+>> Do you have any suggestions for the TAs to more effectively assist
+>> students, either for future quarters or the remaining projects?
+
+>> Any other comments?
+
