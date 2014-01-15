@@ -62,11 +62,11 @@ For the example given above, piping would work as follows: Before any child
 process is forked, the parent process initializes an int[2] array called 
 pipefd with the pipe() system call. Child "a" is forked, and we dup2 the 
 write end pipefd into "a"'s STDOUT_FILENO. We close the read end of pipefd
-sinc we do not need it. In the parent process after "a" is forked, we move
+since we do not need it. In the parent process after "a" is forked, we 
 copy pipefd into an int[2] array called prev_pipefd. We then initialize a 
 new pipe with pipefd. Then, child "b" is forked. We dup2 the read end of 
-prev_pipefd (which is piping data from child "a") into STDIN_LOC. We dup2 
-the write end of pipefd into child "b"'s STDOUT_LOC. In the parent process 
+prev_pipefd (which is piping data from child "a") into STDIN_FILENO. We dup2 
+the write end of pipefd into child "b"'s STDOUT_FILENO. In the parent process 
 after forking child "b", we close prev_pipefd (since we don't need it anymore)
 and then before forking child "c", we copy pipefd into prev_pipefd, and since
 we have reached the last command now, we don't create any more pipes. After
