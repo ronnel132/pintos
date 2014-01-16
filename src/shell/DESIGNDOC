@@ -27,6 +27,8 @@ Archan Luhar     <archanl@gmail.com>
 >> Please cite any offline or online sources you consulted while
 >> preparing your submission, other than the Pintos documentation, course
 >> text, lecture notes, and course instructors.
+Different manpages
+http://stackoverflow.com/questions/876605/multiple-child-process
 
 			   COMMAND SHELL
 			   =============
@@ -81,9 +83,45 @@ child processes.
 >> A5: Similarly, describe the details of how terminated processes are
 >> reaped in the example command "a | b | c".
 
+In the above example, mysh would have forked 3 times, hence have 3
+children (a, b, c). They could certainly terminate at very different 
+times, and we need to reap them all. Thus, when fork()-ing we maintain
+an array of pid-s (pids[]), so the parent knows the id-s of all of its
+children.
+
+Then, it initializes remaining to num_spawned_processes. While
+there are still remaining processes, it loops through pids[] and
+waits for the first nonzero pid (hence reaps it). After it reaps this
+child, it sets that pid in the array to 0, so that next time it knows that
+that child has already exited, so that it doesn't waitpid() for it.
+
+Clearly, after remaining is 0,
+all pids[] are set to 0, hence all children have exited and
+been reaped. 
+
+
 >> A6: Similarly, describe which processes are responsible for setting
 >> up the redirections in the example command
 >> "a < inp.txt | b | c > out.txt".
+
+After fork()-ing, the exec_cmds() function (in the child), before execve()-ing
+will check for the values of stdin_loc, stdout_loc, stderr_loc in the
+command struct. If they're NULL, it means that they aren't redirected to any 
+paths. If they are non-null, it means that we're redirecting streams. 
+
+For a: we open inp.txt, dup2() STDIN_FILENO to inp.txt, then close the file 
+(stdin fd is now pointing to it).
+For b we have no redirection
+For c: we create and open (with appropriate permissions) out.txt, then
+dup2() STDOUT_FILENO to that file, then we close the file (stdout fd is
+now pointing to it).
+
+Note that although we don't set stderr_loc in this implementation, for
+extensibiilty we left it there (say we wanted to support stderr redirects
+in the future).
+
+Then we execve(). Since execve() doesn't create a new process (just replaces
+the current one) all the file descriptors we set up before are still valid.
 
 ---- RATIONALE ----
 
