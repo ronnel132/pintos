@@ -21,6 +21,8 @@ Command * init_command();
 
 void free_command(Command *cmd);
 
+void free_command_struct(Command *cmd_ll_root, int num_cmds);
+
 char ** tokenizer(char * str);
 
 /* Takes a curr_path string, apointer to a linked list of Command structs

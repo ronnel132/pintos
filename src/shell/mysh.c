@@ -306,7 +306,7 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
 
     /* Holds the two ends of the previously used pipe */
     int prev_pipefd[2];
-    Command *cmd_ll_root, *nxt_cmd;
+    Command *cmd_ll_root;
 
     /* Pointer to hold the concat'ed path */
     char *path;
@@ -509,6 +509,15 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
     free(pids);
 
     /* Free the command structs */
+    free_command_struct(cmd_ll_root, num_cmds);
+}
+
+/* Frees the command linked list */
+void free_command_struct(Command *cmd_ll_root, int num_cmds) {
+    int i;
+    Command *cmd;
+    Command *nxt_cmd;
+
     cmd = cmd_ll_root;
     for (i = 0; i < num_cmds; i++) {
         nxt_cmd = cmd->next;
@@ -516,6 +525,7 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
         cmd = nxt_cmd;
     }
 }
+    
 
 char ** tokenizer(char * str) {
     int num_tokens;
