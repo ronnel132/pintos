@@ -14,34 +14,34 @@
 
 /* Main loop. Waits for user input, then parses and execs commands */
 int main(void) {
-    int i;
+    struct passwd *pw;  /* User info struct */
+
     char curr_path[PATH_MAX];
-    char curr_user[LOGIN_NAME_MAX];
-    struct passwd *pw;
-    char *homedir;
     int chdir_status;
 
     char input[MAX_INPUT_LENGTH];
     char **tokenized_input;
 
-    Command *cmd_ll;  /* The cmd linked list */
-    int ll_size;      /* Size of the cmd linked list */
+    int i;
+
+    Command *cmd_ll;    /* The cmd linked list */
+    int ll_size;        /* Size of the cmd linked list */
 
 
-    /* TODO: Check for errors. */
+    /* Get user's information. */
     pw = getpwuid(getuid());
-    homedir = pw->pw_dir;
+    if (pw == NULL) {
+        fputs("Error retrieving user information.\n", stderr);
+    }
 
     /* Loop the shell prompt, waiting for input */
     while (1) {
         /* Get current user and path */
         getcwd(curr_path, PATH_MAX);
-        getlogin_r(curr_user, LOGIN_NAME_MAX);
-
         /* TODO: Check for errors. */
 
         /* Print prompt */
-        printf("%s:%s> ", curr_user, curr_path);
+        printf("%s:%s> ", pw->pw_name, curr_path);
 
         /* Get user input and tokenize it */
         fgets(input, MAX_INPUT_LENGTH, stdin);
@@ -56,7 +56,7 @@ int main(void) {
                    strcmp(tokenized_input[0], "chdir") == 0) {
 
             if (tokenized_input[1] == NULL) {
-                chdir_status = chdir(homedir);
+                chdir_status = chdir(pw->pw_dir);
             } else {
                 chdir_status = chdir(tokenized_input[1]);
             }
