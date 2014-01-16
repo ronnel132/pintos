@@ -133,6 +133,7 @@ char * concat(char *str1, char *str2) {
 Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
     int i, argv_ind;
     char **cmd_argv;
+    char *curr_path_slash;
     Command *cmd, *cur_cmd, *cmd_ll_root;
 
 
@@ -168,7 +169,11 @@ Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
                 fputs("Invalid redirect specified.\n", stderr);
                 return NULL;
             }
-            cmd->stdin_loc = concat(concat(curr_path, "/"), strdup(tokenized[i + 1]));
+
+            curr_path_slash = concat(curr_path, "/");
+            cmd->stdin_loc = concat(curr_path_slash, tokenized[i + 1]);
+            free(curr_path_slash);
+
             i = i + 2;
         }
         else if (strcmp(tokenized[i], ">") == 0) {
@@ -176,7 +181,11 @@ Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
                 fputs("Invalid redirect specified.\n", stderr);
                 return NULL;
             }
-            cmd->stdout_loc = concat(concat(curr_path, "/"), strdup(tokenized[i + 1]));
+
+            curr_path_slash = concat(curr_path, "/");
+            cmd->stdout_loc = concat(curr_path_slash, tokenized[i + 1]);
+            free(curr_path_slash);
+            
             i = i + 2;
         }
         else {
