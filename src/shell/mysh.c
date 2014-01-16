@@ -850,8 +850,6 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
 
             exit(1);
 
-            /* TODO: If one command fails, should all of them fail? */
-
         }
         else {
             if (num_cmds > 1) {
