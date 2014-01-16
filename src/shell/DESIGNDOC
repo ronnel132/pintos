@@ -171,6 +171,22 @@ the current one) all the file descriptors we set up before are still valid.
 >> A6: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
 
+In choosing the data structures to represent the series of processes to be 
+executed, we decided that the Command struct linked list design would suit 
+our needs very well. Each Command struct is capable of containing all the 
+information necessary to execute that particular command/process, in a 
+convenient struct.
+
+For the piping design, we did consider then abandon one alternative: Instead
+of our current design, we previously considered creating all the pipes in the 
+parent process before forking any children. We realized, however, that this is
+an inferior design, because the child process, when forked from the parent 
+process, would have a copy of this pipe array uneccesarily, and the child 
+process would have to go through this array and close all the pipes that it
+did not need. Instead, our alternative only keeps pipes that are needed open,
+and only creates pipes when they are needed, then closes them when they are 
+not.
+
 			  SURVEY QUESTIONS
 			  ================
 
