@@ -362,19 +362,38 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
             /* TODO: Check created file permissions */
 
             if (cmd->stdin_loc != NULL) {
-                in = open(cmd->stdin_loc, O_RDWR, S_IRUSR | S_IWUSR);
+                /* Open file, read only */
+                in = open(cmd->stdin_loc, O_RDWR);
+
+                /* Set as stdin */
                 dup2(in, STDIN_FILENO);
+
+                /* Remove temporary file descriptor */
                 close(in);
             }
 
             if (cmd->stdout_loc != NULL) {
-                out = open(cmd->stdout_loc, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+                /*
+                 * Open file for writing. Permission to create if necessary,
+                 * with user read/write permissions.
+                 */
+                out = open(cmd->stdout_loc,
+                           O_CREAT | O_RDWR,
+                           S_IRUSR | S_IWUSR);
+
+                /* Set as stdout */
                 dup2(out, STDOUT_FILENO);
+
+                /* Remove temporary file descriptor */
                 close(out);
             }
 
             if (cmd->stderr_loc != NULL) {
-                err = open(cmd->stderr_loc, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+                err = open(cmd->stderr_loc,
+                           O_CREAT | O_RDWR,
+                           S_IRUSR | S_IWUSR);
+
+                /* Set as stderr */
                 dup2(err, STDERR_FILENO);
                 close(err);
             }
