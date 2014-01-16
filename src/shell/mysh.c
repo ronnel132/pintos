@@ -11,8 +11,6 @@
 
 #include "mysh.h"
 
-#define ASCII_NUL '\0'
-#define MAX_INPUT_LENGTH 1024
 
 /* Main loop. Waits for user input, then parses and execs commants */
 int main(void) {
