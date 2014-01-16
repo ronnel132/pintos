@@ -186,6 +186,7 @@ char ** tokenizer(char * str) {
             if (*str_it == '>' && *(str_it + 1) == '>') {
                 /* >> is the append token so skip next char */
                 token = str_it + 2;
+                str_it++;
             } else {
                 /* the token is just > */
                 token = str_it + 1;
@@ -274,6 +275,7 @@ char ** tokenizer(char * str) {
 
                 /* Start new token, skip next char because >> */
                 token = str_it + 2;
+                str_it++;
             } else {
                 tokens[token_index] = strndup(str_it, 1);
 
