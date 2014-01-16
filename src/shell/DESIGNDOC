@@ -168,6 +168,13 @@ the current one) all the file descriptors we set up before are still valid.
 >> A?: Why do the chdir and exit commands have to be implemented as
 >> built-in functions, rather than external programs?
 
+Both of them (chdir and exit) modify the state of the shell (one changes
+a variable, the other exits the program). Changing the variable certainly
+couldn't be done by an external program. Exiting wouldn't make much sense
+either. We'd need to create a program that finds mysh (it's parent) and
+sends it a SIGTERM or something. There isn't much sense in that when we can
+simply exit internally from mysh.
+
 >> A6: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
 
