@@ -20,6 +20,7 @@ int main(void) {
     char curr_user[LOGIN_NAME_MAX];
     struct passwd *pw;
     char *homedir;
+    int chdir_status;
 
     char input[MAX_INPUT_LENGTH];
     char **tokenized_input;
@@ -56,13 +57,14 @@ int main(void) {
                    strcmp(tokenized_input[0], "chdir") == 0) {
 
             if (tokenized_input[1] == NULL) {
-                free(tokenized_input[1]);
-                tokenized_input[1] = strdup(homedir);
+                chdir_status = chdir(homedir);
+            } else {
+                chdir_status = chdir(tokenized_input[1]);
             }
 
             /* chdir changes current directory. Returns nonzero if error. */
             /* TODO: figure out why correct error messages aren't being displayed */
-            if (chdir(tokenized_input[1])) {
+            if (chdir_status < 0) {
                 if (errno == ENOTDIR) {
                     fputs("A component of the path is not a directory.\n", stderr);
                 } else if (errno == EACCES) {
@@ -73,6 +75,8 @@ int main(void) {
                     fputs("Error changing directory.\n", stderr);
                 }
             }
+
+            tokenized_input[1] = NULL;
         } else {
             cmd_ll = make_cmd_ll(tokenized_input, curr_path, &ll_size);
             if (cmd_ll == NULL) {
