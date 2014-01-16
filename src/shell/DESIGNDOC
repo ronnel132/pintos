@@ -91,6 +91,19 @@ this file location into the stdout_loc field.
 >> redirection in a simple command like "a < inp.txt > out.txt", by
 >> describing what process takes care of the redirection and when.
 
+When executing commands, we would have a command struct for a. The
+struct will store stdout_loc and stdin_loc, which would be set to the
+path for inp.txt and out.txt. Then, we open inp.txt, dup2() stdin to
+the file, then close the original file descriptor, since now stdin is
+pointing to it.
+
+Similarly, we create out.txt with the appropriate permissions (using open()),
+then we dup2 stdout to this file. Then we finally close the original file
+handler, since now stdout is pointing to the file. 
+
+This achieves the desired effect of redirecting the streams to the requested
+file paths.
+
 >> A4: Illustrate how you solved the problem of setting up the pipes
 >> between multiple operations in a single command, by describing
 >> what each process is responsible for.  For example, given the
@@ -151,7 +164,12 @@ paths. If they are non-null, it means that we're redirecting streams.
 
 For a: we open inp.txt, dup2() STDIN_FILENO to inp.txt, then close the file 
 (stdin fd is now pointing to it).
-For b we have no redirection
+Then we connect a and b with a pipe (as described above; a's stdout is
+write end of pipe; b's stdin is read end of pipe)
+For b we have no redirection, so just dup2() b's stdout to the write end of
+pipe2, and c's stdin to the read end of pipe2. Of course, the extra fd-s should
+be closed.
+
 For c: we create and open (with appropriate permissions) out.txt, then
 dup2() STDOUT_FILENO to that file, then we close the file (stdout fd is
 now pointing to it).
