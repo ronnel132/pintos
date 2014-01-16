@@ -37,11 +37,17 @@ int main(void) {
     /* Loop the shell prompt, waiting for input */
     while (1) {
         /* Get current user and path */
-        getcwd(curr_path, PATH_MAX);
-        /* TODO: Check for errors. */
+        if (getcwd(curr_path, PATH_MAX) == NULL) {
+            fputs("Error retrieving current directory!.\n", stderr);
+            curr_path[0] = ASCII_NUL;
+        }
 
         /* Print prompt */
-        printf("%s:%s> ", pw->pw_name, curr_path);
+        if (pw != NULL && curr_path[0] != ASCII_NUL) {
+            printf("%s:%s> ", pw->pw_name, curr_path);
+        } else {
+            puts("> ");
+        }
 
         /* Get user input and tokenize it */
         fgets(input, MAX_INPUT_LENGTH, stdin);
@@ -633,17 +639,28 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
              * to these locations; no need to leak fhs
             */
 
-            /* TODO: Handle failures */
+
 
             if (cmd->stdin_loc != NULL) {
                 /* Open file, read only */
                 in = open(cmd->stdin_loc, O_RDWR);
 
-                /* Set as stdin */
-                dup2(in, STDIN_FILENO);
+                if (in != -1) {
+                    /* Set as stdin */
+                    if (dup2(in, STDIN_FILENO) == -1) {
+                        fputs("Fatal error: Cannot set stdin file. "
+                              "Aborting.\n", stderr);
+                        exit(1);
+                    }
 
-                /* Remove temporary file descriptor */
-                close(in);
+                    /* Remove temporary file descriptor */
+                    close(in);
+                } else {
+                    fprintf(stderr,
+                            "Fatal error: Unable to read %s. Aborting.\n",
+                            cmd->stdin_loc);
+                    exit(1);
+                }
             }
 
             if (cmd->stdout_loc != NULL) {
@@ -655,11 +672,23 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
                            O_CREAT | O_RDWR,
                            S_IRUSR | S_IWUSR);
 
-                /* Set as stdout */
-                dup2(out, STDOUT_FILENO);
+                if (out != -1) {
+                    /* Set as stdout */
+                    if (dup2(out, STDOUT_FILENO) == -1) {
+                        fputs("Fatal error: Cannot set stdout file. "
+                              "Aborting.\n", stderr);
+                        exit(1);
+                    }
 
-                /* Remove temporary file descriptor */
-                close(out);
+                    /* Remove temporary file descriptor */
+                    close(out);
+                } else {
+                    fprintf(stderr,
+                            "Fatal error: Unable to read/write/create %s. "
+                            "Aborting.\n",
+                            cmd->stdin_loc);
+                    exit(1);
+                }
             }
 
             if (cmd->stderr_loc != NULL) {
@@ -667,10 +696,25 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
                            O_CREAT | O_RDWR,
                            S_IRUSR | S_IWUSR);
 
-                /* Set as stderr */
-                dup2(err, STDERR_FILENO);
-                close(err);
+                if (err != -1) {
+                    /* Set as stderr */
+                    if (dup2(err, STDERR_FILENO) == -1) {
+                        fputs("Fatal error: Cannot set stderr file. "
+                              "Aborting.\n", stderr);
+                        exit(1);
+                    }
+
+                    /* Remove temporary file descriptor */
+                    close(err);
+                } else {
+                    fprintf(stderr,
+                            "Fatal error: Unable to read/write/create %s. "
+                            "Aborting.\n",
+                            cmd->stdin_loc);
+                    exit(1);
+                }
             }
+
 
             /*
              * Set up piping between processes if num_cmds is greater than 
@@ -683,7 +727,11 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
                  */
                 if (i == 0) {
                     close(pipefd[0]);
-                    dup2(pipefd[1], STDOUT_FILENO);
+                    if (dup2(pipefd[1], STDOUT_FILENO) == -1) {
+                        fputs("Fatal error: Cannot set stdout file. "
+                              "Aborting.\n", stderr);
+                        exit(1);
+                    }
                     close(pipefd[1]);
                 }
                 /*
@@ -695,7 +743,11 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
                  */
                 else if (i == num_cmds - 1) {
                     close(prev_pipefd[1]);
-                    dup2(prev_pipefd[0], STDIN_FILENO);
+                    if (dup2(prev_pipefd[0], STDIN_FILENO) == -1) {
+                        fputs("Fatal error: Cannot set stdin file. "
+                              "Aborting.\n", stderr);
+                        exit(1);
+                    }
                     close(prev_pipefd[0]);
                 }
                 /*
@@ -710,8 +762,16 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
                 else {
                     close(prev_pipefd[1]);
                     close(pipefd[0]);
-                    dup2(prev_pipefd[0], STDIN_FILENO);
-                    dup2(pipefd[1], STDOUT_FILENO);
+                    if (dup2(prev_pipefd[0], STDIN_FILENO) == -1) {
+                        fputs("Fatal error: Cannot set stdin file. "
+                              "Aborting.\n", stderr);
+                        exit(1);
+                    }
+                    if (dup2(pipefd[1], STDOUT_FILENO) == -1) {
+                        fputs("Fatal error: Cannot set stdout file. "
+                              "Aborting.\n", stderr);
+                        exit(1);
+                    }
                     close(prev_pipefd[0]);
                     close(pipefd[1]);
                 }
