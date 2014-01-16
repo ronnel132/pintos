@@ -105,7 +105,7 @@ int main(void) {
     return 0;
 }
 
-/* A helper function to concatinate two strings. Note that concat()
+/* A helper function to concatinate str1 and str2. Note that concat()
 *  malloc()-s, hence the returned pointer needs to be freed
 */
 char * concat(char *str1, char *str2) {
@@ -285,7 +285,8 @@ void free_command(Command *cmd) {
     }
 }
 
-/* Execute a chain of commands, and handle any piping/redirection */
+/* Takes a curr_path string, apointer to a linked list of Command structs
+* (and their count), and executes each one of them */
 void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
     int i;
 
@@ -306,7 +307,7 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
 
     /* Holds the two ends of the previously used pipe */
     int prev_pipefd[2];
-    Command *cmd_ll_root, *nxt_cmd;
+    Command *cmd_ll_root;
 
     /* Pointer to hold the concat'ed path */
     char *path;
@@ -378,19 +379,38 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
             /* TODO: Handle failures */
 
             if (cmd->stdin_loc != NULL) {
-                in = open(cmd->stdin_loc, O_RDWR, S_IRUSR | S_IWUSR);
+                /* Open file, read only */
+                in = open(cmd->stdin_loc, O_RDWR);
+
+                /* Set as stdin */
                 dup2(in, STDIN_FILENO);
+
+                /* Remove temporary file descriptor */
                 close(in);
             }
 
             if (cmd->stdout_loc != NULL) {
-                out = open(cmd->stdout_loc, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+                /*
+                 * Open file for writing. Permission to create if necessary,
+                 * with user read/write permissions.
+                 */
+                out = open(cmd->stdout_loc,
+                           O_CREAT | O_RDWR,
+                           S_IRUSR | S_IWUSR);
+
+                /* Set as stdout */
                 dup2(out, STDOUT_FILENO);
+
+                /* Remove temporary file descriptor */
                 close(out);
             }
 
             if (cmd->stderr_loc != NULL) {
-                err = open(cmd->stderr_loc, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+                err = open(cmd->stderr_loc,
+                           O_CREAT | O_RDWR,
+                           S_IRUSR | S_IWUSR);
+
+                /* Set as stderr */
                 dup2(err, STDERR_FILENO);
                 close(err);
             }
@@ -509,6 +529,17 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
     free(pids);
 
     /* Free the command structs */
+    free_command_struct(cmd_ll_root, num_cmds);
+}
+
+/* Frees the command linked list. Takes the head of the ll and
+*  the number of elems in the linked list
+*/
+void free_command_struct(Command *cmd_ll_root, int num_cmds) {
+    int i;
+    Command *cmd;
+    Command *nxt_cmd;
+
     cmd = cmd_ll_root;
     for (i = 0; i < num_cmds; i++) {
         nxt_cmd = cmd->next;
@@ -516,6 +547,7 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
         cmd = nxt_cmd;
     }
 }
+    
 
 char ** tokenizer(char * str) {
     int num_tokens;
