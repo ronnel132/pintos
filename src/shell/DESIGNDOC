@@ -168,15 +168,34 @@ the current one) all the file descriptors we set up before are still valid.
 >> A?: Why do the chdir and exit commands have to be implemented as
 >> built-in functions, rather than external programs?
 
-Both of them (chdir and exit) modify the state of the shell (one changes
-a variable, the other exits the program). Changing the variable certainly
-couldn't be done by an external program. Exiting wouldn't make much sense
-either. We'd need to create a program that finds mysh (it's parent) and
-sends it a SIGTERM or something. There isn't much sense in that when we can
-simply exit internally from mysh.
+The shell implements the chdir command because the current working directory
+of the shell can only be changed, using chdir, by the shell itself.
+
+The exit command is also implemented as a built-in function because it is
+easier if the program terminates itself rather than an external program. The
+external program would need to kill its parent by send it a SIG. Then it too
+would have to exit itself. To remove redundancy, the shell exits itself 
+simply by returning from main.
+
 
 >> A6: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
+
+In choosing the data structures to represent the series of processes to be 
+executed, we decided that the Command struct linked list design would suit 
+our needs very well. Each Command struct is capable of containing all the 
+information necessary to execute that particular command/process, in a 
+convenient struct.
+
+For the piping design, we did consider then abandon one alternative: Instead
+of our current design, we previously considered creating all the pipes in the 
+parent process before forking any children. We realized, however, that this is
+an inferior design, because the child process, when forked from the parent 
+process, would have a copy of this pipe array uneccesarily, and the child 
+process would have to go through this array and close all the pipes that it
+did not need. Instead, our alternative only keeps pipes that are needed open,
+and only creates pipes when they are needed, then closes them when they are 
+not.
 
 			  SURVEY QUESTIONS
 			  ================
