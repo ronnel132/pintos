@@ -385,7 +385,6 @@ Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
     /* resolved_path used to store the path when using the "realpath" system 
      * call.
      */
-    char resolved_path[PATH_MAX];
     Command *cmd, *cur_cmd, *cmd_ll_root;
 
     /* Initialize linked list size to 0 */
@@ -431,9 +430,11 @@ Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
          * struct's stdin_loc.
          */
         if (strcmp(tokenized[i], "<") == 0) {
-            if (realpath(tokenized[i + 1], resolved_path) == NULL) {
-                fprintf(stderr, "Invalid file \"%s\" specified.\n", 
-                    tokenized[i + 1]);
+            if (tokenized[i + 1] == NULL || 
+                strcmp(tokenized[i + 1], "<") == 0 ||
+                strcmp(tokenized[i + 1], ">") == 0 ||
+                strcmp(tokenized[i + 1], "|") == 0) {
+                fputs("Invalid redirect specified.\n", stderr);
                 return NULL;
             }
 
@@ -533,7 +534,8 @@ Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
 
 
         if (strcmp(tokenized[i], ">") == 0 ||
-            strcmp(tokenized[i], "<") == 0) {
+            strcmp(tokenized[i], "<") == 0 ||
+            strcmp(tokenized[i], ">>") == 0) {
             /*
              * If a redirect is specified, increment iterator i by 2.
              * Don't include tokenized[i] and tokenized[i + 1] in argv.
