@@ -77,10 +77,7 @@ int main(void) {
             }
         } else {
             cmd_ll = make_cmd_ll(tokenized_input, curr_path, &ll_size);
-            if (cmd_ll == NULL) {
-                fputs("Invalid entry. Command not supported.\n", stderr);
-            }
-            else {
+            if (cmd_ll != NULL) {
                 exec_cmds(curr_path, cmd_ll, ll_size);
             }
         }
@@ -136,9 +133,9 @@ char * concat(char *str1, char *str2) {
 Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
     int i, argv_ind;
     char **cmd_argv;
-    char *curr_path_slash;
+    char *curr_path_slash; 
+    char resolved_path[PATH_MAX];
     Command *cmd, *cur_cmd, *cmd_ll_root;
-
 
     /* Initialize linked list size to 0 */
     *ll_size = 0;
@@ -168,8 +165,9 @@ Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
         }
 
         if (strcmp(tokenized[i], "<") == 0) {
-            if (tokenized[i + 1] == NULL) {
-                fputs("Invalid redirect specified.\n", stderr);
+            if (realpath(tokenized[i + 1], resolved_path) == NULL) {
+                fprintf(stderr, "Invalid file \"%s\" specified.\n", 
+                    tokenized[i + 1]);
                 return NULL;
             }
 
@@ -180,7 +178,10 @@ Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
             i = i + 2;
         }
         else if (strcmp(tokenized[i], ">") == 0) {
-            if (tokenized[i + 1] == NULL) {
+            if (tokenized[i + 1] == NULL || 
+                strcmp(tokenized[i + 1], "<") == 0 || 
+                strcmp(tokenized[i + 1], ">") == 0 || 
+                strcmp(tokenized[i + 1], "|") == 0) {
                 fputs("Invalid redirect specified.\n", stderr);
                 return NULL;
             }
