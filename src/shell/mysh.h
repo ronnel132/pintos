@@ -8,7 +8,9 @@ typedef struct command {
     struct command *next; 
 } Command;
 
-/* Concatenates two strings str1 and str2 */
+/* A helper function to concatinate str1 and str2. Note that concat()
+*  malloc()-s, hence the returned pointer needs to be freed
+*/
 char * concat(char *str1, char *str2);
 
 /* Takes in a tokenized input, returns a linked list of Command structs
@@ -21,6 +23,9 @@ Command * init_command();
 
 void free_command(Command *cmd);
 
+/* Frees the command linked list. Takes the head of the ll and
+*  the number of elems in the linked list
+*/
 void free_command_struct(Command *cmd_ll_root, int num_cmds);
 
 char ** tokenizer(char * str);

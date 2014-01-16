@@ -105,7 +105,7 @@ int main(void) {
     return 0;
 }
 
-/* A helper function to concatinate two strings. Note that concat()
+/* A helper function to concatinate str1 and str2. Note that concat()
 *  malloc()-s, hence the returned pointer needs to be freed
 */
 char * concat(char *str1, char *str2) {
@@ -285,7 +285,8 @@ void free_command(Command *cmd) {
     }
 }
 
-/* Execute a chain of commands, and handle any piping/redirection */
+/* Takes a curr_path string, apointer to a linked list of Command structs
+* (and their count), and executes each one of them */
 void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
     int i;
 
@@ -531,7 +532,9 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
     free_command_struct(cmd_ll_root, num_cmds);
 }
 
-/* Frees the command linked list */
+/* Frees the command linked list. Takes the head of the ll and
+*  the number of elems in the linked list
+*/
 void free_command_struct(Command *cmd_ll_root, int num_cmds) {
     int i;
     Command *cmd;
