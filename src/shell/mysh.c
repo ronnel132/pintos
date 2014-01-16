@@ -688,12 +688,12 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
                  * needs to create a new file, while the later needs to append
                  * to a current file
                 */
-                if (cmd->file_append == 0) {
+                if (cmd->file_append) {
+                    out = open(cmd->stdout_loc, O_APPEND | O_RDWR);
+                } else {
                     out = open(cmd->stdout_loc,
                                O_CREAT | O_RDWR,
                                S_IRUSR | S_IWUSR);
-                } else {
-                    out = open(cmd->stdout_loc, O_APPEND | O_RDWR);
                 }
                     
 
