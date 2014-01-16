@@ -134,6 +134,9 @@ Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
     int i, argv_ind;
     char **cmd_argv;
     char *curr_path_slash; 
+    /* resolved_path used to store the path when using the "realpath" system 
+     * call.
+     */
     char resolved_path[PATH_MAX];
     Command *cmd, *cur_cmd, *cmd_ll_root;
 
@@ -146,7 +149,15 @@ Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
     cur_cmd = cmd;
 
     i = 0;
+    /* Iterate through the tokens in tokenized, storing all information except
+     * for the argv array, which will be computed in the next while loop, 
+     * after we have calculated each command struct's argc's (so we know what 
+     * size array to malloc for the argv arrays for each command struct).
+     */
     while (tokenized[i] != NULL) {
+        /* If we encounter a pipe, this means we should create a new command
+         * struct, and add it to the end of our linked list.
+         */
         if (strcmp(tokenized[i], "|") == 0) {
             if (tokenized[i + 1] == NULL) {
                 fputs("Invalid pipe specified.\n", stderr);
@@ -160,10 +171,17 @@ Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
             continue;
         }
         
+        /* Set the process name for the command struct, which is only done 
+         * after a pipe or if i is zero.
+         */
         if ((i == 0) || (strcmp(tokenized[i - 1], "|") == 0)) {
             cmd->process = strdup(tokenized[i]);
         }
 
+        /* If a redirect "<" is specified, then check if the file for input 
+         * exists with the realpath system call, and if so, set the command 
+         * struct's stdin_loc.
+         */
         if (strcmp(tokenized[i], "<") == 0) {
             if (realpath(tokenized[i + 1], resolved_path) == NULL) {
                 fprintf(stderr, "Invalid file \"%s\" specified.\n", 
@@ -175,8 +193,15 @@ Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
             cmd->stdin_loc = concat(curr_path_slash, tokenized[i + 1]);
             free(curr_path_slash);
 
+            /* Increment i by two, because we are not counting the tokens "<"
+             * and the next token (representing the file name for redirection)
+             * in counting this command struct's argc's.
+             */
             i = i + 2;
         }
+        /* Check if redirect token ">" is specified. If so, store this file 
+         * path in the command struct's stdout_loc.
+         */
         else if (strcmp(tokenized[i], ">") == 0) {
             if (tokenized[i + 1] == NULL || 
                 strcmp(tokenized[i + 1], "<") == 0 || 
@@ -190,9 +215,15 @@ Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
             cmd->stdout_loc = concat(curr_path_slash, tokenized[i + 1]);
             free(curr_path_slash);
 
+            /* Increment i by two, for the same reason as we do when handling
+             * the token "<".
+             */
             i = i + 2;
         }
         else {
+            /* Increment i by one, as well as the command struct's argc 
+             * value. 
+             */
             i++;
             (cmd->argc)++;
         }
@@ -211,7 +242,15 @@ Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
         exit(1);
     }
 
+    /* This loop iterates through the tokenized input, and set's each command
+     * struct's argv array.
+     */
     while (tokenized[i] != NULL) {
+        /* If we encounter a pipe, we should set the argv for the current 
+         * command struct iterator (cur_cmd) to cmd_argv, and also set the
+         * last value of this argv array to be NULL. Then, we move cur_cmd
+         * to the next command struct, and malloc a new cmd_argv array.
+         */
         if (strcmp(tokenized[i], "|") == 0) {
             cur_cmd->argv = cmd_argv;
             cur_cmd->argv[argv_ind] = NULL;
@@ -224,19 +263,32 @@ Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
                 fputs("Fatal error: Could not allocate memory. Aborting.\n", stderr);
                 exit(1);
             }
-
+            
+            /* Set argv_ind to 0. This variable keeps track of our position
+             * while filling the cmd_argv array for the current command
+             * struct. 
+             */
             argv_ind = 0;
             (*ll_size)++;
         }
+        /* If a redirect is specified, increment our iterator i by 2. We don't
+         * wish to include tokenized[i] and tokenized[i + 1] in argv.
+         */
         if (strcmp(tokenized[i], ">") == 0 
             || strcmp(tokenized[i], "<") == 0) {
             i = i + 2;
         }
+        /* If a pipe is specified, increment our iterator i by 1. We don't 
+         * wish to include the pipe in argv.
+         */
         else if (strcmp(tokenized[i], "|") == 0) {
             i++;
         }
+        /* Otherwise, store the current token in cmd_argv at index argv_ind.
+         */
         else {
             cmd_argv[argv_ind] = strdup(tokenized[i]);
+            /* Increment our iterators. */
             i++;
             argv_ind++;
         }
@@ -256,6 +308,7 @@ Command * init_command() {
         fputs("Fatal error: Could not allocate memory. Aborting.\n", stderr);
         exit(1);
     }
+    /* Initialize the new struct's fields */
     cmd->process = NULL;
     cmd->argc = 0;
     cmd->argv = NULL;
@@ -269,10 +322,11 @@ Command * init_command() {
 void free_command(Command *cmd) {
     int i;
     if (cmd != NULL) {
-        /* Most of the command structs fields are freed in the main loop,
-         * by the tokenizer. 
-         */
+        /* Free the command struct's fields. Then free the command struct. */
         free(cmd->process);
+        /* Iterate through the command struct's argv array, and free each 
+         * one.
+         */
         for (i = 0; i < cmd->argc; i++) {
             free(cmd->argv[i]);
         }
@@ -343,10 +397,17 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
                 }
             }
             else if (i == num_cmds - 1) {
+                /* If we are at the last command, then only move the current
+                 * pipe to prev_pipefd. Do NOT create a new pipe since we 
+                 * won't need one.
+                 */
                 prev_pipefd[0] = pipefd[0];
                 prev_pipefd[1] = pipefd[1];
             }
             else {
+                /* Move the current pipe into the prev_pipe, then create a 
+                 * new pipe with pipefd.
+                 */
                 prev_pipefd[0] = pipefd[0];
                 prev_pipefd[1] = pipefd[1];
                 if (pipe(pipefd) == -1) {
@@ -358,10 +419,6 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
 
         pid = fork();
         pids[i] = pid;
-
-        /* Create the pipe for communication between the ith and (i + 1)th
-         * processes. 
-         */
 
         if (pid < 0) {
             fputs("Fatal error: Could not fork. Aborting.\n", stderr);
@@ -414,17 +471,37 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
                 close(err);
             }
 
+            /* Set up piping between processes if num_cmds is greater than 
+             * 1.
+             */
             if (num_cmds > 1) {
+                /* If we are at i = 0, we need only close pipefd's read end,
+                 * then dup2 pipefd's write end to STDOUT_FILENO. 
+                 */
                 if (i == 0) {
                     close(pipefd[0]);
                     dup2(pipefd[1], STDOUT_FILENO);
                     close(pipefd[1]);
                 }
+                /* If we are at the last command (num_cmds - 1), then we are 
+                 * only working with prev_pipefd (which is the pipe connected
+                 * to the STDOUT of the previous command), and we dup2 the 
+                 * output of prev_pipefd's read end to STDIN_FILENO, and close
+                 * prev_pipefd.
+                 */
                 else if (i == num_cmds - 1) {
                     close(prev_pipefd[1]);
                     dup2(prev_pipefd[0], STDIN_FILENO);
                     close(prev_pipefd[0]);
                 }
+                /* Finally, if we are at a command in-between two pipes, then
+                 * we pipe between processes using BOTH prev_pipefd and 
+                 * pipefd, which will pipe data from the previous process and
+                 * to the next process, respectively. Thus, we dup2 
+                 * prev_pipefd's read end to STDIN_FILENO, and dup2 pipefd's
+                 * write end into STDOUT_FILENO. We also ensure these pipes 
+                 * are closed.
+                 */
                 else {
                     close(prev_pipefd[1]);
                     close(pipefd[0]);
@@ -491,7 +568,13 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
         else {
             if (num_cmds > 1) {
                 if (i != 0) {
-                    /* In parent we always close the pipe, it doesn't use it */
+                    /* In the parent process, if i != 0 (which means 
+                     * prev_pipefd is not initialized yet), we close 
+                     * prev_pipefd's read and write ends, because future 
+                     * child processes will not need to access these IPC 
+                     * channels... i.e., these pipes have served there purpose
+                     * for previous processes and are no longer needed.
+                     */
                     close(prev_pipefd[0]);
                     close(prev_pipefd[1]);
                 }
