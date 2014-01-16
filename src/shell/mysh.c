@@ -75,8 +75,6 @@ int main(void) {
                     fputs("Error changing directory.\n", stderr);
                 }
             }
-
-            tokenized_input[1] = NULL;
         } else {
             cmd_ll = make_cmd_ll(tokenized_input, curr_path, &ll_size);
             if (cmd_ll == NULL) {
