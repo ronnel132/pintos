@@ -61,6 +61,7 @@ int main(void) {
             }
 
             /* chdir changes current directory. Returns nonzero if error. */
+            /* TODO: figure out why correct error messages aren't being displayed */
             if (chdir(tokenized_input[1])) {
                 if (errno == ENOTDIR) {
                     fputs("A component of the path is not a directory.\n", stderr);
@@ -78,7 +79,7 @@ int main(void) {
                 fputs("Invalid entry. Command not supported.\n", stderr);
             }
             else {
-                exec_cmd(curr_path, cmd_ll, ll_size);
+                exec_cmds(curr_path, cmd_ll, ll_size);
             }
         }
 
@@ -185,7 +186,7 @@ Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
             curr_path_slash = concat(curr_path, "/");
             cmd->stdout_loc = concat(curr_path_slash, tokenized[i + 1]);
             free(curr_path_slash);
-            
+
             i = i + 2;
         }
         else {
@@ -280,7 +281,7 @@ void free_command(Command *cmd) {
     }
 }
 
-void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
+void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
     int i;
     pid_t pid;
     int remaining;

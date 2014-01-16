@@ -25,4 +25,4 @@ char ** tokenizer(char * str);
 
 /* Takes a curr_path string, apointer to a linked list of Command structs
 * (and their count), and executes each one of them */
-void exec_cmd(char *curr_path, Command *cmd, int num_cmds); 
+void exec_cmds(char *curr_path, Command *cmd, int num_cmds); 
