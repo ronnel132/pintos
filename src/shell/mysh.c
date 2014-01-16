@@ -63,10 +63,9 @@ int main(void) {
             }
 
             /* chdir changes current directory. Returns nonzero if error. */
-            /* TODO: figure out why correct error messages aren't being displayed */
             if (chdir_status < 0) {
-                if (errno == ENOTDIR) {
-                    fputs("A component of the path is not a directory.\n", stderr);
+                if (errno == ENOTDIR || errno == ENOENT) {
+                    fputs("A component of the path is invalid.\n", stderr);
                 } else if (errno == EACCES) {
                     fputs("Access denied.\n", stderr);
                 } else if (errno == EIO) {
