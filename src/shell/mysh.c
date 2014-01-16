@@ -281,6 +281,12 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
     int prev_pipefd[2];
     Command *cmd_ll_root, *nxt_cmd;
 
+    /* Pointer to hold the concat'ed path */
+    char *path;
+
+    /* Pointer to hold the trailing / (or any temporary char * if needed */
+    char *tmp;
+
     /* Inspired by: 
         http://stackoverflow.com/questions/876605/multiple-child-process */
 
@@ -386,32 +392,51 @@ void exec_cmd(char *curr_path, Command *cmd, int num_cmds) {
 
             /* Yeah, concat() mallocs, but we found no good way to
             *  free that pointer because of execve(). Anyway the children should
-            *  exit at some point, so this memory leak isn't really an issue in
+            *  exit at some point, so this "memory leak" (not really a leak)
+            *  isn't really an issue in
             *  the long run, just each child will consume a few more bytes in the
-            *  heap during it's lifespan
+            *  heap during it's lifespan.
+            *  However, have to free when execve() returns, since the concat() pointers
+            *  would be lost forever!
             */
 
             /* See if cmd is in /bin/ */
             /* Close the write end, because the child is only using the read
              * end of the pipe.
              */
+
+
+            path = concat("/bin/", cmd->process);
             
-            execve(concat("/bin/", cmd->process), cmd->argv, NULL);
+            execve(path, cmd->argv, NULL);
 
             /* If we're here, execve failed. Let's try to run it on
             *  /usr/bin/
             */
 
-            execve(concat("/usr/bin/", cmd->process), cmd->argv, NULL);
+            free(path);
+
+            path = concat("/usr/bin/", cmd->process);
+
+            execve(path, cmd->argv, NULL);
 
             /* If we're here, execve failed. Let's try to run it on
             *  current wd
             */
 
-            execve(concat(concat(curr_path, "/"), cmd->process), cmd->argv, NULL);
+            free(path);
+
+            tmp = concat(curr_path, "/");
+            path = concat(tmp, cmd->process);
+
+            execve(path, cmd->argv, NULL);
 
             /* If we're here, second execve failed. */
             fputs("Fatal error: Could not execve. Aborting.\n", stderr);
+
+            free(tmp);
+            free(path);
+
             exit(1);
 
             /* TODO: If one command fails, should all of them fail? */
