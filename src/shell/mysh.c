@@ -11,8 +11,6 @@
 
 #include "mysh.h"
 
-#define ASCII_NUL '\0'
-#define MAX_INPUT_LENGTH 1024
 
 /* Main loop. Waits for user input, then parses and execs commants */
 int main(void) {
@@ -63,10 +61,9 @@ int main(void) {
             }
 
             /* chdir changes current directory. Returns nonzero if error. */
-            /* TODO: figure out why correct error messages aren't being displayed */
             if (chdir_status < 0) {
-                if (errno == ENOTDIR) {
-                    fputs("A component of the path is not a directory.\n", stderr);
+                if (errno == ENOTDIR || errno == ENOENT) {
+                    fputs("A component of the path is invalid.\n", stderr);
                 } else if (errno == EACCES) {
                     fputs("Access denied.\n", stderr);
                 } else if (errno == EIO) {
@@ -260,7 +257,8 @@ Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
 
             /* Malloc failed */
             if (cmd_argv == NULL) {
-                fputs("Fatal error: Could not allocate memory. Aborting.\n", stderr);
+                fputs("Fatal error: Could not allocate memory. Aborting.\n",
+                      stderr);
                 exit(1);
             }
             
@@ -392,7 +390,8 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
              */
             if (i == 0) {
                 if (pipe(pipefd) == -1) {
-                    fputs("Fatal error: Unable to create pipe. Aborting.\n", stderr);
+                    fputs("Fatal error: Unable to create pipe. Aborting.\n",
+                          stderr);
                     exit(1);
                 }
             }
@@ -411,7 +410,8 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
                 prev_pipefd[0] = pipefd[0];
                 prev_pipefd[1] = pipefd[1];
                 if (pipe(pipefd) == -1) {
-                    fputs("Fatal error: Unable to create pipe. Aborting.\n", stderr);
+                    fputs("Fatal error: Unable to create pipe. Aborting.\n",
+                          stderr);
                     exit(1);
                 }
             }
@@ -513,14 +513,14 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
             }
 
 
-            /* Yeah, concat() mallocs, but we found no good way to
-            *  free that pointer because of execve(). Anyway the children should
+            /* Yeah, concat() mallocs, but we found no good way to free that
+            *  pointer because of execve(). Anyway the children should
             *  exit at some point, so this "memory leak" (not really a leak)
             *  isn't really an issue in
-            *  the long run, just each child will consume a few more bytes in the
-            *  heap during it's lifespan.
-            *  However, have to free when execve() returns, since the concat() pointers
-            *  would be lost forever!
+            *  the long run, just each child will consume a few more bytes in
+            *  the heap during it's lifespan.
+            *  However, have to free when execve() returns, since the concat()
+            *  pointers would be lost forever!
             */
 
             /* See if cmd is in /bin/ */

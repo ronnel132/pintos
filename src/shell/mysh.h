@@ -1,3 +1,11 @@
+#define ASCII_NUL '\0'
+#define MAX_INPUT_LENGTH 1024
+
+/*
+ * Command struct defines a process's name, arguments, and non-default input
+ * output files.
+ * next points to the next command in a series of piped Commands.
+ */
 typedef struct command {
     char *process;
     int argc;
@@ -8,12 +16,14 @@ typedef struct command {
     struct command *next; 
 } Command;
 
-/* A helper function to concatinate str1 and str2. Note that concat()
-*  malloc()-s, hence the returned pointer needs to be freed
-*/
+/*
+ * A helper function to concatinate str1 and str2. Note that concat()
+ * malloc()-s, hence the returned pointer needs to be freed
+ */
 char * concat(char *str1, char *str2);
 
-/* Takes in a tokenized input, returns a linked list of Command structs
+/*
+ * Takes in a tokenized input, returns a linked list of Command structs
  * representing the sequence of commands specified by the user through 
  * redirects and pipes.
  */
