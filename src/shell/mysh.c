@@ -183,7 +183,13 @@ char ** tokenizer(char * str) {
             num_tokens++;
 
             /* Start new token */
-            token = str_it + 1;
+            if (*str_it == '>' && *(str_it + 1) == '>') {
+                /* >> is the append token so skip next char */
+                token = str_it + 2;
+            } else {
+                /* the token is just > */
+                token = str_it + 1;
+            }
             token_length = 0;
         }
 
@@ -262,11 +268,20 @@ char ** tokenizer(char * str) {
             }
 
             /* Redirection or pipe symbol is its own token */
-            tokens[token_index] = strndup(str_it, 1);
-            token_index++;
+            if (*str_it == '>' && *(str_it + 1) == '>') {
+                /* >> is the append token so it's 2 chars */
+                tokens[token_index] = strndup(str_it, 2);
 
-            /* Start new token */
-            token = str_it + 1;
+                /* Start new token, skip next char because >> */
+                token = str_it + 2;
+            } else {
+                tokens[token_index] = strndup(str_it, 1);
+
+                /* Start new token */
+                token = str_it + 1;
+            }
+
+            token_index++;
             token_length = 0;
         }
 
