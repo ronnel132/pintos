@@ -168,6 +168,16 @@ the current one) all the file descriptors we set up before are still valid.
 >> A?: Why do the chdir and exit commands have to be implemented as
 >> built-in functions, rather than external programs?
 
+The shell implements the chdir command because the current working directory
+of the shell can only be changed, using chdir, by the shell itself.
+
+The exit command is also implemented as a built-in function because it is
+easier if the program terminates itself rather than an external program. The
+external program would need to kill its parent by send it a SIG. Then it too
+would have to exit itself. To remove redundancy, the shell exits itself 
+simply by returning from main.
+
+
 >> A6: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
 
