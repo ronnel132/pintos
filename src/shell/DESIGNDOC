@@ -40,10 +40,50 @@ http://stackoverflow.com/questions/876605/multiple-child-process
 >> command "a arg1 arg2 | b arg1 | c arg1 arg2 arg3".  How does your
 >> shell internally represent such a command?
 
+When a command is typed into our shell, we tokenize the input, then iterate
+through the tokenized input in make_cmd_ll, which creates a linked list of 
+Command structs. A Command struct is created whenever we encounter a pipe.
+In the example above, "a arg1 arg2", "b arg1", and "c arg1 arg2 arg3" would 
+each be represented in their own Command structs. Command structs contain 
+all the information necessary to execute the command with execve. It contains
+the process name, argc (for "a arg1 arg2", for example, argc would be 3), 
+argv (a null terminated list), any redirects, and a "next" pointer, which 
+points to the next Command struct in the linked list. 
+
+We set all the fields of each Command struct while iterating through the
+tokenized input array, and we create Command structs when a pipe symbol is
+encountered. When a Command struct is created, we update the pointer to the
+current Command to the new command after setting the current command's next
+pointer to the newly created command struct. At the end of make_cmd_ll, we
+return the head pointer of the new linked list. In the example above, this 
+would be a linked list of 3 command structs, the first with argc 3, the second
+with argc 2, and the third with argc 4. Also note that when a field is not 
+specified it is given a value of NULL, which we check for in certain areas
+(especially when executing commands in the linked list).
+
 >> A2: Now, given the command:
 >> "a arg1 arg2 < inp.txt | b arg1 | c arg1 arg2 arg3 > out.txt"
 >> Briefly explain specifically how the redirections are parsed and
 >> represented, and by what processes.
+
+Our tokenizer takes the string input typed into the shell and ensures that
+any redirect symbols (">" or "<") are made into their own tokens. Thus, when
+creating the command struct linked list described above, it is very easy to 
+check if the current token found while iterating through the tokenized input 
+is a redirect symbol. If this is true, then the token immediately after the 
+redirect symbol is set to be the file location of the redirect. Of course,
+we check what type of redirect is performed, and adjust the stdin_loc and
+stdout_loc fields of the current command struct accordingly, depending on 
+if we encountered a ">" or a "<". 
+
+Thus, in the example above, in the command "a arg1 arg2 < inp.txt", upon 
+encountering a "<", we take the file at the index after the current index,
+and store this location into the current command struct's stdin_loc field.
+Then, in "b arg1", in a new Command struct, we encounter no redirects, so 
+there is no need to modify the current Command struct's stdin_loc or 
+stdout_loc. And finally, in the last command "c arg1 arg2 arg3 > out.txt",
+upon encountering ">", we take the index after the current index, and store
+this file location into the stdout_loc field. 
 
 ---- ALGORITHMS ----
 
