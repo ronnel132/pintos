@@ -14,6 +14,7 @@
 #define ASCII_NUL '\0'
 #define MAX_INPUT_LENGTH 1024
 
+/* Main loop. Waits for user input, then parses and execs commants */
 int main(void) {
     int i;
     char curr_path[PATH_MAX];
@@ -24,7 +25,6 @@ int main(void) {
 
     char input[MAX_INPUT_LENGTH];
     char **tokenized_input;
-//     **tokenized_it;
 
     Command *cmd_ll;  /* The cmd linked list */
     int ll_size;  /* Size of the cmd linked list */
@@ -108,6 +108,9 @@ int main(void) {
     return 0;
 }
 
+/* A helper function to concatinate two strings. Note that concat()
+*  malloc()-s, hence the returned pointer needs to be freed
+*/
 char * concat(char *str1, char *str2) {
     char *buffer;
     int i, len;
@@ -285,13 +288,26 @@ void free_command(Command *cmd) {
     }
 }
 
+/* Execute a chain of commands, and handle any piping/redirection */
 void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
     int i;
+
+    /* Holds the PID after fork()-ing */
     pid_t pid;
+
+    /* Number of remaining alive children */
     int remaining;
+
+    /* Child's return value (when it's reaped) */
     int ret_val;
+
+    /* File descriptors for stdin, stdout, and stderr */
     int in, out, err;
+
+    /* Array to hold the two ends (fd-s) of a pipe */
     int pipefd[2];
+
+    /* Holds the two ends of the previously used pipe */
     int prev_pipefd[2];
     Command *cmd_ll_root, *nxt_cmd;
 
@@ -342,6 +358,7 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
                 }
             }
         }
+
         pid = fork();
         pids[i] = pid;
 
@@ -362,7 +379,6 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
             */
 
             /* TODO: Handle failures */
-            /* TODO: Check created file permissions */
 
             if (cmd->stdin_loc != NULL) {
                 in = open(cmd->stdin_loc, O_RDWR, S_IRUSR | S_IWUSR);
