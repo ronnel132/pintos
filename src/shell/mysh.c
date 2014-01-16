@@ -335,6 +335,7 @@ Command * init_command() {
     cmd->stdin_loc = NULL;
     cmd->stdout_loc = NULL;
     cmd->stderr_loc = NULL;
+    cmd->file_append = 0;
     cmd->next = NULL;
     return cmd;
 }
@@ -444,16 +445,23 @@ Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
              */
             i = i + 2;
         }
+
         /* Check if redirect token ">" is specified. If so, store this file 
          * path in the command struct's stdout_loc.
          */
-        else if (strcmp(tokenized[i], ">") == 0) {
+        else if (strcmp(tokenized[i], ">") == 0 ||
+                 strcmp(tokenized[i], ">>") == 0) {
+
             if (tokenized[i + 1] == NULL || 
                 strcmp(tokenized[i + 1], "<") == 0 || 
                 strcmp(tokenized[i + 1], ">") == 0 || 
                 strcmp(tokenized[i + 1], "|") == 0) {
                 fputs("Invalid redirect specified.\n", stderr);
                 return NULL;
+            }
+
+            if (strcmp(tokenized[i], ">>") == 0) {
+                cmd->file_append = 1;
             }
 
             curr_path_slash = concat(curr_path, "/");
