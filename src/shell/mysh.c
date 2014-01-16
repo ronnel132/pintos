@@ -88,20 +88,17 @@ int main(void) {
         }
 
         /* Free tokenized input */
-        i = 0;
-        while (tokenized_input[i] != NULL) {
+        for(i = 0; tokenized_input[i] != NULL; i++) {
             free(tokenized_input[i]);
-            i++;
         }
         free(tokenized_input);
     }
+
     /* Try to free tokenized_input again just in case we broke from the while 
      * loop above without freeing. 
      */
-    i = 0;
-    while (tokenized_input[i] != NULL) {
+    for(i = 0; tokenized_input[i] != NULL; i++) {
         free(tokenized_input[i]);
-        i++;
     }
     free(tokenized_input);
 
