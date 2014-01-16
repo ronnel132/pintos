@@ -361,7 +361,7 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
             /* TODO: Check created file permissions */
 
             if (cmd->stdin_loc != NULL) {
-                in = open(cmd->stdin_loc, O_RDWR, S_IRUSR, S_IWUSR);
+                in = open(cmd->stdin_loc, O_RDWR, S_IRUSR | S_IWUSR);
                 dup2(in, STDIN_FILENO);
                 close(in);
             }
