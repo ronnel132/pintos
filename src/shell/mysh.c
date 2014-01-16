@@ -220,7 +220,8 @@ Command * make_cmd_ll(char **tokenized, char *curr_path, int *ll_size) {
 
             /* Malloc failed */
             if (cmd_argv == NULL) {
-                fputs("Fatal error: Could not allocate memory. Aborting.\n", stderr);
+                fputs("Fatal error: Could not allocate memory. Aborting.\n",
+                      stderr);
                 exit(1);
             }
 
@@ -337,7 +338,8 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
              */
             if (i == 0) {
                 if (pipe(pipefd) == -1) {
-                    fputs("Fatal error: Unable to create pipe. Aborting.\n", stderr);
+                    fputs("Fatal error: Unable to create pipe. Aborting.\n",
+                          stderr);
                     exit(1);
                 }
             }
@@ -349,7 +351,8 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
                 prev_pipefd[0] = pipefd[0];
                 prev_pipefd[1] = pipefd[1];
                 if (pipe(pipefd) == -1) {
-                    fputs("Fatal error: Unable to create pipe. Aborting.\n", stderr);
+                    fputs("Fatal error: Unable to create pipe. Aborting.\n",
+                          stderr);
                     exit(1);
                 }
             }
@@ -435,14 +438,14 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
             }
 
 
-            /* Yeah, concat() mallocs, but we found no good way to
-            *  free that pointer because of execve(). Anyway the children should
+            /* Yeah, concat() mallocs, but we found no good way to free that
+            *  pointer because of execve(). Anyway the children should
             *  exit at some point, so this "memory leak" (not really a leak)
             *  isn't really an issue in
-            *  the long run, just each child will consume a few more bytes in the
-            *  heap during it's lifespan.
-            *  However, have to free when execve() returns, since the concat() pointers
-            *  would be lost forever!
+            *  the long run, just each child will consume a few more bytes in
+            *  the heap during it's lifespan.
+            *  However, have to free when execve() returns, since the concat()
+            *  pointers would be lost forever!
             */
 
             /* See if cmd is in /bin/ */
@@ -490,7 +493,7 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
         else {
             if (num_cmds > 1) {
                 if (i != 0) {
-                    /* In parent we always close the pipe, it doesn't use it */
+                    /* Parent does not need pipes */
                     close(prev_pipefd[0]);
                     close(prev_pipefd[1]);
                 }
