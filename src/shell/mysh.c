@@ -700,7 +700,7 @@ void exec_cmds(char *curr_path, Command *cmd, int num_cmds) {
                 */
                 if (cmd->file_append) {
                     out = open(cmd->stdout_loc,
-                               O_APPEND | O_RDWR,
+                               O_APPEND | O_RDWR | O_CREAT,
                                S_IRUSR | S_IWUSR);
                 } else {
                     out = open(cmd->stdout_loc,
