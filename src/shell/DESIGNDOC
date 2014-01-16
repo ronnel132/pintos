@@ -230,6 +230,8 @@ website.
 
 >> Did you find that working on a particular part of the assignment gave
 >> you greater insight into some aspect of OS design?
+Yes, especially the piping and fork/exec-ing parts. Also using the
+UNIX api.
 
 >> Is there some particular fact or hint we should give students in
 >> future quarters to help them solve the problems?  Conversely, did you
