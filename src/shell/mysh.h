@@ -6,6 +6,9 @@
  * Command struct defines a process's name, arguments, and non-default input
  * output files.
  * next points to the next command in a series of piped Commands.
+ * file_append will be 0 if we're just doing a redirect, nonzero if we're 
+ * appending to a current file. This field is meaningful only if stdout_loc
+ * is non-null, i.e. if we're redirectign somewhere.
  */
 typedef struct command {
     char *process;
@@ -14,6 +17,7 @@ typedef struct command {
     char *stdin_loc;
     char *stdout_loc;
     char *stderr_loc;
+    int file_append;
     struct command *next; 
 } Command;
 
