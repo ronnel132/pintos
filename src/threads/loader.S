@@ -62,17 +62,39 @@ read_hd:
     
 # Set the offset pointer to the DAP to be 0.
     sub %si, %si
-    mov $0x10, (%ds:%si) # Set the size in the DAP struct to be 16
-    mov $0x00, 1(%ds:%si) 
+
+
+    # Initialize cx to 0 (this will keep track of ds:si
+    sub %cx, cx
+
+    mov 0x10, (%cx)
+
+    mov $0x00, 1(%cx) 
+
     # Set the low byte of the number of sectors we are reading as 1
-    mov $0x01, 2(%ds:%si)
+    mov $0x01, 2(%cx)
+
     # Set the high byte of the number of sectors were are reading to 0
-    mov $0x00, 3(%ds:%si) # Set the 
-    # Move the segment and offset valie of the MBR buffer into bytes 4 - 7
-    mov %al, 4(%ds:%si)
-    mov %ah, 5(%ds:%si)
-    mov %bl, 6(%ds:%si)
-    mov %bh, 7(%ds:%si)
+    mov $0x00, 3(%cx) 
+
+    # Move the segment and offset value of the MBR buffer into bytes 4 - 7
+    mov %al, 4(%cx)
+    mov %ah, 5(%cx)
+    mov %bl, 6(%cx)
+    mov %bh, 7(%cx)
+
+
+#    mov $0x10, %ds:(%si) # Set the size in the DAP struct to be 16
+#    mov $0x00, 1(%ds:%si) 
+#    # Set the low byte of the number of sectors we are reading as 1
+#    mov $0x01, 2(%ds:%si)
+#    # Set the high byte of the number of sectors were are reading to 0
+#    mov $0x00, 3(%ds:%si) # Set the 
+#    # Move the segment and offset value of the MBR buffer into bytes 4 - 7
+#    mov %al, 4(%ds:%si)
+#    mov %ah, 5(%ds:%si)
+#    mov %bl, 6(%ds:%si)
+#    mov %bh, 7(%ds:%si)
 
 # Set the starting index of the sectors to read to be 0
     mov $0x08, cx
