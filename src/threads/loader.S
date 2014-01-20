@@ -108,10 +108,10 @@ set_index_bytes:
     int $0x13
 
 # Check if sector 0 ends with 0x55, 0xAA. Otherwise skip drive
-    cmp 0x1FE(%ax:%bx), 0x55
+    cmp (%ax:%bx, 0x1FE,), 0x55
     jne read_hd
 
-    cmp 0x1FF(%ax:%bx), 0xAA
+    cmp (%ax:%bx, 0x1FF,), 0xAA
     jne read_hd
 
 # Iterate through the partition table in the MBR
