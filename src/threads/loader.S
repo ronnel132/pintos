@@ -47,17 +47,20 @@
 ####        If you want to create helper routines, there is a TODO toward
 ####        the end of this file that shows where they should go.
 
-    mov $0x42, %ah
-    mov $0x80, %dl
+mov $0x7F, %dl # Hard drive number -1 (since we're immediately incrementing)
 
-####        Set the segment and offset of the buffer for the MBR.
-####        Move segment 0x00 into ax, and offset 0x10 (after the DAP) 
-####        into bx.
+read_hd:
+    mov $0x42, %ah # Setting extended r/w sector mode
+    inc %dl # Go to next (or first, for the first time) hard drive
+
+# Set the segment and offset of the buffer for the MBR.
+# Move segment 0x00 into ax, and offset 0x10 (after the DAP) 
+# into bx.
 
     mov $0x00, %ax
     mov $0x10, %bx
     
-####        Set the offset pointer to the DAP to be 0.
+# Set the offset pointer to the DAP to be 0.
     sub %si, %si
     mov $0x10, (%ds:%si) # Set the size in the DAP struct to be 16
     mov $0x00, 1(%ds:%si) 
@@ -71,7 +74,7 @@
     mov %bl, 6(%ds:%si)
     mov %bh, 7(%ds:%si)
 
-####        Set the starting index of the sectors to read to be 0
+# Set the starting index of the sectors to read to be 0
     mov $0x08, cx
 set_index_bytes:
     mov $0x00, (%ds:%si, cx,)
@@ -79,23 +82,37 @@ set_index_bytes:
     cmp cx, $0x10
     jne set_index_bytes
 
-####        Now call the interupt
+#   Now call the interupt
     int $0x13
 
-#### Iterate through the partition table in the MBR
-#### Move the starting hex-off of the partition table into cx
+# Check if sector 0 ends with 0x55, 0xAA. Otherwise skip drive
+    cmp 0x1FE(%ax:%bx), 0x55
+    jne read_hd
+
+    cmp 0x1FF(%ax:%bx), 0xAA
+    jne read_hd
+
+# Iterate through the partition table in the MBR
+# Move the starting hex-off of the partition table into cx
     mov $0x1AE, cx
 read_pt_entry:
+    # If we finished checking partition 4, leave this hd
+    cmp %cx, 0x1EE
+    je read_hd
+
+    # Go to next partition
     add $0x10, cx
+
     # Check if the drive status of the current partition is bootable (0x80)
     cmp (%ax:%bx, cx,), $0x80
     jne read_pt_entry
+
     # Check if the type of the current partition is a Pintos partition
     cmp 4(%ax:%bx, cx,), $0x20
     jne read_pt_entry
 
-#### If we've reached this point, then the current partition is a bootable 
-#### Pintos partition.
+# If we've reached this point, then the current partition is a bootable 
+# Pintos partition.
 
 	call puts
 	.string "\r\rTODO:  IMPLEMENT THE BOOTLOADER\r"
