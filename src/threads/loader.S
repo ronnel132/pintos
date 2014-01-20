@@ -47,6 +47,56 @@
 ####        If you want to create helper routines, there is a TODO toward
 ####        the end of this file that shows where they should go.
 
+    mov $0x42, %ah
+    mov $0x80, %dl
+
+####        Set the segment and offset of the buffer for the MBR.
+####        Move segment 0x00 into ax, and offset 0x10 (after the DAP) 
+####        into bx.
+
+    mov $0x00, %ax
+    mov $0x10, %bx
+    
+####        Set the offset pointer to the DAP to be 0.
+    sub %si, %si
+    mov $0x10, (%ds:%si) # Set the size in the DAP struct to be 16
+    mov $0x00, 1(%ds:%si) 
+    # Set the low byte of the number of sectors we are reading as 1
+    mov $0x01, 2(%ds:%si)
+    # Set the high byte of the number of sectors were are reading to 0
+    mov $0x00, 3(%ds:%si) # Set the 
+    # Move the segment and offset valie of the MBR buffer into bytes 4 - 7
+    mov %al, 4(%ds:%si)
+    mov %ah, 5(%ds:%si)
+    mov %bl, 6(%ds:%si)
+    mov %bh, 7(%ds:%si)
+
+####        Set the starting index of the sectors to read to be 0
+    mov $0x08, cx
+set_index_bytes:
+    mov $0x00, (%ds:%si, cx,)
+    inc cx
+    cmp cx, $0x10
+    jne set_index_bytes
+
+####        Now call the interupt
+    int $0x13
+
+#### Iterate through the partition table in the MBR
+#### Move the starting hex-off of the partition table into cx
+    mov $0x1AE, cx
+read_pt_entry:
+    add $0x10, cx
+    # Check if the drive status of the current partition is bootable (0x80)
+    cmp (%ax:%bx, cx,), $0x80
+    jne read_pt_entry
+    # Check if the type of the current partition is a Pintos partition
+    cmp 4(%ax:%bx, cx,), $0x20
+    jne read_pt_entry
+
+#### If we've reached this point, then the current partition is a bootable 
+#### Pintos partition.
+
 	call puts
 	.string "\r\rTODO:  IMPLEMENT THE BOOTLOADER\r"
 
