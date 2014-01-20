@@ -65,9 +65,9 @@ read_hd:
 
 
     # Initialize cx to 0 (this will keep track of ds:si
-    sub %cx, cx
+    sub %cx, %cx
 
-    mov 0x10, (%cx)
+    mov $0x10, (%cx)
 
     mov $0x00, 1(%cx) 
 
@@ -97,11 +97,11 @@ read_hd:
 #    mov %bh, 7(%ds:%si)
 
 # Set the starting index of the sectors to read to be 0
-    mov $0x08, cx
+    mov $0x08, %cx
 set_index_bytes:
-    mov $0x00, (%ds:%si, cx,)
-    inc cx
-    cmp cx, $0x10
+    mov $0x00, (%ds:%si, %cx,)
+    inc %cx
+    cmp %cx, $0x10
     jne set_index_bytes
 
 #   Now call the interupt
@@ -116,21 +116,21 @@ set_index_bytes:
 
 # Iterate through the partition table in the MBR
 # Move the starting hex-off of the partition table into cx
-    mov $0x1AE, cx
+    mov $0x1AE, %cx
 read_pt_entry:
     # If we finished checking partition 4, leave this hd
     cmp %cx, 0x1EE
     je read_hd
 
     # Go to next partition
-    add $0x10, cx
+    add $0x10, %cx
 
     # Check if the drive status of the current partition is bootable (0x80)
-    cmp (%ax:%bx, cx,), $0x80
+    cmp (%ax:%bx, %cx,), $0x80
     jne read_pt_entry
 
     # Check if the type of the current partition is a Pintos partition
-    cmp 4(%ax:%bx, cx,), $0x20
+    cmp 4(%ax:%bx, %cx,), $0x20
     jne read_pt_entry
 
 # If we've reached this point, then the current partition is a bootable 
