@@ -57,61 +57,52 @@ read_hd:
 # Move segment 0x00 into ax, and offset 0x10 (after the DAP) 
 # into bx.
 
-    mov $0x00, %ax
     mov $0x10, %bx
     
 # Set the offset pointer to the DAP to be 0.
     sub %si, %si
 
-
-    # Initialize cx to 0 (this will keep track of ds:si
-    sub %cx, %cx
-
-    mov $0x10, (%cx)
-
-    mov $0x00, 1(%cx) 
-
+    movb $0x10, %ds:(%si) 
+    inc %si
+    movb $0x00, %ds:(%si)
+    inc %si
     # Set the low byte of the number of sectors we are reading as 1
-    mov $0x01, 2(%cx)
-
+    movb $0x01, %ds:(%si)
+    inc %si
     # Set the high byte of the number of sectors were are reading to 0
-    mov $0x00, 3(%cx) 
-
+    movb $0x00, %ds:(%si) 
+    inc %si
     # Move the segment and offset value of the MBR buffer into bytes 4 - 7
-    mov %al, 4(%cx)
-    mov %ah, 5(%cx)
-    mov %bl, 6(%cx)
-    mov %bh, 7(%cx)
-
-
-#    mov $0x10, %ds:(%si) # Set the size in the DAP struct to be 16
-#    mov $0x00, 1(%ds:%si) 
-#    # Set the low byte of the number of sectors we are reading as 1
-#    mov $0x01, 2(%ds:%si)
-#    # Set the high byte of the number of sectors were are reading to 0
-#    mov $0x00, 3(%ds:%si) # Set the 
-#    # Move the segment and offset value of the MBR buffer into bytes 4 - 7
-#    mov %al, 4(%ds:%si)
-#    mov %ah, 5(%ds:%si)
-#    mov %bl, 6(%ds:%si)
-#    mov %bh, 7(%ds:%si)
+    movb $0x00, %ds:(%si) 
+    inc %si
+    movb $0x00, %ds:(%si) 
+    inc %si
+    movb $0x10, %ds:(%si) 
+    inc %si
+    movb $0x00, %ds:(%si)
+    inc %si
 
 # Set the starting index of the sectors to read to be 0
-    mov $0x08, %cx
 set_index_bytes:
-    mov $0x00, (%ds:%si, %cx,)
-    inc %cx
-    cmp %cx, $0x10
+    movb $0x00, %ds:(%si) 
+    inc %si
+    cmp $0x10, %si
     jne set_index_bytes
+
+    sub %si, %si
 
 #   Now call the interupt
     int $0x13
 
 # Check if sector 0 ends with 0x55, 0xAA. Otherwise skip drive
-    cmp (%ax:%bx, 0x1FE,), 0x55
+    add $0x1FE, %bx
+    cmp $0x55, %ds:(%bx)
+    sub $0x1FE, %bx
     jne read_hd
 
-    cmp (%ax:%bx, 0x1FF,), 0xAA
+    add $0x1FF, %bx
+    cmpb $0xAA, %ds:(%bx)
+    sub $0x1FF, %bx
     jne read_hd
 
 # Iterate through the partition table in the MBR
@@ -119,18 +110,24 @@ set_index_bytes:
     mov $0x1AE, %cx
 read_pt_entry:
     # If we finished checking partition 4, leave this hd
-    cmp %cx, 0x1EE
+    cmp $0x1EE, %cx
     je read_hd
 
     # Go to next partition
     add $0x10, %cx
 
     # Check if the drive status of the current partition is bootable (0x80)
-    cmp (%ax:%bx, %cx,), $0x80
+    add %cx, %bx
+    cmpb $0x80, %ds:(%bx)
+    sub %cx, %bx
     jne read_pt_entry
 
     # Check if the type of the current partition is a Pintos partition
-    cmp 4(%ax:%bx, %cx,), $0x20
+    add %cx, %bx
+    add $0x04, %bx
+    cmp $0x20, %ds:(%bx)
+    sub %cx, %bx
+    sub $0x04, %bx
     jne read_pt_entry
 
 # If we've reached this point, then the current partition is a bootable 
