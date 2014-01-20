@@ -50,6 +50,10 @@
 mov $0x7F, %dl # Hard drive number -1 (since we're immediately incrementing)
 
 read_hd:
+    # TODO: Check if we've reached last HD
+	call puts
+	.string "read_hd"
+
     mov $0x42, %ah # Setting extended r/w sector mode
     inc %dl # Go to next (or first, for the first time) hard drive
 
