@@ -3,3 +3,4 @@ cscope.out
 TAGS
 tags
 doc
+*.o
