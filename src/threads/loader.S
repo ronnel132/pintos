@@ -51,15 +51,12 @@ mov $0x7F, %dl # Hard drive number -1 (since we're immediately incrementing)
 
 read_hd:
     # TODO: Check if we've reached last HD
-	call puts
-	.string "read_hd"
 
     mov $0x42, %ah # Setting extended r/w sector mode
     inc %dl # Go to next (or first, for the first time) hard drive
 
 # Set the segment and offset of the buffer for the MBR.
-# Move segment 0x00 into ax, and offset 0x10 (after the DAP) 
-# into bx.
+# Move offset 0x10 (after the DAP) into %bx 
 
     mov $0x10, %bx
     
@@ -67,27 +64,20 @@ read_hd:
     sub %si, %si
 
     movb $0x10, %ds:(%si) 
-    inc %si
-    movb $0x00, %ds:(%si)
-    inc %si
+    movb $0x00, %ds:1(%si)
     # Set the low byte of the number of sectors we are reading as 1
-    movb $0x01, %ds:(%si)
-    inc %si
+    movb $0x01, %ds:2(%si)
     # Set the high byte of the number of sectors were are reading to 0
-    movb $0x00, %ds:(%si) 
-    inc %si
+    movb $0x00, %ds:3(%si) 
     # Move the segment and offset value of the MBR buffer into bytes 4 - 7
-    movb $0x00, %ds:(%si) 
-    inc %si
-    movb $0x00, %ds:(%si) 
-    inc %si
-    movb $0x10, %ds:(%si) 
-    inc %si
-    movb $0x00, %ds:(%si)
-    inc %si
+    movb $0x00, %ds:4(%si) 
+    movb $0x00, %ds:5(%si) 
+    movb $0x10, %ds:6(%si) 
+    movb $0x00, %ds:7(%si)
 
 # Set the starting index of the sectors to read to be 0
 set_index_bytes:
+    mov $0x08, %si
     movb $0x00, %ds:(%si) 
     inc %si
     cmp $0x10, %si
@@ -98,26 +88,25 @@ set_index_bytes:
 #   Now call the interupt
     int $0x13
 
+# Check if there was an error in accessing the hd by checking the CF flag
+    jb drive_error
+    
 # Check if sector 0 ends with 0x55, 0xAA. Otherwise skip drive
-    add $0x1FE, %bx
-    cmp $0x55, %ds:(%bx)
-    sub $0x1FE, %bx
+    cmp $0x55, %ds:510(%bx)
     jne read_hd
 
-    add $0x1FF, %bx
-    cmpb $0xAA, %ds:(%bx)
-    sub $0x1FF, %bx
+    cmpb $0xAA, %ds:511(%bx)
     jne read_hd
 
 # Iterate through the partition table in the MBR
 # Move the starting hex-off of the partition table into cx
-    mov $0x1AE, %bx
+    add $0x1AE, %bx
 read_pt_entry:
     # If we finished checking partition 4, leave this hd
     cmp $0x1EE, %bx
     je read_hd
 
-    # Go to next partition
+    # Go to next partition table entry
     add $0x10, %bx
 
     # Check if the drive status of the current partition is bootable (0x80)
@@ -132,6 +121,8 @@ read_pt_entry:
 
 # If we've reached this point, then the current partition is a bootable 
 # Pintos partition.
+
+drive_error:
 
 	call puts
 	.string "\r\rTODO:  IMPLEMENT THE BOOTLOADER\r"
