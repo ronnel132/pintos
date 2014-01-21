@@ -114,9 +114,7 @@ read_pt_entry:
     jne read_pt_entry
 
     # Check if the type of the current partition is a Pintos partition
-    add $0x04, %bx
-    cmp $0x20, %ds:(%bx)
-    sub $0x04, %bx
+    cmp $0x20, %ds:4(%bx)
     jne read_pt_entry
 
 # If we've reached this point, then the current partition is a bootable 
