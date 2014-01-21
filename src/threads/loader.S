@@ -76,8 +76,8 @@ read_hd:
     movb $0x00, %ds:7(%si)
 
 # Set the starting index of the sectors to read to be 0
+mov $0x08, %si
 set_index_bytes:
-    mov $0x08, %si
     movb $0x00, %ds:(%si) 
     inc %si
     cmp $0x10, %si
