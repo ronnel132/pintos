@@ -107,26 +107,22 @@ set_index_bytes:
 
 # Iterate through the partition table in the MBR
 # Move the starting hex-off of the partition table into cx
-    mov $0x1AE, %cx
+    mov $0x1AE, %bx
 read_pt_entry:
     # If we finished checking partition 4, leave this hd
-    cmp $0x1EE, %cx
+    cmp $0x1EE, %bx
     je read_hd
 
     # Go to next partition
-    add $0x10, %cx
+    add $0x10, %bx
 
     # Check if the drive status of the current partition is bootable (0x80)
-    add %cx, %bx
     cmpb $0x80, %ds:(%bx)
-    sub %cx, %bx
     jne read_pt_entry
 
     # Check if the type of the current partition is a Pintos partition
-    add %cx, %bx
     add $0x04, %bx
     cmp $0x20, %ds:(%bx)
-    sub %cx, %bx
     sub $0x04, %bx
     jne read_pt_entry
 
