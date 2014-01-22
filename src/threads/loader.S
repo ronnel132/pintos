@@ -201,8 +201,8 @@ init_dap:
     # First push the starting sector to read (in LBA)
     # Push the sector segment first
     push $0x0
-    push %ax
     push $0x0
+    push %ax
     push %bx
 
     # Next push the register storing the location of the buffer. We assume
