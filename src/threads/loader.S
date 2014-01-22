@@ -50,57 +50,43 @@
 mov $0x7F, %dl # Hard drive number -1 (since we're immediately incrementing)
 
 read_hd:
-    # TODO: Check if we've reached last HD
+    call puts
+    .string "read_hd"
 
-    mov $0x42, %ah # Setting extended r/w sector mode
     inc %dl # Go to next (or first, for the first time) hard drive
-
-# Set the segment and offset of the buffer for the MBR.
-# Move offset 0x10 (after the DAP) into %bx 
-
-    mov $0x10, %bx
     
-# Set the offset pointer to the DAP to be 0.
-    sub %si, %si
-
-    movb $0x10, %ds:(%si) 
-    movb $0x00, %ds:1(%si)
-    # Set the low byte of the number of sectors we are reading as 1
-    movb $0x01, %ds:2(%si)
-    # Set the high byte of the number of sectors were are reading to 0
-    movb $0x00, %ds:3(%si) 
-    # Move the segment and offset value of the MBR buffer into bytes 4 - 7
-    movb $0x00, %ds:4(%si) 
-    movb $0x00, %ds:5(%si) 
-    movb $0x10, %ds:6(%si) 
-    movb $0x00, %ds:7(%si)
-
-# Set the starting index of the sectors to read to be 0
-mov $0x08, %si
-set_index_bytes:
-    movb $0x00, %ds:(%si) 
-    inc %si
-    cmp $0x10, %si
-    jne set_index_bytes
-
-    sub %si, %si
+    # Load the MBR for the current HD
+    # Set init_dap's arguments
+    mov $0x0, %ax
+    mov $0x0, %bx
+    mov %ds, %cx
+    mov $0x1, %di
+    
+    call init_dap
+    
+    call puts
+    .string "called init_dap"
 
 #   Now call the interupt
+    mov $0x42, %ah
     int $0x13
 
 # Check if there was an error in accessing the hd by checking the CF flag
     jb drive_error
     
 # Check if sector 0 ends with 0x55, 0xAA. Otherwise skip drive
-    cmp $0x55, %ds:510(%bx)
+    cmpb $0x55, %ds:0x1FE
     jne read_hd
 
-    cmpb $0xAA, %ds:511(%bx)
+    cmpb $0xAA, %ds:0x1FF
     jne read_hd
+
+    call puts
+    .string "HERE"
 
 # Iterate through the partition table in the MBR
 # Move the starting hex-off of the partition table into cx
-    add $0x1AE, %bx
+    mov $0x1AE, %bx
 read_pt_entry:
     # If we finished checking partition 4, leave this hd
     cmp $0x1EE, %bx
@@ -207,6 +193,51 @@ popa_ret:
 
 #### TODO:  YOU CAN PUT HELPER FUNCTIONS HERE IF YOU WISH.
 
+# Helper function to create a data access packet. Buffer segment will be
+# specified in %cx, number of sectors to read in %di, and the starting 
+# sector to read in %ax:%bx. The DAP will then be stored in %ds:%si. 
+init_dap:
+   # push %ebp
+    #mov %ebp, %esp
+    call puts
+    .string "init_dap"
+    pusha
+    # First push the starting sector to read (in LBA)
+    # Push the sector segment first
+    push $0x0
+    push %ax
+    push $0x0
+    push %bx
+
+    # Next push the register storing the location of the buffer. We assume
+    # the offset will be 0 for this location.
+    push %cx
+    push $0x0
+
+    # Push the number of sectors to read
+    push %di
+
+    # Unused byte
+    # Bello: The two pushb's generate a compiler error, so for some reason
+    # we can't push a byte on the stack. Hence I changed to push
+    # and added a 0 for the first command.
+
+    # Push the size of the DAP (always 0x10)
+    push $0x10
+
+    # Set ds:si
+    mov %sp, %si
+    mov $0x42, %ah
+    int $0x13
+    popa
+    popa
+    
+    # Clean up the stack frame
+    call puts
+    .string "init_dap: pre return "
+    #mov %ebp, %esp
+    #pop %ebp
+    ret
 
 #### Command-line arguments and their count.
 #### This is written by the `pintos' utility and read by the kernel.
