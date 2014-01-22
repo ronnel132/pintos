@@ -229,6 +229,10 @@ init_dap:
     mov %sp, %si
     call puts
     .string "HERE2"
+
+    # As it turns out, we're pushing exactly 16 bytes, which is
+    # the total size of all registers. So we can save lines of code
+    # by doing a popa.
     popa
     popa
     
