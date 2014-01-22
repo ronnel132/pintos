@@ -227,14 +227,12 @@ init_dap:
 
     # Set ds:si
     mov %sp, %si
-    mov $0x42, %ah
-    int $0x13
+    call puts
+    .string "HERE2"
     popa
     popa
     
     # Clean up the stack frame
-    call puts
-    .string "init_dap: pre return "
     #mov %ebp, %esp
     #pop %ebp
     ret
