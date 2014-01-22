@@ -96,7 +96,6 @@ read_pt_entry:
     mov $0x2000, %cx
     mov %es:8(%bx), %ax
     mov %es:10(%bx), %bx
-    mov $0x1, %di
     cmpw $0x400, %es:12(%bx)
     jg set_min_sector_read_1024
     jmp set_min_sector_read_pintos_size
@@ -106,12 +105,12 @@ set_min_sector_read_1024:
 set_min_sector_read_pintos_size:
     mov %es:12(%bx), %di
 done:
-    int $0x13
+    call init_dap
     jmp good_to_go
-
 drive_error:
 	hlt
 good_to_go:
+
 
 #### TODO:  LOADING CODE ENDS HERE!
 
