@@ -50,8 +50,6 @@
 mov $0x7F, %dl # Hard drive number -1 (since we're immediately incrementing)
 
 read_hd:
-    call puts
-    .string "read_hd"
 
     inc %dl # Go to next (or first, for the first time) hard drive
     
@@ -112,8 +110,6 @@ done:
     int $0x13
 
 drive_error:
-
-	hlt
 
 #### TODO:  LOADING CODE ENDS HERE!
 
