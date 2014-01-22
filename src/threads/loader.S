@@ -50,9 +50,6 @@
 mov $0x7F, %dl # Hard drive number -1 (since we're immediately incrementing)
 
 read_hd:
-    call puts
-    .string "read_hd"
-
     inc %dl # Go to next (or first, for the first time) hard drive
     
     # Load the MBR for the current HD
@@ -110,10 +107,11 @@ set_min_sector_read_pintos_size:
     mov %es:12(%bx), %di
 done:
     int $0x13
+    jmp good_to_go
 
 drive_error:
-
 	hlt
+good_to_go:
 
 #### TODO:  LOADING CODE ENDS HERE!
 
