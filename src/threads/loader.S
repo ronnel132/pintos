@@ -64,12 +64,6 @@ read_hd:
     
     call init_dap
     
-#   Now call the interupt
-    mov $0x42, %ah
-    int $0x13
-
-    call puts
-    .string "interupt"
 
 # Check if there was an error in accessing the hd by checking the CF flag
     jc drive_error
@@ -227,6 +221,13 @@ init_dap:
 
     # Set ds:si
     mov %sp, %si
+
+    # Now call the interupt
+    mov $0x42, %ah
+    int $0x13
+
+    call puts
+    .string "interupt"
 
     # As it turns out, we're pushing exactly 16 bytes, which is
     # the total size of all registers. So we can save lines of code
