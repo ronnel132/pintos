@@ -66,15 +66,11 @@ read_hd:
     
     call init_dap
     
-
-# Check if there was an error in accessing the hd by checking the CF flag
-    jc drive_error
-    
 # Check if sector 0 ends with 0x55, 0xAA. Otherwise skip drive
-    cmpb $0x55, %ds:0x1FE
+    cmpb $0x55, %es:0x1FE
     jne read_hd
 
-    cmpb $0xAA, %ds:0x1FF
+    cmpb $0xAA, %es:0x1FF
     jne read_hd
 
     call puts
@@ -195,14 +191,12 @@ popa_ret:
 init_dap:
     #push %ebp
     #mov %ebp, %esp
-    call puts
-    .string "init_dap"
     pusha
     # First push the starting sector to read (in LBA)
     # Push the sector segment first
     push $0x0
-    push %ax
     push $0x0
+    push %ax
     push %bx
 
     # Next push the register storing the location of the buffer. We assume
@@ -228,8 +222,8 @@ init_dap:
     mov $0x42, %ah
     int $0x13
 
-    call puts
-    .string "interupt"
+# Check if there was an error in accessing the hd by checking the CF flag
+    jc drive_error
 
     # As it turns out, we're pushing exactly 16 bytes, which is
     # the total size of all registers. So we can save lines of code
