@@ -67,14 +67,13 @@ read_hd:
     call init_dap
     
 # Check if sector 0 ends with 0x55, 0xAA. Otherwise skip drive
+    mov $0x2000, %cx
+    mov %cx, %es
     cmpb $0x55, %es:0x1FE
     jne read_hd
 
     cmpb $0xAA, %es:0x1FF
     jne read_hd
-
-    call puts
-    .string "HERE"
 
 # Iterate through the partition table in the MBR
 # Move the starting hex-off of the partition table into cx
@@ -88,15 +87,16 @@ read_pt_entry:
     add $0x10, %bx
 
     # Check if the drive status of the current partition is bootable (0x80)
-    cmpb $0x80, %ds:(%bx)
+    cmpb $0x80, %es:(%bx)
     jne read_pt_entry
 
     # Check if the type of the current partition is a Pintos partition
-    cmp $0x20, %ds:4(%bx)
+    cmp $0x20, %es:4(%bx)
     jne read_pt_entry
 
 # If we've reached this point, then the current partition is a bootable 
 # Pintos partition.
+
 
 drive_error:
 
