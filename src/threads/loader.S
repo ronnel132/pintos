@@ -60,19 +60,19 @@ read_hd:
     mov $0x0, %ax
     mov $0x0, %bx
     mov %ds, %cx
-    mov $0x1, %di
+    mov $0x01, %di
     
     call init_dap
     
-    call puts
-    .string "called init_dap"
-
 #   Now call the interupt
     mov $0x42, %ah
     int $0x13
 
+    call puts
+    .string "interupt"
+
 # Check if there was an error in accessing the hd by checking the CF flag
-    jb drive_error
+    jc drive_error
     
 # Check if sector 0 ends with 0x55, 0xAA. Otherwise skip drive
     cmpb $0x55, %ds:0x1FE
@@ -227,8 +227,6 @@ init_dap:
 
     # Set ds:si
     mov %sp, %si
-    call puts
-    .string "HERE2"
     popa
     popa
     
