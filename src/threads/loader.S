@@ -59,7 +59,9 @@ read_hd:
     # Set init_dap's arguments
     mov $0x0, %ax
     mov $0x0, %bx
-    mov %ds, %cx
+
+    # Initialize cx to 0x2000 (buffer segment)
+    mov $0x2000, %cx
     mov $0x01, %di
     
     call init_dap
@@ -191,7 +193,7 @@ popa_ret:
 # specified in %cx, number of sectors to read in %di, and the starting 
 # sector to read in %ax:%bx. The DAP will then be stored in %ds:%si. 
 init_dap:
-   # push %ebp
+    #push %ebp
     #mov %ebp, %esp
     call puts
     .string "init_dap"
