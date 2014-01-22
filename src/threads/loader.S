@@ -96,14 +96,23 @@ read_pt_entry:
 
 # If we've reached this point, then the current partition is a bootable 
 # Pintos partition.
-
+    mov $0x2000, %cx
+    mov %es:8(%bx), %ax
+    mov %es:10(%bx), %bx
+    mov $0x1, %di
+    cmpw $0x400, %es:12(%bx)
+    jg set_min_sector_read_1024
+    jmp set_min_sector_read_pintos_size
+set_min_sector_read_1024:
+    mov $0x400, %di
+    jmp done
+set_min_sector_read_pintos_size:
+    mov %es:12(%bx), %di
+done:
+    int $0x13
 
 drive_error:
 
-	call puts
-	.string "\r\rTODO:  IMPLEMENT THE BOOTLOADER\r"
-
-	# Stop the processor.
 	hlt
 
 #### TODO:  LOADING CODE ENDS HERE!
