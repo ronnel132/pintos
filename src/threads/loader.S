@@ -160,17 +160,14 @@ good_to_go:
 	call puts
 	.string "\r\rReading hd"
 
-	cmp %bx, 0x1BE
-	cmove 0x6161, %ax
-	cmp %bx, 0x1CE
-	cmove 0x6262, %ax
-	cmp %bx, 0x1DE
-	cmove 0x6363, %ax
-	cmp %bx, 0x1EE
-	cmove 0x6464, %ax
-
-	mov 0x61, %al
-#### LOADING CODE ENDS HERE!
+	cmp %dl, $0x80
+	cmove $0x6161, %ax
+	cmp %dl, $0x81
+	cmove $0x6262, %ax
+	cmp %dl, $0x82 
+	cmove $0x6363, %ax
+	cmp %dl, $0x83
+	cmove $0x6464, %ax
 
 	call putc
 
