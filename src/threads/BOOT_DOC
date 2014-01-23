@@ -1,0 +1,81 @@
+			+-----------------------+
+			|         CS 124        |
+			| PROJECT 2: BOOTLOADER |
+			|    DESIGN DOCUMENT    |
+			+-----------------------+
+
+---- GROUP ----
+
+>> Fill in the names and email addresses of your group members.
+
+FirstName LastName <email@domain.example>
+FirstName LastName <email@domain.example>
+FirstName LastName <email@domain.example>
+
+>> Specify how many late tokens you are using on this assignment:  
+
+>> What is the Git repository and commit hash for your submission?
+
+   Repository URL:  
+   commit ...
+
+---- PRELIMINARIES ----
+
+>> If you have any preliminary comments on your submission, notes for the
+>> TAs, or extra credit, please give them here.
+
+>> Please cite any offline or online sources you consulted while
+>> preparing your submission, other than the Pintos documentation, course
+>> text, lecture notes, and course instructors.
+
+			     BOOTLOADER
+			     ==========
+
+---- DATA STRUCTURES ----
+
+>> A1: In the order that they are used, specify the areas of memory that
+>> your bootloader code uses (both starting address and size) during the
+>> bootstrap process.  Briefly describe the purpose of each memory area.
+>> Note that you do not have to enumerate the structure of sector data or
+>> anything like that; simply state the general purpose of the various
+>> memory areas used by your bootload code.
+
+---- ALGORITHMS ----
+
+>> A2: Write a pseudocode description (e.g. at the level of Python and
+>> English phrases) of the sequence of operations that your bootloader
+>> performs when searching for, and then loading, the Pintos kernel.
+
+>> A3: Did you have any difficulties making the entire bootloader fit
+>> within the space allotted?  If so, what steps did you take to reduce
+>> the size of your bootstrap code?
+
+---- RATIONALE ----
+
+>> A4: Why did you choose your final implementation?  Did you encounter
+>> any major obstacles or difficulties that forced you to change your
+>> approach?  If so, describe the obstacles and how you overcame them.
+
+			   SURVEY QUESTIONS
+			   ================
+
+Answering these questions is optional, but it will help us improve the
+course in future quarters.  Feel free to tell us anything you
+want--these questions are just to spur your thoughts.  You may also
+choose to respond anonymously in the feedback survey on the course
+website.
+
+>> In your opinion, was this assignment, or any one of the three problems
+>> in it, too easy or too hard?  Did it take too long or too little time?
+
+>> Did you find that working on a particular part of the assignment gave
+>> you greater insight into some aspect of OS design?
+
+>> Is there some particular fact or hint we should give students in
+>> future quarters to help them solve the problems?  Conversely, did you
+>> find any of our guidance to be misleading?
+
+>> Do you have any suggestions for the TAs to more effectively assist
+>> students, either for future quarters or the remaining projects?
+
+>> Any other comments?
