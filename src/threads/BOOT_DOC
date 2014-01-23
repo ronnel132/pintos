@@ -73,6 +73,8 @@ proceeds with the given code, jumping to the kernel.
 >> the size of your bootstrap code?
 We were caucions about this since the beginning (especially about printing)
 so we didn't have this issue.
+UPDATE: Towards the end we did hit this problem, and we ended up making
+the strings less verbose.
 
 ---- RATIONALE ----
 
