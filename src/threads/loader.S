@@ -54,8 +54,7 @@ read_hd:
     
     # Load the MBR for the current HD
     # Set init_dap's arguments
-    mov $0x0, %ax
-    mov $0x0, %bx
+    mov $0x0, %eax
 
     # Initialize cx to 0x2000 (buffer segment)
     mov $0x2000, %cx
@@ -91,10 +90,12 @@ read_pt_entry:
     cmpb $0x20, %es:4(%bx)
     jne read_pt_entry
 
+    call puts
+    .string "b4 g2g"
 # If we've reached this point, then the current partition is a bootable 
 # Pintos partition.
     mov $0x2000, %cx
-    mov %es:8(%bx), %ax
+    movl %es:8(%bx), %eax
     cmpw $0x400, %es:12(%bx)
     jg set_min_sector_read_1024
     jmp set_min_sector_read_pintos_size
@@ -104,10 +105,13 @@ set_min_sector_read_1024:
 set_min_sector_read_pintos_size:
     mov %es:12(%bx), %di
 done:
-    mov %es:10(%bx), %bx
+    call puts
+    .string "b4 call"
     call init_dap
     jmp good_to_go
 drive_error:
+    call puts
+    .string "drive err"
 	hlt
 good_to_go:
     call puts
@@ -203,8 +207,7 @@ init_dap:
     # Push the sector segment first
     push $0x0
     push $0x0
-    push %ax
-    push %bx
+    pushl %eax
 
     # Next push the register storing the location of the buffer. We assume
     # the offset will be 0 for this location.
@@ -220,7 +223,7 @@ init_dap:
     # and added a 0 for the first command.
 
     # Push the size of the DAP (always 0x10)
-    push $0x10
+    push $0x0010
 
     # Set ds:si
     mov %sp, %si
