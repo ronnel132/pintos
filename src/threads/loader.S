@@ -45,6 +45,10 @@ mov $0x7F, %dl
 read_hd:
     # 
     inc %dl 
+
+    # Check if we've reached the 26th drive; we then abort
+    cmp $0x99, %dl
+    je no_drive_found
 	    
     # Load the MBR for the current HD
 
@@ -147,6 +151,11 @@ drive_error:
 	call puts
 	.string "\rdrive read error"
 	hlt
+
+no_drive_found:
+	call puts
+	.string "\rno drive found"
+    hlt
 
 good_to_go:
 
