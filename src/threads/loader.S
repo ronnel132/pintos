@@ -158,23 +158,25 @@ good_to_go:
 	call puts
 	.string "Reading hd"
 
-	mov $0x6161, %bx
-	cmpb $0x80, %dl
-	cmove %bx, %ax
+# We couldn't get printing of HD number to work. Here's how we tried to 
+# implement it.
+#	mov $0x6161, %bx
+#	cmpb $0x80, %dl
+#	cmove %bx, %ax
 
-	mov $0x6262, %bx
-	cmpb $0x81, %dl
-	cmove %bx, %ax
+#	mov $0x6262, %bx
+#	cmpb $0x81, %dl
+#	cmove %bx, %ax
 
-	mov $0x6363, %bx
-	cmpb $0x82, %dl
-	cmove %bx, %ax
+#	mov $0x6363, %bx
+#	cmpb $0x82, %dl
+#	cmove %bx, %ax
 
-	mov $0x6464, %bx
-	cmpb $0x83, %dl
-	cmove %bx, %ax
+#	mov $0x6464, %bx
+#	cmpb $0x83, %dl
+#	cmove %bx, %ax
 
-	call putc
+#	call putc
 
 	
 #### Transfer control to the kernel that we loaded.  We read the start
