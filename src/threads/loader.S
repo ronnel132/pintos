@@ -47,17 +47,20 @@
 ####        If you want to create helper routines, there is a TODO toward
 ####        the end of this file that shows where they should go.
 
-mov $0x7F, %dl # Hard drive number -1 (since we're immediately incrementing)
+# Set the hard drive number in dl to be HD No. - 1 (Since we immediately 
+# increment.
+mov $0x7F, %dl 
 
+# read_hd is the main loop for iterating through hard drives. 
 read_hd:
-    inc %dl # Go to next (or first, for the first time) hard drive
+    # 
+    inc %dl 
     
     # Load the MBR for the current HD
     # Set init_dap's arguments
     mov $0x0, %eax
 
     # Initialize cx to 0x2000 (buffer segment)
-    mov $0x2000, %cx
     mov $0x01, %di
     
     call init_dap
@@ -94,7 +97,6 @@ read_pt_entry:
     .string "b4 g2g"
 # If we've reached this point, then the current partition is a bootable 
 # Pintos partition.
-    mov $0x2000, %cx
     movl %es:8(%bx), %eax
     cmpw $0x400, %es:12(%bx)
     jg set_min_sector_read_1024
@@ -200,18 +202,15 @@ popa_ret:
 # specified in %cx, number of sectors to read in %di, and the starting 
 # sector to read in %ax:%bx. The DAP will then be stored in %ds:%si. 
 init_dap:
-    #push %ebp
-    #mov %ebp, %esp
     pusha
     # First push the starting sector to read (in LBA)
     # Push the sector segment first
-    push $0x0
-    push $0x0
+    pushl $0x0
     pushl %eax
 
     # Next push the register storing the location of the buffer. We assume
     # the offset will be 0 for this location.
-    push %cx
+    push $0x2000 
     push $0x0
 
     # Push the number of sectors to read
@@ -241,9 +240,6 @@ init_dap:
     popa
     popa
     
-    # Clean up the stack frame
-    #mov %ebp, %esp
-    #pop %ebp
     ret
 
 #### Command-line arguments and their count.
