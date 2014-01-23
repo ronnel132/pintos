@@ -160,13 +160,13 @@ good_to_go:
 	call puts
 	.string "\r\rReading hd"
 
-	cmpb %dl, $0x80
+	cmpb $0x80, %dl
 	cmove $0x6161, %ax
-	cmpb %dl, $0x81
+	cmpb $0x81, %dl
 	cmove $0x6262, %ax
-	cmpb %dl, $0x82 
+	cmpb $0x82, %dl
 	cmove $0x6363, %ax
-	cmpb %dl, $0x83
+	cmpb $0x83, %dl
 	cmove $0x6464, %ax
 
 	call putc
