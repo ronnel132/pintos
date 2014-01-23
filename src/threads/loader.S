@@ -42,7 +42,7 @@ mov $0x7F, %dl
 
 # read_hd is the main loop for iterating through hard drives. 
 read_hd:
-    # 
+    # Incementing hard drive (or setting it to 0x80 for the first time
     inc %dl 
 
     # Check if we've reached the 26th drive; we then abort
