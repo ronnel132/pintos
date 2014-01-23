@@ -36,17 +36,6 @@
 	call puts
 	.string "PiLo"
 
-#### TODO:  ITERATE THROUGH ALL HARD DISKS IN THE SYSTEM, LOOKING FOR A
-####        BOOTABLE PINTOS PARTITION TO LOAD AND START.
-####
-####        Note that there are only ~300 bytes available for the entire
-####        Pintos bootloader, as Pintos commands are stored in the
-####        region immediately before the partition table in the sector.
-####        Sooo... be concise!
-####
-####        If you want to create helper routines, there is a TODO toward
-####        the end of this file that shows where they should go.
-
 # Set the hard drive number in dl to be HD No. - 1 (Since we immediately 
 # increment.
 mov $0x7F, %dl 
@@ -157,9 +146,23 @@ drive_error:
 	hlt
 
 good_to_go:
+	call puts
+	.string "\r\rReading hd"
 
-#### TODO:  LOADING CODE ENDS HERE!
+	cmp %bx, 0x1BE
+	cmove 0x6161, %ax
+	cmp %bx, 0x1CE
+	cmove 0x6262, %ax
+	cmp %bx, 0x1DE
+	cmove 0x6363, %ax
+	cmp %bx, 0x1EE
+	cmove 0x6464, %ax
 
+	mov 0x61, %al
+
+	call putc
+
+	
 #### Transfer control to the kernel that we loaded.  We read the start
 #### address out of the ELF header (see [ELF1]) and convert it from a
 #### 32-bit linear address into a 16:16 segment:offset address for
@@ -233,9 +236,6 @@ putc:	pusha
 popa_ret:
 	popa
 	ret				# Error code still in CF
-
-
-#### TODO:  YOU CAN PUT HELPER FUNCTIONS HERE IF YOU WISH.
 
 # Helper function to create a data access packet and call int 13.
 # We hard code the buffer pointer to be the location 0x2000:0x0000, since
