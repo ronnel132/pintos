@@ -33,16 +33,12 @@
 					# AH is already 0 (Initialize Port).
 	int $0x14			# Destroys AX.
 
-	call puts
-	.string "PiLo"
-
 # Set the hard drive number in dl to be HD No. - 1 (Since we immediately 
 # increment.
 mov $0x7F, %dl 
 
 # read_hd is the main loop for iterating through hard drives. 
 read_hd:
-    # 
     inc %dl 
 
     # Check if we've reached the 26th drive; we then abort
@@ -148,17 +144,17 @@ done:
 # signifying we have reached the last HD.
 drive_error:
 	call puts
-	.string "\rdrive read error"
+	.string "\rread err"
 	hlt
 
 no_drive_found:
 	call puts
-	.string "\rno drive found"
+	.string "\rno drive"
     hlt
 
 good_to_go:
 	call puts
-	.string "\r\rReading hd"
+	.string "\rLoading"
 
 	cmp %bx, 0x1BE
 	cmove 0x6161, %ax
