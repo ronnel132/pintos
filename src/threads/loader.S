@@ -88,14 +88,13 @@ read_pt_entry:
     jne read_pt_entry
 
     # Check if the type of the current partition is a Pintos partition
-    cmp $0x20, %es:4(%bx)
+    cmpb $0x20, %es:4(%bx)
     jne read_pt_entry
 
 # If we've reached this point, then the current partition is a bootable 
 # Pintos partition.
     mov $0x2000, %cx
     mov %es:8(%bx), %ax
-    mov %es:10(%bx), %bx
     cmpw $0x400, %es:12(%bx)
     jg set_min_sector_read_1024
     jmp set_min_sector_read_pintos_size
@@ -105,12 +104,14 @@ set_min_sector_read_1024:
 set_min_sector_read_pintos_size:
     mov %es:12(%bx), %di
 done:
+    mov %es:10(%bx), %bx
     call init_dap
     jmp good_to_go
 drive_error:
 	hlt
 good_to_go:
-
+    call puts
+    .string "g2g"
 
 #### TODO:  LOADING CODE ENDS HERE!
 
