@@ -55,19 +55,27 @@ mov $0x7F, %dl
 read_hd:
     # 
     inc %dl 
-    
+	    
     # Load the MBR for the current HD
-    # Set init_dap's arguments
+
+	# Set init_dap's register arguments
+
+	# Set eax (the LBA starting sector index) to be 0 (for the MBR)
     mov $0x0, %eax
 
-    # Initialize cx to 0x2000 (buffer segment)
+    # Set the number of sectors we are reading as 1 (only reading the MBR) 
     mov $0x01, %di
     
+	# Call init_dap, which sets up the DAP, and calls int 13, and stores the
+	# results in 0x2000:0x0000
     call init_dap
-    
-# Check if sector 0 ends with 0x55, 0xAA. Otherwise skip drive
+
+	# Set es to be 0x2000. We use this to refer to the newly loaded MBR (it 
+	# was loaded into this location).    
     mov $0x2000, %cx
     mov %cx, %es
+
+# Check if sector 0 ends with 0x55, 0xAA. Otherwise skip drive
     cmpb $0x55, %es:0x1FE
     jne read_hd
 
@@ -75,49 +83,80 @@ read_hd:
     jne read_hd
 
 # Iterate through the partition table in the MBR
-# Move the starting hex-off of the partition table into cx
+
+# bx is our iterator for reading the partition table entries. We set it to
+# the offset of the first partition table entry - 0x10 (since we add 0x10
+# in the beginning of the loop, and each partition table entry is 0x10 
+# bytes).
     mov $0x1AE, %bx
+
+# Loop through partitions in the partition table.
 read_pt_entry:
-    # If we finished checking partition 4, leave this hd
+    # If we finished checking partition 4 (when the offset bx is equal to the
+    # offset of the last partition table entry), leave this hd.
     cmp $0x1EE, %bx
     je read_hd
 
     # Go to next partition table entry
     add $0x10, %bx
 
-    # Check if the drive status of the current partition is bootable (0x80)
+    # Check if the drive status of the current partition is bootable (0x80).
+	# If not, jump to the next partition.
     cmpb $0x80, %es:(%bx)
     jne read_pt_entry
 
-    # Check if the type of the current partition is a Pintos partition
+    # Check if the type of the current partition is a Pintos partition.
+	# If not, jump to the next partition.
     cmpb $0x20, %es:4(%bx)
     jne read_pt_entry
 
-    call puts
-    .string "b4 g2g"
 # If we've reached this point, then the current partition is a bootable 
 # Pintos partition.
+
+	# Start setting register arguments for init_dap so we can load the 
+	# kernel code.
+
+	# Move the partition table entry (PTE) memory address at offset 8 (the 
+	# LBA address of the starting sector) into eax.
     movl %es:8(%bx), %eax
+
+	# Compare 0x400 (1024 in dec) to the number of sectors specified by the
+	# PTE stored at offset 12. We store the minimum of these two values in
+	# di (which init_dap stores in the DAP as the number of sectors to read).
+	# Thus, we read up to 512 KiB, or less if the partition is smaller than 
+	# that.
     cmpw $0x400, %es:12(%bx)
+	
+	# Jump to set_min_sector_read_1024 if the number of sectors in the 
+	# partition is greater than 0x400.
     jg set_min_sector_read_1024
+
+	# Otherwise jump to set_min_sector_read_pintos_size
     jmp set_min_sector_read_pintos_size
+
 set_min_sector_read_1024:
     mov $0x400, %di
+	
+	# Jump to done and call init_dap
     jmp done
 set_min_sector_read_pintos_size:
+	# The number of sectors in this partition is less than 0x400, so move it 
+	# into di.
     mov %es:12(%bx), %di
+
 done:
-    call puts
-    .string "b4 call"
+	# Call init_dap to move the kernel partition to 0x20000
     call init_dap
+
+	# We're good to go.
     jmp good_to_go
+
+# drive_error is jumped to in init_dap after int 13 is called and CF=1, 
+# signifying we have reached the last HD.
 drive_error:
-    call puts
-    .string "drive err"
 	hlt
+
 good_to_go:
-    call puts
-    .string "g2g"
 
 #### TODO:  LOADING CODE ENDS HERE!
 
@@ -198,33 +237,35 @@ popa_ret:
 
 #### TODO:  YOU CAN PUT HELPER FUNCTIONS HERE IF YOU WISH.
 
-# Helper function to create a data access packet. Buffer segment will be
-# specified in %cx, number of sectors to read in %di, and the starting 
-# sector to read in %ax:%bx. The DAP will then be stored in %ds:%si. 
+# Helper function to create a data access packet and call int 13.
+# We hard code the buffer pointer to be the location 0x2000:0x0000, since
+# this is where the kernel code will end up eventually. We also have two 
+# register arguments: eax, which stores the starting sector to read, and 
+# di, which stores the number of sectors to read.
+
 init_dap:
+	# Save the registers onto the stack.
     pusha
-    # First push the starting sector to read (in LBA)
-    # Push the sector segment first
+
+    # First push the starting sector to read (in LBA).
+	# We push 4 bytes of 0's first since the start sector is 8 bytes long.
     pushl $0x0
+	# Push the register argument for start sector index.
     pushl %eax
 
-    # Next push the register storing the location of the buffer. We assume
-    # the offset will be 0 for this location.
+    # Next push the register storing the location of the buffer. We hard
+	# code this location to be 0x2000:0x0000. 
     push $0x2000 
     push $0x0
 
-    # Push the number of sectors to read
+    # Push the number of sectors to read.
     push %di
 
-    # Unused byte
-    # Bello: The two pushb's generate a compiler error, so for some reason
-    # we can't push a byte on the stack. Hence I changed to push
-    # and added a 0 for the first command.
-
-    # Push the size of the DAP (always 0x10)
+    # Push the size of the DAP (always 0x10) and the unused byte both at
+	# once (since we can't push bytes).
     push $0x0010
 
-    # Set ds:si
+	# Set ds:si by moving the current stack pointer into si. (ds = ss).
     mov %sp, %si
 
     # Now call the interupt
@@ -238,6 +279,8 @@ init_dap:
     # the total size of all registers. So we can save lines of code
     # by doing a popa.
     popa
+
+	# Now pop the registers back.
     popa
     
     ret
