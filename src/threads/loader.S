@@ -144,6 +144,8 @@ done:
 # drive_error is jumped to in init_dap after int 13 is called and CF=1, 
 # signifying we have reached the last HD.
 drive_error:
+	call puts
+	.string "\rdrive read error"
 	hlt
 
 good_to_go:
