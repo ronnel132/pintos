@@ -327,6 +327,11 @@ void thread_sleep(int64_t end_ticks) {
     else {
         st->t = t;
         st->end_ticks = end_ticks;
+
+        /* Disable interrupts, as we shouldn't be interrupted here.
+         * We're dealing with running/blocked queues, hence we are 
+         * modifying global state.
+        */
         old_level = intr_disable();
         list_push_back(&sleep_list, &cur->elem);
         thread_block();
