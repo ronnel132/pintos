@@ -323,7 +323,8 @@ void thread_sleep(int64_t end_ticks) {
 
     if (st == NULL) {
         thread_yield();
-    } else {
+    }
+    else {
         st->t = t;
         st->end_ticks = end_ticks;
         old_level = intr_disable();
