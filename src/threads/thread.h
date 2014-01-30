@@ -127,6 +127,9 @@ struct thread_sleeping {
 
   /* End time. Compare to timer_ticks(). */
   int64_t end_ticks;
+
+  /* List element for sleep list */
+  struct list_elem elem;
 };
 
 /*! If false (default), use round-robin scheduler.

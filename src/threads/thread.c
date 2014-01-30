@@ -24,6 +24,11 @@
     that are ready to run but not actually running. */
 static struct list ready_list;
 
+/*! List of processes in THREAD_BLOCKED state and sleeping,
+    that is, blocked processes that should be woken up after
+    at a specified time. */
+static struct list sleep_list;
+
 /*! List of all processes.  Processes are added to this list
     when they are first scheduled and removed when they exit. */
 static struct list all_list;
@@ -86,6 +91,7 @@ void thread_init(void) {
 
     lock_init(&tid_lock);
     list_init(&ready_list);
+    list_init(&sleep_list);
     list_init(&all_list);
 
     /* Set up a thread structure for the running thread. */
@@ -114,6 +120,9 @@ void thread_start(void) {
     Thus, this function runs in an external interrupt context. */
 void thread_tick(void) {
     struct thread *t = thread_current();
+    struct list_elem *e;
+    struct thread_sleeping *st;
+    int64_t current_ticks;
 
     /* Update statistics. */
     if (t == idle_thread)
@@ -124,6 +133,25 @@ void thread_tick(void) {
 #endif
     else
         kernel_ticks++;
+
+    /* Wake up sleeping threads if time alarm time reached. */
+    for (e = list_begin(&sleep_list); e != list_end(&sleep_list);
+         e = list_next(e)) {
+
+        /* Get current number of ticks and the pointer to a sleeping thread */
+        current_ticks = timer_ticks();
+        st = list_entry(e, struct thread_sleeping, elem);
+
+        /* If the sleeping threads wake up time is now or has passed */ 
+        if (current_ticks >= st->end_ticks) {
+            /* Remove from list of sleeping threads */
+            list_remove(st->elem);
+            /* Unblock the thread */
+            thread_unblock(st->t);
+            /* Free the sleeping thread struct */
+            free(st);
+        }
+    }
 
     /* Enforce preemption. */
     if (++thread_ticks >= TIME_SLICE)
@@ -284,6 +312,30 @@ void thread_yield(void) {
     intr_set_level(old_level);
 }
 
+
+
+void thread_sleep(int64_t end_ticks) {
+    struct thread *t = thread_current();
+    struct thread_sleeping *st = palloc_get_page(PAL_ZERO);
+    enum intr_level old_level;
+
+    ASSERT(!intr_context());
+
+    if (st == NULL) {
+        thread_yield();
+    } else {
+        st->t = t;
+        st->end_ticks = end_ticks;
+        old_level = intr_disable();
+        list_push_back(&sleep_list, &cur->elem);
+        thread_block();
+        intr_set_level(old_level);
+    }
+}
+
+
+
+
 /*! Invoke function 'func' on all threads, passing along 'aux'.
     This function must be called with interrupts off. */
 void thread_foreach(thread_action_func *func, void *aux) {
@@ -330,7 +382,7 @@ int thread_get_recent_cpu(void) {
     /* Not yet implemented. */
     return 0;
 }
-
+
 /*! Idle thread.  Executes when no other thread is ready to run.
 
     The idle thread is initially put on the ready list by thread_start().
@@ -371,7 +423,7 @@ static void kernel_thread(thread_func *function, void *aux) {
     function(aux);       /* Execute the thread function. */
     thread_exit();       /* If function() returns, kill the thread. */
 }
-
+
 /*! Returns the running thread. */
 struct thread * running_thread(void) {
     uint32_t *esp;
@@ -503,7 +555,7 @@ static tid_t allocate_tid(void) {
 
     return tid;
 }
-
+
 /*! Offset of `stack' member within `struct thread'.
     Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof(struct thread, stack);
