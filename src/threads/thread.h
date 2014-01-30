@@ -117,11 +117,11 @@ struct thread {
     /**@}*/
 };
 
-/*! A waiting kernel thread.
+/*! A sleeping kernel thread.
     Stores information about a thread and the time it
     should be unblocked.
  */
-struct thread_waiting {
+struct thread_sleeping {
   /* Thread pointer. */
   struct thread *t;
 
@@ -152,7 +152,7 @@ const char *thread_name(void);
 
 void thread_exit(void) NO_RETURN;
 void thread_yield(void);
-void thread_wait(int64_t end_ticks);
+void thread_sleep(int64_t end_ticks);
 
 /*! Performs some operation on thread t, given auxiliary data AUX. */
 typedef void thread_action_func(struct thread *t, void *aux);
