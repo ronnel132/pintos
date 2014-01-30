@@ -118,7 +118,7 @@ struct thread {
 };
 
 /*! A sleeping kernel thread.
-    Stores information about a thread and the time it
+    Stores the thread struct pointer and the time it
     should be unblocked.
  */
 struct thread_sleeping {
