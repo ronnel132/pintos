@@ -117,6 +117,18 @@ struct thread {
     /**@}*/
 };
 
+/*! A waiting kernel thread.
+    Stores information about a thread and the time it
+    should be unblocked.
+ */
+struct thread_waiting {
+  /* Thread pointer. */
+  struct thread *t;
+
+  /* End time. Compare to timer_ticks(). */
+  int64_t end_ticks;
+};
+
 /*! If false (default), use round-robin scheduler.
     If true, use multi-level feedback queue scheduler.
     Controlled by kernel command-line option "-o mlfqs". */
@@ -140,6 +152,7 @@ const char *thread_name(void);
 
 void thread_exit(void) NO_RETURN;
 void thread_yield(void);
+void thread_wait(int64_t end_ticks);
 
 /*! Performs some operation on thread t, given auxiliary data AUX. */
 typedef void thread_action_func(struct thread *t, void *aux);
