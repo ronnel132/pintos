@@ -351,7 +351,7 @@ void thread_sleep(int64_t end_ticks) {
         st->end_ticks = end_ticks;
         
         /* Pass in NULL for auxiliary data pointer AUX. */
-        list_insert_ordered(&sleep_list, &st->elem, thread_sleep_less, NULL);
+        list_insert_ordered(&sleep_list, &st->elem, &thread_sleep_less, NULL);
         thread_block();
         intr_set_level(old_level);
     }
