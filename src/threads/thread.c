@@ -333,18 +333,20 @@ void thread_sleep(int64_t end_ticks) {
     struct thread_sleeping *st = palloc_get_page(PAL_ZERO);
     enum intr_level old_level;
 
-    /* Disable interrupts, as we shouldn't be interrupted here.
-     * We're dealing with running/blocked queues, hence we are 
-     * modifying global state. (If we're interrupted here, and if
-     * the current threads context switches, it will probably still
-     * end up in the ready queue...)
-    */
-    old_level = intr_disable();
+    /* This shouldn't be called on an interrupt context */
+    ASSERT(!intr_context());
+
 
     if (st == NULL) {
         thread_yield();
     }
     else {
+        /* Disable interrupts, as we shouldn't be interrupted here.
+         * We're dealing with running/blocked queues, hence we are 
+         * modifying global state.
+         */
+        old_level = intr_disable();
+
         st->t = t;
         st->end_ticks = end_ticks;
         
