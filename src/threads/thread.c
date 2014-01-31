@@ -121,7 +121,7 @@ void thread_start(void) {
 void thread_tick(void) {
     struct thread *t = thread_current();
     struct list_elem *e;
-    struct thread_sleeping *st;
+    struct thread_sleeping *next_to_wake;
     int64_t current_ticks;
 
     /* Update statistics. */
@@ -134,22 +134,22 @@ void thread_tick(void) {
     else
         kernel_ticks++;
 
-    /* Wake up sleeping threads if time alarm time reached. */
-    for (e = list_begin(&sleep_list); e != list_end(&sleep_list);
-         e = list_next(e)) {
-
-        /* Get current number of ticks and the pointer to a sleeping thread */
+    /* Check if there is a sleeping thread to be unblocked. This can be done
+     * quickly (O(1)), sleep_list is sorted, so we simply check the first 
+     * list_elem in the front of the list and check if its wake time is 
+     * greater than the current time.
+     */
+    e = list_begin(&sleep_list);
+    next_to_wake = list_entry(e, struct thread_sleeping, elem);
+    if (next_to_wake != list_end(&sleep_list)) {
         current_ticks = timer_ticks();
-        st = list_entry(e, struct thread_sleeping, elem);
-
-        /* If the sleeping threads wake up time is now or has passed */ 
-        if (current_ticks >= st->end_ticks) {
+        if (current_ticks >= next_to_wake->end_ticks) {
             /* Remove from list of sleeping threads */
-            list_remove(st->elem);
+            list_remove(next_to_wake->elem);
             /* Unblock the thread */
-            thread_unblock(st->t);
+            thread_unblock(next_to_wake->t);
             /* Free the sleeping thread struct */
-            free(st);
+            free(next_to_wake);
         }
     }
 
@@ -312,7 +312,21 @@ void thread_yield(void) {
     intr_set_level(old_level);
 }
 
+/*! LESS function provided to list_insert_ordered for the sleep_list. */
+bool thread_sleep_less(struct list_elem *elem1, struct list_elem *elem2,
+                       void *aux) {
+    /* The aux pointer is required, however we don't have need any auxiliary
+     * data to perform our LESS comparison.
+     */
+    struct thread_sleeping *st1, *st2;
+    st1 = list_entry(elem1, struct thread_sleeping, elem);
+    st2 = list_entry(elem2, struct thread_sleeping, elem);
 
+    /* Return true if st1->end_ticks <= st2->end_ticks. */
+    if (st1->end_ticks <= st2->end_ticks)
+        return true;
+    return false;
+}
 
 void thread_sleep(int64_t end_ticks) {
     struct thread *t = thread_current();
@@ -333,8 +347,9 @@ void thread_sleep(int64_t end_ticks) {
     else {
         st->t = t;
         st->end_ticks = end_ticks;
-
-        list_push_back(&sleep_list, &cur->elem);
+        
+        /* Pass in NULL for auxiliary data pointer AUX. */
+        list_insert_ordered(&sleep_list, &st->elem, thread_sleep_less, NULL);
         thread_block();
         intr_set_level(old_level);
     }
