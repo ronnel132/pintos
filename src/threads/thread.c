@@ -271,6 +271,10 @@ void thread_unblock(struct thread *t) {
 	/* Do an ordered insert into ready_list, so that the ready_list maintains
      * its ordering (by priority). */
     list_insert_ordered(&ready_list, &t->elem, &ready_less, NULL);
+
+    /* Make sure the list is ordered */
+	ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+
     t->status = THREAD_READY;
     intr_set_level(old_level);
 }
@@ -333,6 +337,10 @@ void thread_yield(void) {
     if (cur != idle_thread) 
 		/* Do an insert into the ready_list, ordered by highest priority. */	
         list_insert_ordered(&ready_list, &cur->elem, &ready_less, NULL);
+
+        /* Make sure the list is ordered */
+        ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+
     cur->status = THREAD_READY;
     schedule();
     intr_set_level(old_level);
@@ -378,6 +386,10 @@ void thread_sleep(int64_t end_ticks) {
         
         /* Pass in NULL for auxiliary data pointer AUX. */
         list_insert_ordered(&sleep_list, &st->elem, &thread_sleep_less, NULL);
+
+        /* Make sure the list is ordered */
+        ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+
         thread_block();
         intr_set_level(old_level);
     }
@@ -621,6 +633,9 @@ void schedule_donor(int original_priority) {
 	list_remove(&thread_current()->elem);
 	list_insert_ordered(&ready_list, &thread_current()->elem, &ready_less, NULL);
 
+    /* Make sure the list is ordered */
+	ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+
     /* Set current thread to ready */
     thread_current()->status = THREAD_READY;
 
@@ -640,6 +655,9 @@ void donate_priority(struct thread *donee) {
     donee->priority = thread_get_priority();
 	list_remove(&donee->elem);
 	list_insert_ordered(&ready_list, &donee->elem, &ready_less, NULL);
+
+    /* Make sure the list is ordered */
+	ASSERT(list_sorted(&ready_list, &ready_less, NULL));
 
     /* Set current thread to ready */
     thread_current()->status = THREAD_READY;
