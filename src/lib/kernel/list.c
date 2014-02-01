@@ -344,7 +344,10 @@ is_sorted (struct list_elem *a, struct list_elem *b,
 {
   if (a != b)
     while ((a = list_next (a)) != b) 
-      if (less (a, list_prev (a), aux))
+      /* If a is less than prev(a), and NOT prev(a) less then a.
+       * This makes sure we don't return false if the elements are equal
+       */
+      if ((less (a, list_prev (a), aux)) && (!less (list_prev (a), a,  aux)))
         return false;
   return true;
 }
