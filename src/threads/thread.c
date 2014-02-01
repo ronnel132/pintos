@@ -149,7 +149,7 @@ void thread_tick(void) {
      */
     e = list_begin(&sleep_list);
     next_to_wake = list_entry(e, struct thread_sleeping, elem);
-    if (e != list_end(&sleep_list)) {
+    if (!list_empty(&sleep_list)) {
         current_ticks = timer_ticks();
         if (current_ticks >= next_to_wake->end_ticks) {
             /* Remove from list of sleeping threads */
