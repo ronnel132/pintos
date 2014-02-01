@@ -31,11 +31,7 @@
    MODIFICATIONS.
 */
 
-#ifndef THREADS_SYNCH_H
-#define THREADS_SYNCH_H
 #include "threads/synch.h"
-#endif /* threads/synch.h */
-
 #include <stdio.h>
 #include <string.h>
 #include "threads/interrupt.h"

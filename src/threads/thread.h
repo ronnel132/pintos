@@ -9,11 +9,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
-
-#ifndef THREADS_SYNCH_H
-#define THREADS_SYNCH_H
 #include "threads/synch.h"
-#endif /* threads/synch.h */
 
 /*! States in a thread's life cycle. */
 enum thread_status {
