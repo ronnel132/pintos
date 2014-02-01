@@ -247,12 +247,6 @@ void lock_release(struct lock *lock) {
 
     lock->holder = NULL;
 
-    // TODO: If the lock that was just released is the lock that the previous
-    // thread in the stack was waiting for (we determine this by checking the
-    // stack that contains the nested locks that we're waiting for), then
-    // change priority of the current thread to its original priority
-    // (we determine this by the priority stack, should be the top value)
-
     /* If we have a donor, and if the donor wants this lock */
     if (lock == wanted_lock) {
         /* Change current thread's priority */
@@ -261,9 +255,6 @@ void lock_release(struct lock *lock) {
         /* Call scheduler immediately, so we go back to donor */
         schedule();
     }
-
-    // Also use: lock_held_by_current_thread()
-    // Then call schedule after setting priority back.
 
     sema_up(&lock->semaphore);
 }
