@@ -129,6 +129,8 @@ void thread_tick(void) {
     struct thread_sleeping *next_to_wake;
     int64_t current_ticks;
 
+    ASSERT (intr_context());
+
     /* Update statistics. */
     if (t == idle_thread)
         idle_ticks++;
@@ -153,6 +155,15 @@ void thread_tick(void) {
             list_remove(&next_to_wake->elem);
             /* Unblock the thread */
             thread_unblock(next_to_wake->t);
+
+            /* If this thread's priority is higher than or equal than the 
+             * running thread's priority, yield the processor
+             */
+            if (t->priority >= thread_get_priority()) {
+                /* Yield current thread, as the created thread has higher priority */
+                intr_yield_on_return();
+            }
+
             /* Free the sleeping thread struct */
             palloc_free_page(next_to_wake);
         }
@@ -220,6 +231,16 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
     /* Add to run queue. */
     thread_unblock(t);
 
+    /* If this thread's priority is higher than or equal than the 
+     * running thread's priority, yield the processor
+     */
+    if (t->priority >= thread_get_priority()) {
+        if (intr_get_level() == INTR_OFF) {
+            intr_enable();
+        }
+        /* Yield current thread, as the created thread has higher priority */
+        thread_yield();
+    }
 
     return tid;
 }
@@ -273,16 +294,6 @@ void thread_unblock(struct thread *t) {
 
     t->status = THREAD_READY;
 
-    /* If this thread's priority is higher than or equal than the 
-     * running thread's priority, yield the processor
-     */
-    if (t->priority >= thread_get_priority()) {
-        if (intr_get_level() == INTR_OFF) {
-            intr_enable();
-        }
-        /* Yield current thread, as the created thread has higher priority */
-        thread_yield();
-    }
 
     /* Make sure the list is ordered */
 	ASSERT(list_sorted(&ready_list, &ready_less, NULL));
