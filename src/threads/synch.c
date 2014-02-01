@@ -202,6 +202,9 @@ bool lock_try_acquire(struct lock *lock) {
     success = sema_try_down(&lock->semaphore);
     if (success)
       lock->holder = thread_current();
+    // TODO: If we fail to acquire lock, see what thread has this particular
+    // lock and donate priority to that thread.
+    // donate_priority(higher_priority_thread, lower_p_thread)
 
     return success;
 }
@@ -216,6 +219,14 @@ void lock_release(struct lock *lock) {
     ASSERT(lock_held_by_current_thread(lock));
 
     lock->holder = NULL;
+    // TODO: If the lock that was just released is the lock that the previous
+    // thread in the stack was waiting for (we determine this by checking the
+    // stack that contains the nested locks that we're waiting for), then
+    // change priority of the current thread to its original priority
+    // (we determine this by the priority stack, should be the top value)
+
+    // Also use: lock_held_by_current_thread()
+
     sema_up(&lock->semaphore);
 }
 
