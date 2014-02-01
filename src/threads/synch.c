@@ -31,14 +31,18 @@
    MODIFICATIONS.
 */
 
+#ifndef THREADS_SYNCH_H
+#define THREADS_SYNCH_H
 #include "threads/synch.h"
+#endif /* threads/synch.h */
+
 #include <stdio.h>
 #include <string.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
 /* Declare pri_donation_list struct from the header file definition */
-struct list pri_donation_list;
+extern struct list pri_donation_list;
 
 /*! Initializes semaphore SEMA to VALUE.  A semaphore is a
     nonnegative integer along with two atomic operators for
