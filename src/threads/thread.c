@@ -608,11 +608,11 @@ static void schedule(void) {
  * current thread to its original priority
  */
 void schedule_donor(int original_priority) {
-    /* Schedule should be called with interrupts off */
-    ASSERT(intr_get_level() == INTR_OFF);
-
     /* Assert correct bounds */
     ASSERT((original_priority >= PRI_MIN) && (original_priority <= PRI_MAX));
+
+    /* Schedule should be called with interrupts off */
+    intr_disable();
 
     /* Change current thread's priority */
     thread_set_priority(original_priority);
@@ -620,6 +620,19 @@ void schedule_donor(int original_priority) {
     /* Call scheduler immediately, so we go back to donor */
     schedule();
 }
+
+/* Donate current thread's priority to donee */
+void donate_priority(struct thread *donee) {
+    /* Schedule should be called with interrupts off */
+    intr_disable();
+
+    /* Set donees priority to current thread's priority */
+    donee->priority = thread_get_priority();
+
+    /* Schedule donee */
+    schedule();
+}
+    
 
 /*! Returns a tid to use for a new thread. */
 static tid_t allocate_tid(void) {
