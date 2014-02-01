@@ -37,10 +37,8 @@ static struct list all_list;
  * donation.
  */
 
-/*! List of priority donation states, for keeping track of chains of priority 
-    donations (i.e., A donates to B, B donates to C, etc.). When not exploring
-    some chain of priority donations, this linked list is empty. */
-static struct list pri_donation_list;
+/* Declare pri_donation_list struct from the header file definition */
+struct list pri_donation_list;
 
 /*! Idle thread. */
 static struct thread *idle_thread;

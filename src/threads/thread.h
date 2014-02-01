@@ -133,6 +133,12 @@ struct priority_donation_state {
     struct list_elem elem;              /*!< List element. */
 };
 
+/*! List of priority donation states, for keeping track of chains of priority 
+    donations (i.e., A donates to B, B donates to C, etc.). When not exploring
+    some chain of priority donations, this linked list is empty. */
+extern struct list pri_donation_list;
+
+
 /*! A sleeping kernel thread.
     Stores the thread struct pointer and the time it
     should be unblocked.

@@ -37,6 +37,9 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
+/* Declare pri_donation_list struct from the header file definition */
+struct list pri_donation_list;
+
 /*! Initializes semaphore SEMA to VALUE.  A semaphore is a
     nonnegative integer along with two atomic operators for
     manipulating it:
@@ -219,12 +222,45 @@ void lock_release(struct lock *lock) {
     ASSERT(lock != NULL);
     ASSERT(lock_held_by_current_thread(lock));
 
+    /* Donor's data */
+
+    struct priority_donation_state *donor; 
+    
+    /* The original thread's priority */
+    int original_priority;
+
+    /* The lock we're looking for so we can trace back */
+    struct lock *wanted_lock;
+
+    /* If the stack isn't empty */
+    if (!list_empty(pri_donation_list)) {
+        /* This is the previous donor */
+        donor = list_entry(list_begin(pri_donation_list))
+
+        /* His desired lock, and the current thread's initial priority */
+        wanted_lock = donor->lock;
+        original_priority = donor->prev_priority;
+    }
+    else {
+        wanted_lock = NULL;
+    }
+
     lock->holder = NULL;
+
     // TODO: If the lock that was just released is the lock that the previous
     // thread in the stack was waiting for (we determine this by checking the
     // stack that contains the nested locks that we're waiting for), then
     // change priority of the current thread to its original priority
     // (we determine this by the priority stack, should be the top value)
+
+    /* If we have a donor, and if the donor wants this lock */
+    if (lock == wanted_lock) {
+        /* Change current thread's priority */
+        thread_set_priority(original_priority);
+
+        /* Call scheduler immediately, so we go back to donor */
+        schedule();
+    }
 
     // Also use: lock_held_by_current_thread()
     // Then call schedule after setting priority back.
