@@ -588,6 +588,7 @@ static void schedule(void) {
     ASSERT(intr_get_level() == INTR_OFF);
     ASSERT(cur->status != THREAD_RUNNING);
     ASSERT(is_thread(next));
+
 	/* Assert that the entire ready list is sorted. */
 	ASSERT(list_sorted(&ready_list, &ready_less, NULL));
 
