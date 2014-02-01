@@ -117,6 +117,11 @@ struct thread {
     /**@}*/
 };
 
+/* TODO: Add the struct for the data structure we store in the priority donation stack.
+ * It should contain fields for the lock that this current thread is trying to unlock, 
+ * as well as this current thread's previous priority. That should be it basically.
+ */
+
 /*! A sleeping kernel thread.
     Stores the thread struct pointer and the time it
     should be unblocked.

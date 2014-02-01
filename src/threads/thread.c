@@ -33,6 +33,10 @@ static struct list sleep_list;
     when they are first scheduled and removed when they exit. */
 static struct list all_list;
 
+/* TODO: Declare the global stack for keeping track of the priorities for priority
+ * donation.
+ */
+
 /*! Idle thread. */
 static struct thread *idle_thread;
 
@@ -93,6 +97,8 @@ void thread_init(void) {
     list_init(&ready_list);
     list_init(&sleep_list);
     list_init(&all_list);
+
+    /* TODO: Initialize the priority donation stack. */
 
     /* Set up a thread structure for the running thread. */
     initial_thread = running_thread();
@@ -245,6 +251,8 @@ void thread_unblock(struct thread *t) {
 
     old_level = intr_disable();
     ASSERT(t->status == THREAD_BLOCKED);
+    /* TODO: Needs to be list_insert_ordered since ready_list will be ordered.
+     */
     list_push_back(&ready_list, &t->elem);
     t->status = THREAD_READY;
     intr_set_level(old_level);
@@ -306,6 +314,9 @@ void thread_yield(void) {
 
     old_level = intr_disable();
     if (cur != idle_thread) 
+    /* TODO: Change this to list_insert_ordered because we want to insert into
+     * ready_list in the proper order.
+     */
         list_push_back(&ready_list, &cur->elem);
     cur->status = THREAD_READY;
     schedule();
@@ -562,6 +573,15 @@ static void schedule(void) {
     ASSERT(intr_get_level() == INTR_OFF);
     ASSERT(cur->status != THREAD_RUNNING);
     ASSERT(is_thread(next));
+
+    /* TODO: This part should be simple. The only thing the scheduler needs to 
+     * worry about is ALWAYS running the thread with the highest priority. 
+     * We'll change the run queue to a sorted queue, so we'll always be popping
+     * off the thread in the front of the queue to get the next thread to run.
+     * Actually, I don't think we need to change any code here, because
+     * next_thread_to_run() (above) just pops from the front of the ready queue.
+     * We only have to worry about how we insert into the ready queue.
+     */
 
     if (cur != next)
         prev = switch_threads(cur, next);
