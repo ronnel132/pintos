@@ -223,7 +223,6 @@ void lock_release(struct lock *lock) {
     ASSERT(lock_held_by_current_thread(lock));
 
     /* Donor's data */
-
     struct priority_donation_state *donor; 
     
     /* The original thread's priority */
@@ -250,11 +249,8 @@ void lock_release(struct lock *lock) {
 
     /* If we have a donor, and if the donor wants this lock */
     if (lock == wanted_lock) {
-        /* Change current thread's priority */
-        thread_set_priority(original_priority);
-
-        /* Call scheduler immediately, so we go back to donor */
-        schedule();
+        /* Schedule the donor thread, suspending the current one */
+        schedule_donor(original_priority);
     }
 
     sema_up(&lock->semaphore);

@@ -604,6 +604,20 @@ static void schedule(void) {
     thread_schedule_tail(prev);
 }
 
+/* Schedules the donor of this thread, and sets the priority of the
+ * current thread to its original priority
+ */
+void schedule_donor(int original_priority) {
+    /* Assert correct bounds */
+    assert ((original_priority >= PRI_MIN) && (original_priority <= PRI_MAX)) 
+
+    /* Change current thread's priority */
+    thread_set_priority(original_priority);
+
+    /* Call scheduler immediately, so we go back to donor */
+    schedule();
+}
+
 /*! Returns a tid to use for a new thread. */
 static tid_t allocate_tid(void) {
     static tid_t next_tid = 1;

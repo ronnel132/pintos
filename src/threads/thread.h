@@ -190,6 +190,11 @@ void thread_foreach(thread_action_func *, void *);
 int thread_get_priority(void);
 void thread_set_priority(int);
 
+/* Schedules the donor of this thread, and sets the priority of the
+ * current thread to its original priority
+ */
+void schedule_donor(int original_priority);
+
 int thread_get_nice(void);
 void thread_set_nice(int);
 int thread_get_recent_cpu(void);
