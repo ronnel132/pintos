@@ -141,15 +141,15 @@ void thread_tick(void) {
      */
     e = list_begin(&sleep_list);
     next_to_wake = list_entry(e, struct thread_sleeping, elem);
-    if (next_to_wake != list_end(&sleep_list)) {
+    if (e != list_end(&sleep_list)) {
         current_ticks = timer_ticks();
         if (current_ticks >= next_to_wake->end_ticks) {
             /* Remove from list of sleeping threads */
-            list_remove(next_to_wake->elem);
+            list_remove(&next_to_wake->elem);
             /* Unblock the thread */
             thread_unblock(next_to_wake->t);
             /* Free the sleeping thread struct */
-            free(next_to_wake);
+            palloc_free_page(next_to_wake);
         }
     }
 

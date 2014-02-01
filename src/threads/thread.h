@@ -155,6 +155,8 @@ const char *thread_name(void);
 
 void thread_exit(void) NO_RETURN;
 void thread_yield(void);
+bool thread_sleep_less(struct list_elem *elem1, struct list_elem *elem2,
+                       void *aux);
 void thread_sleep(int64_t end_ticks);
 
 /*! Performs some operation on thread t, given auxiliary data AUX. */
