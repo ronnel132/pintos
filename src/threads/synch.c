@@ -233,9 +233,10 @@ void lock_release(struct lock *lock) {
     struct lock *wanted_lock;
 
     /* If the stack isn't empty */
-    if (!list_empty(pri_donation_list)) {
+    if (!list_empty(&pri_donation_list)) {
         /* This is the previous donor */
-        donor = list_entry(list_begin(pri_donation_list))
+        donor = list_entry(list_begin(&pri_donation_list),
+                           struct priority_donation_state, elem);
 
         /* His desired lock, and the current thread's initial priority */
         wanted_lock = donor->lock;

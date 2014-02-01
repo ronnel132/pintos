@@ -170,7 +170,7 @@ typedef void thread_func(void *aux);
 tid_t thread_create(const char *name, int priority, thread_func *, void *);
 
 void thread_block(void);
-void ready_less(struct list_elem *elem1, struct list_elem *elem2);
+bool ready_less(struct list_elem *elem1, struct list_elem *elem2);
 void thread_unblock(struct thread *);
 
 struct thread *thread_current (void);
