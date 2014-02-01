@@ -272,11 +272,9 @@ void thread_unblock(struct thread *t) {
     /* If this thread's priority is higher than or equal than the 
      * running thread's priority, call schedule 
      */
-     if (t->priority >= thread_get_priority()) {
-        /* Schedule should be called with interrupts off */
-        intr_disable();
-
-        schedule();
+    if (t->priority >= thread_get_priority()) {
+        /* Yield current thread, as the created thread has higher priority */
+        thread_yield();
     }
 
     /* Make sure the list is ordered */
@@ -632,9 +630,6 @@ void schedule_donor(int original_priority) {
     /* Assert correct bounds */
     ASSERT((original_priority >= PRI_MIN) && (original_priority <= PRI_MAX));
 
-    /* Schedule should be called with interrupts off */
-    intr_disable();
-
     /* Change current thread's priority */
     thread_set_priority(original_priority);
 	list_remove(&thread_current()->elem);
@@ -643,20 +638,14 @@ void schedule_donor(int original_priority) {
     /* Make sure the list is ordered */
 	ASSERT(list_sorted(&ready_list, &ready_less, NULL));
 
-    /* Set current thread to ready */
-    thread_current()->status = THREAD_READY;
-
-    /* Call scheduler immediately, so we go back to donor */
-    schedule();
+    /* Yield control, so that the higher priority thread runs */
+    thread_yield();
 }
 
 /* Donate current thread's priority to donee */
 void donate_priority(struct thread *donee) {
     /* Check if donee is a valid thread */
     ASSERT (is_thread(donee));
-
-    /* Schedule should be called with interrupts off */
-    intr_disable();
 
     /* Set donees priority to current thread's priority */
     donee->priority = thread_get_priority();
@@ -666,11 +655,8 @@ void donate_priority(struct thread *donee) {
     /* Make sure the list is ordered */
 	ASSERT(list_sorted(&ready_list, &ready_less, NULL));
 
-    /* Set current thread to ready */
-    thread_current()->status = THREAD_READY;
-
-    /* Schedule donee */
-    schedule();
+    /* Yield control, so that the higher priority thread runs */
+    thread_yield();
 }
     
 
