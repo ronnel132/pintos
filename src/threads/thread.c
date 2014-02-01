@@ -608,6 +608,9 @@ static void schedule(void) {
  * current thread to its original priority
  */
 void schedule_donor(int original_priority) {
+    /* Schedule should be called with interrupts off */
+    ASSERT(intr_get_level() == INTR_OFF);
+
     /* Assert correct bounds */
     ASSERT((original_priority >= PRI_MIN) && (original_priority <= PRI_MAX));
 
