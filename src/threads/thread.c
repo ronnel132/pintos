@@ -609,7 +609,7 @@ static void schedule(void) {
  */
 void schedule_donor(int original_priority) {
     /* Assert correct bounds */
-    assert ((original_priority >= PRI_MIN) && (original_priority <= PRI_MAX));
+    ASSERT((original_priority >= PRI_MIN) && (original_priority <= PRI_MAX));
 
     /* Change current thread's priority */
     thread_set_priority(original_priority);
