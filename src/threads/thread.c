@@ -220,6 +220,15 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
     /* Add to run queue. */
     thread_unblock(t);
 
+    /* If this thread's priority is higher than or equal than the 
+     * running thread's priority, yield the processor
+     */
+    if (t->priority >= thread_get_priority()) {
+        /* Yield current thread, as the created thread has higher priority */
+        thread_yield();
+    }
+
+
     return tid;
 }
 
@@ -269,16 +278,9 @@ void thread_unblock(struct thread *t) {
      * its ordering (by priority). */
     list_insert_ordered(&ready_list, &t->elem, &ready_less, NULL);
 
-    /* If this thread's priority is higher than or equal than the 
-     * running thread's priority, call schedule 
-     */
-    if (t->priority >= thread_get_priority()) {
-        /* Yield current thread, as the created thread has higher priority */
-        thread_yield();
-    }
-
     /* Make sure the list is ordered */
 	ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+
 
     t->status = THREAD_READY;
     intr_set_level(old_level);
@@ -343,8 +345,8 @@ void thread_yield(void) {
 		/* Do an insert into the ready_list, ordered by highest priority. */	
         list_insert_ordered(&ready_list, &cur->elem, &ready_less, NULL);
 
-        /* Make sure the list is ordered */
-        ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+    /* Make sure the list is ordered */
+    ASSERT(list_sorted(&ready_list, &ready_less, NULL));
 
     cur->status = THREAD_READY;
     schedule();
