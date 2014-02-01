@@ -131,7 +131,7 @@ struct priority_donation_state {
      */
     int prev_priority;
     struct list_elem elem;              /*!< List element. */
-}
+};
 
 /*! A sleeping kernel thread.
     Stores the thread struct pointer and the time it
