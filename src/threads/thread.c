@@ -248,7 +248,7 @@ bool ready_less(struct list_elem *elem1, struct list_elem *elem2, void *aux) {
      * we will ensure that t1 will be placed before (closer to the HEAD of 
      * the ready queue) than t2.
      */
-    return t1->priority >= t2->priority; 
+    return t1->priority > t2->priority; 
 }
 
 /*! Transitions a blocked thread T to the ready-to-run state.  This is an
