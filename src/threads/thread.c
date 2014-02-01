@@ -630,6 +630,9 @@ void schedule_donor(int original_priority) {
 
 /* Donate current thread's priority to donee */
 void donate_priority(struct thread *donee) {
+    /* Check if donee is a valid thread */
+    ASSERT (is_thread(donee));
+
     /* Schedule should be called with interrupts off */
     intr_disable();
 
