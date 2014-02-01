@@ -239,7 +239,7 @@ void lock_release(struct lock *lock) {
                            struct priority_donation_state, elem);
 
         /* His desired lock, and the current thread's initial priority */
-        wanted_lock = donor->lock;
+        wanted_lock = donor->lock_desired;
         original_priority = donor->prev_priority;
     }
     else {
