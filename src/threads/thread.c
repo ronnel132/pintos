@@ -33,9 +33,6 @@ static struct list sleep_list;
     when they are first scheduled and removed when they exit. */
 static struct list all_list;
 
-/* TODO: Declare the global stack for keeping track of the priorities for priority
- * donation.
- */
 
 /* Declare pri_donation_list struct from the header file definition */
 struct list pri_donation_list;
