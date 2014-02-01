@@ -121,6 +121,17 @@ struct thread {
  * It should contain fields for the lock that this current thread is trying to unlock, 
  * as well as this current thread's previous priority. That should be it basically.
  */
+struct priority_donation_state {
+    /* The lock that the current thread is seeking to unlock so that the 
+     * thread running previously can resume execution.
+     */
+    struct lock lock_desired;
+    /* The priority assigned to the currently running thread before it was 
+     * given the priority donation.
+     */
+    int prev_priority;
+    struct list_elem elem;              /*!< List element. */
+}
 
 /*! A sleeping kernel thread.
     Stores the thread struct pointer and the time it
@@ -152,6 +163,7 @@ typedef void thread_func(void *aux);
 tid_t thread_create(const char *name, int priority, thread_func *, void *);
 
 void thread_block(void);
+void ready_less(struct list_elem *elem1, struct list_elem *elem2);
 void thread_unblock(struct thread *);
 
 struct thread *thread_current (void);
@@ -160,8 +172,7 @@ const char *thread_name(void);
 
 void thread_exit(void) NO_RETURN;
 void thread_yield(void);
-bool thread_sleep_less(struct list_elem *elem1, struct list_elem *elem2,
-                       void *aux);
+bool thread_sleep_less(struct list_elem *elem1, struct list_elem *elem2);
 void thread_sleep(int64_t end_ticks);
 
 /*! Performs some operation on thread t, given auxiliary data AUX. */

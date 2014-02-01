@@ -37,6 +37,11 @@ static struct list all_list;
  * donation.
  */
 
+/*! List of priority donation states, for keeping track of chains of priority 
+    donations (i.e., A donates to B, B donates to C, etc.). When not exploring
+    some chain of priority donations, this linked list is empty. */
+static struct list pri_donation_list;
+
 /*! Idle thread. */
 static struct thread *idle_thread;
 
@@ -97,8 +102,7 @@ void thread_init(void) {
     list_init(&ready_list);
     list_init(&sleep_list);
     list_init(&all_list);
-
-    /* TODO: Initialize the priority donation stack. */
+    list_init(&pri_donation_list);
 
     /* Set up a thread structure for the running thread. */
     initial_thread = running_thread();
@@ -237,6 +241,23 @@ void thread_block(void) {
     schedule();
 }
 
+/*! The ready LESS function, as required by the list_insert_ordered function,
+    since the ready_list will be an ordered list. Used for comparing if one
+    thread struct is LESS than the other, by comparing priority values. */
+bool ready_less(struct list_elem *elem1, struct list_elem *elem2) {
+    struct thread *t1, *t2;
+    t1 = list_entry(elem1, struct thread, elem);
+    t2 = list_entry(elem2, struct thread, elem);
+
+    /* We compare in this way so that if t1's priority is greater than t2's,
+     * we will ensure that t1 will be placed before (closer to the HEAD of 
+     * the ready queue) than t2.
+     */
+    if (t1->priority >= t2->priority) 
+        return true;
+    return false;
+}
+
 /*! Transitions a blocked thread T to the ready-to-run state.  This is an
     error if T is not blocked.  (Use thread_yield() to make the running
     thread ready.)
@@ -253,7 +274,7 @@ void thread_unblock(struct thread *t) {
     ASSERT(t->status == THREAD_BLOCKED);
     /* TODO: Needs to be list_insert_ordered since ready_list will be ordered.
      */
-    list_push_back(&ready_list, &t->elem);
+    list_insert_ordered(&ready_list, &t->elem, &ready_less, NULL);
     t->status = THREAD_READY;
     intr_set_level(old_level);
 }
@@ -317,15 +338,14 @@ void thread_yield(void) {
     /* TODO: Change this to list_insert_ordered because we want to insert into
      * ready_list in the proper order.
      */
-        list_push_back(&ready_list, &cur->elem);
+        list_insert_ordered(&ready_list, &cur->elem, &ready_less, NULL);
     cur->status = THREAD_READY;
     schedule();
     intr_set_level(old_level);
 }
 
 /*! LESS function provided to list_insert_ordered for the sleep_list. */
-bool thread_sleep_less(struct list_elem *elem1, struct list_elem *elem2,
-                       void *aux) {
+bool thread_sleep_less(struct list_elem *elem1, struct list_elem *elem2) {
     /* The aux pointer is required, however we don't have need any auxiliary
      * data to perform our LESS comparison.
      */
