@@ -126,8 +126,9 @@ void thread_start(void) {
 void thread_tick(void) {
     struct thread *t = thread_current();
     struct list_elem *e;
-    struct thread_sleeping *next_to_wake;
+    struct thread_sleeping *current_sleeper;
     int64_t current_ticks;
+	int max_sleeper_pri = -1;
 
     ASSERT (intr_context());
 
@@ -141,33 +142,22 @@ void thread_tick(void) {
     else
         kernel_ticks++;
 
-    /* Check if there is a sleeping thread to be unblocked. This can be done
-     * quickly (O(1)), sleep_list is sorted, so we simply check the first 
-     * list_elem in the front of the list and check if its wake time is 
-     * greater than the current time.
-     */
-    e = list_begin(&sleep_list);
-    next_to_wake = list_entry(e, struct thread_sleeping, elem);
-    if (!list_empty(&sleep_list)) {
-        current_ticks = timer_ticks();
-        if (current_ticks >= next_to_wake->end_ticks) {
-            /* Remove from list of sleeping threads */
-            list_remove(&next_to_wake->elem);
-            /* Unblock the thread */
-            thread_unblock(next_to_wake->t);
-
-            /* If this thread's priority is higher than or equal than the 
-             * running thread's priority, yield the processor
-             */
-            if (t->priority >= thread_get_priority()) {
-                /* Yield current thread, as the created thread has higher priority */
-                intr_yield_on_return();
-            }
-
-            /* Free the sleeping thread struct */
-            palloc_free_page(next_to_wake);
-        }
-    }
+	/* Unblock all sleeping threads that need to be woken up. */
+	for (e = list_begin(&sleep_list); e != list_end(&sleep_list);
+		 e = list_next(e)) {
+		current_sleeper = list_entry(e, struct thread_sleeping, elem);
+		if (current_sleeper->end_ticks < timer_ticks()) {
+			break;
+		}
+		if (current_sleeper->priority > max_sleeper_pri)
+			max_sleeper_pri = current_sleeper->priority;
+		list_remove(&current_sleeper->elem);	
+		thread_unblock(current_sleeper->t);
+		palloc_free_page(current_sleeper);
+	}
+	
+	if (max_sleeper_pri >= thread_get_priority())
+		intr_yield_on_return();
 
     /* Enforce preemption. */
     if (++thread_ticks >= TIME_SLICE)
