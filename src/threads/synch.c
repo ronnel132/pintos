@@ -298,21 +298,14 @@ bool lock_try_acquire(struct lock *lock) {
     handler. */
 void lock_release(struct lock *lock) {
     int largest_donated_pri;
-	int donee_found = 0;
 	struct list_elem *e;
-	struct priority_donation_state *cur_state, *donation_state_found;
+	struct priority_donation_state *cur_state;
 	largest_donated_pri = -1;
     enum intr_level old_level;
 
     ASSERT(!intr_context());
     ASSERT(lock != NULL);
     ASSERT(lock_held_by_current_thread(lock));
-
-    /* Donor's data */
-    struct priority_donation_state *donor; 
-
-    /* The lock we're looking for so we can trace back */
-    struct lock *wanted_lock = NULL;
 
     old_level = intr_disable();
 
@@ -334,17 +327,6 @@ void lock_release(struct lock *lock) {
             }
             
         }
-// 		for (e = list_begin(&pri_donation_list); 
-// 			 e != list_end(&pri_donation_list); e = list_next(e)) {
-// 			cur_state = list_entry(e, struct priority_donation_state, elem);
-// 			if (cur_state->lock_desired == lock && 
-// 				cur_state->donee == thread_current()) {
-// 				donee_found = 1;
-//                 donation_state_found = cur_state;
-// 			}
-//             /* We want the maximum donation priority for this donee,
-//                in the entire list */
-// 		}
 
         for (e = list_begin(&pri_donation_list); 
              e != list_end(&pri_donation_list); e = list_next(e)) {
@@ -356,14 +338,6 @@ void lock_release(struct lock *lock) {
         }
 
         thread_current()->donation_priority = largest_donated_pri;
-
-//         if (thread_get_priority() < max_ready_priority()) {
-//             /* Re schedule */
-//             if (intr_get_level() == INTR_OFF) {
-//                 intr_enable();
-//             }
-//             thread_yield();
-//         }
     }
     intr_set_level(old_level);
 
