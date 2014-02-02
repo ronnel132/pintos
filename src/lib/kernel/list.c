@@ -349,6 +349,16 @@ is_sorted (struct list_elem *a, struct list_elem *b,
   return true;
 }
 
+/* Convenience function for checking if the entire list is sorted, done by
+   calling is_sorted with the beginning and ending elements in the linked
+   list. */
+bool list_sorted (struct list *list, list_less_func *less, void *aux) {
+	struct list_elem *begin, *end;
+	begin = list_begin(list);
+	end = list_end(list);
+	return is_sorted(begin, end, less, aux);
+}
+
 /* Finds a run, starting at A and ending not after B, of list
    elements that are in nondecreasing order according to LESS
    given auxiliary data AUX.  Returns the (exclusive) end of the
