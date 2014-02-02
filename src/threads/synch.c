@@ -205,9 +205,12 @@ void lock_init(struct lock *lock) {
     we need to sleep. */
 void lock_acquire(struct lock *lock) {
 	struct priority_donation_state *pd_state;
+    enum intr_level old_level;
     ASSERT(lock != NULL);
     ASSERT(!intr_context());
     ASSERT(!lock_held_by_current_thread(lock));
+
+    old_level = intr_disable();
 
     /* If this lock is being held by another thread, and
      * that threads priority is less than current thread's priority,
@@ -222,12 +225,14 @@ void lock_acquire(struct lock *lock) {
 			}
 			thread_yield();
 		}	
-		pd_state->prev_donation = lock->holder->donation_priority;
 		pd_state->donee = lock->holder;
 		pd_state->lock_desired = lock;
+        pd_state->donor = thread_current();
 		list_push_front(&pri_donation_list, &pd_state->elem);	
         donate_priority(lock->holder);
     }
+
+    intr_set_level(old_level);
         
 
     sema_down(&lock->semaphore);
@@ -260,11 +265,13 @@ bool lock_try_acquire(struct lock *lock) {
     handler. */
 void lock_release(struct lock *lock) {
     int largest_donated_pri;
-	bool donee_found = false;
+	int donee_found = 0;
 	struct list_elem *e;
 	struct priority_donation_state *cur_state, *donation_state_found;
 	largest_donated_pri = -1;
+    enum intr_level old_level;
 
+    ASSERT(!intr_context());
     ASSERT(lock != NULL);
     ASSERT(lock_held_by_current_thread(lock));
 
@@ -274,35 +281,58 @@ void lock_release(struct lock *lock) {
     /* The lock we're looking for so we can trace back */
     struct lock *wanted_lock = NULL;
 
+    old_level = intr_disable();
+
     /* If the stack isn't empty */
     if (!list_empty(&pri_donation_list)) {
-		for (e = list_begin(&pri_donation_list); 
-			 e != list_end(&pri_donation_list); e = list_next(e)) {
-			cur_state = list_entry(e, struct priority_donation_state, elem);
+        e = list_begin(&pri_donation_list);
+        while (e != list_end(&pri_donation_list)) {
+            cur_state = list_entry(e, struct priority_donation_state, elem);
 			if (cur_state->lock_desired == lock && 
 				cur_state->donee == thread_current()) {
-				donee_found = true;
-				/* If we are unlocking the desired lock, and we are the correct
-				   donee to unlock the lock, then choose the donation priority 
-				   that is the largest in the list. */
-				if (cur_state->prev_donation > largest_donated_pri) {
-					largest_donated_pri = cur_state->prev_donation;
-					donation_state_found = cur_state;
-				}
+
+                /* Jump to next one, then delete */
+                e = list_next(e);
+                list_remove(&cur_state->elem);
+                palloc_free_page(cur_state);
 			}
-		}
-        if (donee_found) {
-            /* This is the previous donor */
-			donor = donation_state_found;
-			list_remove(&donor->elem);
+            else {
+                e = list_next(e);
+            }
+            
+        }
+// 		for (e = list_begin(&pri_donation_list); 
+// 			 e != list_end(&pri_donation_list); e = list_next(e)) {
+// 			cur_state = list_entry(e, struct priority_donation_state, elem);
+// 			if (cur_state->lock_desired == lock && 
+// 				cur_state->donee == thread_current()) {
+// 				donee_found = 1;
+//                 donation_state_found = cur_state;
+// 			}
+//             /* We want the maximum donation priority for this donee,
+//                in the entire list */
+// 		}
 
-            thread_current()->donation_priority = largest_donated_pri;
-			palloc_free_page(cur_state);
+        for (e = list_begin(&pri_donation_list); 
+             e != list_end(&pri_donation_list); e = list_next(e)) {
+            cur_state = list_entry(e, struct priority_donation_state, elem);
+            if ((effective_priority(cur_state->donor) > largest_donated_pri) && 
+                    (cur_state->donee == thread_current())) {
+                largest_donated_pri = effective_priority(cur_state->donor);
+            }
+        }
 
-            /* Schedule the donor thread, suspending the current one */
-            schedule_donor();
+        thread_current()->donation_priority = largest_donated_pri;
+
+        if (thread_get_priority() < max_ready_priority()) {
+            /* Re schedule */
+            if (intr_get_level() == INTR_OFF) {
+                intr_enable();
+            }
+            thread_yield();
         }
     }
+    intr_set_level(old_level);
 
     lock->holder = NULL;
     sema_up(&lock->semaphore);

@@ -120,13 +120,11 @@ struct thread {
 };
 
 struct priority_donation_state {
-	/* The previous donation priority. */
-	int prev_donation;
     /* The lock that the current thread is seeking to unlock so that the 
      * thread running previously can resume execution.
      */
     struct lock *lock_desired;
-	/* The thread that we are donating priority to. */
+    struct thread *donor;
 	struct thread *donee;
     struct list_elem elem;              /*!< List element. */
 };
@@ -206,6 +204,9 @@ int max(int a, int b);
 
 /* Returns the effective priority */
 int effective_priority(struct thread *t);
+
+/* Return max priority of the list */
+int max_ready_priority();
 
 #endif /* threads/thread.h */
 

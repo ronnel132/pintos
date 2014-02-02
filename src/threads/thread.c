@@ -1,5 +1,4 @@
-#include "threads/thread.h"
-#include <debug.h>
+#include "threads/thread.h" #include <debug.h>
 #include <stddef.h>
 #include <random.h>
 #include <stdio.h>
@@ -89,6 +88,11 @@ int max(int a, int b) {
 /* Returns the effective priority */
 int effective_priority(struct thread *t) {
     return max(t->priority, t->donation_priority);
+}
+
+/* Return max priority of the list */
+int max_ready_priority() {
+    return effective_priority(list_entry(list_begin(&ready_list), struct thread, elem));
 }
     
 
@@ -669,14 +673,7 @@ static void schedule(void) {
     thread_schedule_tail(prev);
 }
 
-/* Schedules the donor of this thread, and sets the priority of the
- * current thread to its original priority
- */
 void schedule_donor() {
-    if (intr_get_level() == INTR_OFF) {
-        intr_enable();
-    }
-    thread_yield();
 }
 
 /* Donate current thread's priority to donee */
@@ -697,11 +694,6 @@ void donate_priority(struct thread *donee) {
     /* Make sure the list is ordered */
 	ASSERT(list_sorted(&ready_list, &ready_less, NULL));
 
-    /* Yield control, so that the higher priority thread runs */
-    if (intr_get_level() == INTR_OFF) {
-        intr_enable();
-    }
-    thread_yield();
     intr_set_level(old_level);
 }
     
