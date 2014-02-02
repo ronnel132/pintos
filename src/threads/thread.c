@@ -375,9 +375,7 @@ void thread_yield(void) {
             cur_ready = list_entry(cur_ready_elem, struct thread, elem);
             if (effective_priority(cur_ready) == effective_priority(cur)) {
                 while (effective_priority(cur_ready) == effective_priority(cur)) {
-    //                 printf("=================================\n");
                     cur_ready_elem = list_next(cur_ready_elem);
-    //                 printf("*******************************\n");
                     cur_ready = list_entry(cur_ready_elem, struct thread, elem);
                 }
                 list_insert(cur_ready_elem, &cur->elem);
