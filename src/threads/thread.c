@@ -576,6 +576,9 @@ static void * alloc_frame(struct thread *t, size_t size) {
     thread can continue running, then it will be in the run queue.)  If the
     run queue is empty, return idle_thread. */
 static struct thread * next_thread_to_run(void) {
+	/* Assert that the entire ready list is sorted. */
+	ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+
     if (list_empty(&ready_list))
       return idle_thread;
     else
