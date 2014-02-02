@@ -216,6 +216,10 @@ void lock_acquire(struct lock *lock) {
      * that threads priority is less than current thread's priority,
      * donate priority to that thread
      */
+
+    // TODO: Before donating, make sure that the guy we're donating to 
+    // isn't blocked because he's already a donor to some other thread!
+    // So we should transfer the donation to the end thread, recursively.
     if ((lock->holder != NULL) && 
         (effective_priority(lock->holder) < thread_get_priority())) {
 		pd_state = palloc_get_page(PAL_ZERO);
