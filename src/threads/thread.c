@@ -380,6 +380,9 @@ void thread_sleep(int64_t end_ticks) {
 
 
     if (st == NULL) {
+        if (intr_get_level() == INTR_OFF) {
+            intr_enable();
+        }
         thread_yield();
     }
     else {
