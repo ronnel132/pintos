@@ -268,8 +268,8 @@ void thread_unblock(struct thread *t) {
 
     old_level = intr_disable();
     ASSERT(t->status == THREAD_BLOCKED);
-    /* TODO: Needs to be list_insert_ordered since ready_list will be ordered.
-     */
+	/* Do an ordered insert into ready_list, so that the ready_list maintains
+     * its ordering (by priority). */
     list_insert_ordered(&ready_list, &t->elem, &ready_less, NULL);
     t->status = THREAD_READY;
     intr_set_level(old_level);
@@ -331,9 +331,7 @@ void thread_yield(void) {
 
     old_level = intr_disable();
     if (cur != idle_thread) 
-    /* TODO: Change this to list_insert_ordered because we want to insert into
-     * ready_list in the proper order.
-     */
+		/* Do an insert into the ready_list, ordered by highest priority. */	
         list_insert_ordered(&ready_list, &cur->elem, &ready_less, NULL);
     cur->status = THREAD_READY;
     schedule();
@@ -590,7 +588,7 @@ static void schedule(void) {
     ASSERT(cur->status != THREAD_RUNNING);
     ASSERT(is_thread(next));
 
-    /* TODO: This part should be simple. The only thing the scheduler needs to 
+    /* The only thing the scheduler needs to 
      * worry about is ALWAYS running the thread with the highest priority. 
      * We'll change the run queue to a sorted queue, so we'll always be popping
      * off the thread in the front of the queue to get the next thread to run.
