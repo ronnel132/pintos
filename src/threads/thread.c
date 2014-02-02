@@ -344,9 +344,13 @@ void thread_yield(void) {
     ASSERT(!intr_context());
 
     old_level = intr_disable();
-    if (cur != idle_thread) 
+    if (cur != idle_thread) {
+        /* Remove the current thread fron ready list */
+        list_remove(&cur->elem);
+
 		/* Do an insert into the ready_list, ordered by highest priority. */	
         list_insert_ordered(&ready_list, &cur->elem, &ready_less, NULL);
+    }
 
     /* Make sure the list is ordered */
     ASSERT(list_sorted(&ready_list, &ready_less, NULL));
