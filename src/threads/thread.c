@@ -144,9 +144,9 @@ void thread_tick(void) {
 
 	/* Unblock all sleeping threads that need to be woken up. */
 	e = list_begin(&sleep_list);
+	current_ticks = timer_ticks();
 	while (e != list_end(&sleep_list)) {
 		current_sleeper = list_entry(e, struct thread_sleeping, elem);
-		current_ticks = timer_ticks();
 		if (current_sleeper->end_ticks > current_ticks) {
 			break;
 		}
