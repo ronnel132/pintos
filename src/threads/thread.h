@@ -193,7 +193,7 @@ void thread_set_priority(int);
 /* Schedules the donor of this thread, and sets the priority of the
  * current thread to its original priority
  */
-void schedule_donor();
+void schedule_donor(void);
 
 /* Donate current thread's priority to donee */
 void donate_priority(struct thread *donee);
@@ -210,7 +210,7 @@ int max(int a, int b);
 int effective_priority(struct thread *t);
 
 /* Return max priority of the list */
-int max_ready_priority();
+int max_ready_priority(void);
 
 #endif /* threads/thread.h */
 

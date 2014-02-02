@@ -46,6 +46,7 @@ bool cond_less(struct list_elem *elem1, struct list_elem *elem2, void *aux) {
     struct thread *t1, *t2;
     t1 = list_entry(elem1, struct thread, elem);
     t2 = list_entry(elem2, struct thread, elem);
+    printf("%d", t1->priority);
 
     /* We compare in this way so that if t1's priority is greater than t2's,
      * we will ensure that t1 will be placed before (closer to the HEAD of 
