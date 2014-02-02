@@ -222,7 +222,7 @@ void lock_acquire(struct lock *lock) {
 			}
 			thread_yield();
 		}	
-		pd_state->prev_donation = thread_get_priority();
+		pd_state->prev_donation = lock->holder->donation_priority;
 		pd_state->lock_desired = lock;
 		list_push_front(&pri_donation_list, &pd_state->elem);	
         donate_priority(lock->holder);
@@ -258,6 +258,8 @@ bool lock_try_acquire(struct lock *lock) {
     make sense to try to release a lock within an interrupt
     handler. */
 void lock_release(struct lock *lock) {
+    int previous_donation;
+
     ASSERT(lock != NULL);
     ASSERT(lock_held_by_current_thread(lock));
 
@@ -273,6 +275,9 @@ void lock_release(struct lock *lock) {
         donor = list_entry(list_begin(&pri_donation_list),
                            struct priority_donation_state, elem);
 
+        /* Original donation priority */
+        previous_donation = donor->prev_donation;
+
         /* His desired lock, and the current thread's initial priority */
         wanted_lock = donor->lock_desired;
     }
@@ -284,6 +289,7 @@ void lock_release(struct lock *lock) {
 
     /* If we have a donor, and if the donor wants this lock */
     if (lock == wanted_lock) {
+        thread_current()->donation_priority = previous_donation;
         /* Schedule the donor thread, suspending the current one */
         schedule_donor();
     }

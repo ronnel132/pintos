@@ -673,8 +673,6 @@ static void schedule(void) {
  * current thread to its original priority
  */
 void schedule_donor() {
-    /* Reset current thread's donation priority */
-    thread_current()->donation_priority = -1;
     if (intr_get_level() == INTR_OFF) {
         intr_enable();
     }
