@@ -126,7 +126,6 @@ void sema_up(struct semaphore *sema) {
             /* Context switch to highe rpriority thread */
             if (!intr_context()) {
                 old_level2 = intr_enable();
-                /* Yield current thread, as the created thread has higher priority */
                 thread_yield();
                 intr_set_level(old_level2);
             }
@@ -218,7 +217,7 @@ void lock_acquire(struct lock *lock) {
      * donate priority to that thread
      */
 
-    // TODO: Before donating, make sure that the guy we're donating to 
+    // Before donating, make sure that the guy we're donating to 
     // isn't blocked because he's already a donor to some other thread!
     // So we should transfer the donation to the end thread, recursively.
     if ((lock->holder != NULL) && 
