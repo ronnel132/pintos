@@ -187,7 +187,7 @@ void thread_set_priority(int);
 /* Schedules the donor of this thread, and sets the priority of the
  * current thread to its original priority
  */
-void schedule_donor(int original_priority);
+void schedule_donor();
 
 /* Donate current thread's priority to donee */
 void donate_priority(struct thread *donee);
