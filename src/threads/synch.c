@@ -215,10 +215,6 @@ bool lock_try_acquire(struct lock *lock) {
     success = sema_try_down(&lock->semaphore);
     if (success)
       lock->holder = thread_current();
-    // TODO: If we fail to acquire lock, see what thread has this particular
-    // lock and donate priority to that thread.
-    // donate_priority(higher_priority_thread, lower_p_thread)
-    // Then call schedule after donating priority.
 
     return success;
 }
