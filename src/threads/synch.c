@@ -267,33 +267,27 @@ void lock_release(struct lock *lock) {
     struct priority_donation_state *donor; 
 
     /* The lock we're looking for so we can trace back */
-    struct lock *wanted_lock;
+    struct lock *wanted_lock = NULL;
 
     /* If the stack isn't empty */
     if (!list_empty(&pri_donation_list)) {
-        /* This is the previous donor */
-        donor = list_entry(list_pop_front(&pri_donation_list),
-                           struct priority_donation_state, elem);
+        if (lock == wanted_lock) {
+            /* This is the previous donor */
+            donor = list_entry(list_pop_front(&pri_donation_list),
+                               struct priority_donation_state, elem);
 
-        /* Original donation priority */
-        previous_donation = donor->prev_donation;
+            /* Original donation priority */
+            previous_donation = donor->prev_donation;
 
-        /* His desired lock, and the current thread's initial priority */
-        wanted_lock = donor->lock_desired;
-    }
-    else {
-        wanted_lock = NULL;
+            thread_current()->donation_priority = previous_donation;
+
+            /* Schedule the donor thread, suspending the current one */
+            schedule_donor();
+
+        }
     }
 
     lock->holder = NULL;
-
-    /* If we have a donor, and if the donor wants this lock */
-    if (lock == wanted_lock) {
-        thread_current()->donation_priority = previous_donation;
-        /* Schedule the donor thread, suspending the current one */
-        schedule_donor();
-    }
-
     sema_up(&lock->semaphore);
 }
 
