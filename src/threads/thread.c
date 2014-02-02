@@ -434,9 +434,6 @@ void thread_set_priority(int new_priority) {
 
     thread_current()->priority = new_priority;
 
-    /* Remove and reinsert, to keep list sorted */
-    list_insert_ordered(&ready_list, &thread_current()->elem, &ready_less, NULL);
-
     /* Make sure the list is ordered */
     ASSERT(list_sorted(&ready_list, &ready_less, NULL));
 
