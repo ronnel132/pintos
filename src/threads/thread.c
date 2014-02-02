@@ -692,9 +692,9 @@ void donate_priority(struct thread *donee) {
 
     /* Set donees priority to current thread's priority */
     donee->donation_priority = thread_get_priority();
-	list_remove(&donee->elem);
-	list_insert_ordered(&ready_list, &donee->elem, &ready_less, NULL);
 
+    /* TODO: ONLY If donee is in ready list, remove and reinsert, to reorder */
+    list_sort(&ready_list, &ready_less, NULL);
 
     /* Make sure the list is ordered */
 	ASSERT(list_sorted(&ready_list, &ready_less, NULL));
