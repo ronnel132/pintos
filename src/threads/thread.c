@@ -282,9 +282,7 @@ void thread_unblock(struct thread *t) {
      * its ordering (by priority). */
     list_insert_ordered(&ready_list, &t->elem, &ready_less, NULL);
 
-
     t->status = THREAD_READY;
-
 
     /* Make sure the list is ordered */
 	ASSERT(list_sorted(&ready_list, &ready_less, NULL));
