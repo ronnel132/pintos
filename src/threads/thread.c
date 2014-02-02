@@ -143,25 +143,25 @@ void thread_tick(void) {
         kernel_ticks++;
 
 	/* Unblock all sleeping threads that need to be woken up. */
-	for (e = list_begin(&sleep_list); e != list_end(&sleep_list);
-		 e = list_next(e)) {
+	e = list_begin(&sleep_list);
+	while (e != list_end(&sleep_list)) {
 		current_sleeper = list_entry(e, struct thread_sleeping, elem);
 		current_ticks = timer_ticks();
-		if (current_sleeper->end_ticks < current_ticks) {
+		if (current_sleeper->end_ticks > current_ticks) {
 			break;
 		}
 		if (current_sleeper->t->priority > max_sleeper_pri)
 			max_sleeper_pri = current_sleeper->t->priority;
 		list_remove(&current_sleeper->elem);	
 		thread_unblock(current_sleeper->t);
+
+		e = list_next(e);
 		palloc_free_page(current_sleeper);
 	}
 	
-	if (max_sleeper_pri >= thread_get_priority())
-		intr_yield_on_return();
-
     /* Enforce preemption. */
-    if (++thread_ticks >= TIME_SLICE)
+    if (++thread_ticks >= TIME_SLICE || 
+		max_sleeper_pri >= thread_get_priority())
         intr_yield_on_return();
 }
 
@@ -369,9 +369,7 @@ bool thread_sleep_less(struct list_elem *elem1, struct list_elem *elem2,
     st2 = list_entry(elem2, struct thread_sleeping, elem);
 
     /* Return true if st1->end_ticks <= st2->end_ticks. */
-    if (st1->end_ticks <= st2->end_ticks)
-        return true;
-    return false;
+    return (st1->end_ticks <= st2->end_ticks);
 }
 
 void thread_sleep(int64_t end_ticks) {
