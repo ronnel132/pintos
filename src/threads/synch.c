@@ -114,12 +114,15 @@ void sema_up(struct semaphore *sema) {
 
     old_level = intr_disable();
     if (!list_empty(&sema->waiters)) {
-        sema->value++;
         waiter = list_entry(list_pop_front(&sema->waiters),
                                   struct thread, elem);
         thread_unblock(waiter);
-        /* The following should probably be enabled, but it loops... */
+        sema->value++;
+
+        /* If the waiter that just got unblocked has higher priority */
         if (waiter->priority >= thread_get_priority()) {
+
+            /* Context switch to highe rpriority thread */
             if (!intr_context()) {
                 old_level2 = intr_enable();
                 /* Yield current thread, as the created thread has higher priority */
@@ -132,6 +135,7 @@ void sema_up(struct semaphore *sema) {
         }
     }
     else {
+        /* Increment semaphore for the other case too */
         sema->value++;
     }
     intr_set_level(old_level);
