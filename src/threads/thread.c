@@ -422,8 +422,32 @@ void thread_foreach(thread_action_func *func, void *aux) {
 
 /*! Sets the current thread's priority to NEW_PRIORITY. */
 void thread_set_priority(int new_priority) {
+    struct thread *max;
+    enum intr_level old_level;
+    
+    ASSERT ((new_priority >= PRI_MIN) && (new_priority <= PRI_MAX));
+    old_level = intr_disable();
+
     thread_current()->priority = new_priority;
-    /* TODO: Yield if this thread doesn't have the highest priority anymore!! */
+
+    /* Remove and reinsert, to keep list sorted */
+    list_remove(&thread_current()->elem);
+    list_insert_ordered(&ready_list, &thread_current()->elem, &ready_less, NULL);
+
+    /* Max priority thread */
+    max = list_entry(list_begin(&ready_list), struct thread, elem);
+
+    /* If the max thread is not the current thread */
+    if (max != thread_current()) {
+        if (intr_get_level() == INTR_OFF) {
+            intr_enable();
+        }
+        thread_yield();
+    }
+
+    /* Make sure the list is ordered */
+    ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+    intr_set_level(old_level);
 }
 
 /*! Returns the current thread's priority. */
@@ -636,14 +660,6 @@ void schedule_donor(int original_priority) {
 
     /* Change current thread's priority */
     thread_set_priority(original_priority);
-	list_remove(&thread_current()->elem);
-	list_insert_ordered(&ready_list, &thread_current()->elem, &ready_less, NULL);
-
-    /* Make sure the list is ordered */
-	ASSERT(list_sorted(&ready_list, &ready_less, NULL));
-
-    /* Yield control, so that the higher priority thread runs */
-    thread_yield();
 }
 
 /* Donate current thread's priority to donee */
