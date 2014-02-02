@@ -370,20 +370,27 @@ void thread_yield(void) {
 		/* If there are other threads with the same priority as the thread 
 		   we are currently yielding, then place the current running thread 
 		   behind those threads, per round-robin rules. */
-		cur_ready_elem = list_begin(&ready_list);
-		cur_ready = list_entry(cur_ready_elem, struct thread, elem);
-		if (effective_priority(cur_ready) == effective_priority(cur)) {
-			while (effective_priority(cur_ready) == effective_priority(cur)) {
-                printf("=================================\n");
-				cur_ready_elem = list_next(cur_ready_elem);
-                printf("*******************************\n");
-				cur_ready = list_entry(cur_ready_elem, struct thread, elem);
-			}
-			list_insert(cur_ready_elem, &cur->elem);
-		}
-		else {
-			list_insert_ordered(&ready_list, &cur->elem, &ready_less, NULL);
-		}
+        if (!list_empty(&ready_list)) {
+            cur_ready_elem = list_begin(&ready_list);
+            cur_ready = list_entry(cur_ready_elem, struct thread, elem);
+            if (effective_priority(cur_ready) == effective_priority(cur)) {
+                while (effective_priority(cur_ready) == effective_priority(cur)) {
+    //                 printf("=================================\n");
+                    printf("%d", list_size(&ready_list));
+                    cur_ready_elem = list_next(cur_ready_elem);
+    //                 printf("*******************************\n");
+                    cur_ready = list_entry(cur_ready_elem, struct thread, elem);
+                }
+                list_insert(cur_ready_elem, &cur->elem);
+            }
+            else {
+                list_insert_ordered(&ready_list, &cur->elem, &ready_less, NULL);
+            }
+        }
+        else {
+            printf("empty\n");
+            list_insert_ordered(&ready_list, &cur->elem, &ready_less, NULL);
+        }
     }
 
     /* Make sure the list is ordered */
