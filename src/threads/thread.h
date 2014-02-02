@@ -97,6 +97,7 @@ struct thread {
     char name[16];                      /*!< Name (for debugging purposes). */
     uint8_t *stack;                     /*!< Saved stack pointer. */
     int priority;                       /*!< Priority. */
+    int donation_priority;              /*!< Donation priority (-1 if N/A). */
     struct list_elem allelem;           /*!< List element for all threads list. */
     /**@}*/
 
@@ -123,10 +124,6 @@ struct priority_donation_state {
      * thread running previously can resume execution.
      */
     struct lock *lock_desired;
-    /* The priority assigned to the currently running thread before it was 
-     * given the priority donation.
-     */
-    int prev_priority;
     struct list_elem elem;              /*!< List element. */
 };
 
@@ -199,6 +196,12 @@ int thread_get_nice(void);
 void thread_set_nice(int);
 int thread_get_recent_cpu(void);
 int thread_get_load_avg(void);
+
+/* Calculates the max of two numbers */
+int max(int a, int b);
+
+/* Returns the effective priority */
+int effective_priority(struct thread *t);
 
 #endif /* threads/thread.h */
 

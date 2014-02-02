@@ -79,6 +79,19 @@ static void schedule(void);
 void thread_schedule_tail(struct thread *prev);
 static tid_t allocate_tid(void);
 
+/* Calculates the max of two numbers */
+int max(int a, int b) {
+    if (a > b)
+        return a;
+    return b;
+}
+
+/* Returns the effective priority */
+int effective_priority(struct thread *t) {
+    return max(t->priority, t->donation_priority);
+}
+    
+
 /*! Initializes the threading system by transforming the code
     that's currently running into a thread.  This can't work in
     general and it is possible in this case only because loader.S
@@ -150,8 +163,8 @@ void thread_tick(void) {
 		if (current_sleeper->end_ticks > current_ticks) {
 			break;
 		}
-		if (current_sleeper->t->priority > max_sleeper_pri)
-			max_sleeper_pri = current_sleeper->t->priority;
+		if (effective_priority(current_sleeper->t) > max_sleeper_pri)
+			max_sleeper_pri = effective_priority(current_sleeper->t);
 		list_remove(&current_sleeper->elem);	
 		thread_unblock(current_sleeper->t);
 
@@ -225,7 +238,7 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
     /* If this thread's priority is higher than or equal than the 
      * running thread's priority, yield the processor
      */
-    if (t->priority >= thread_get_priority()) {
+    if (effective_priority(t) >= thread_get_priority()) {
         if (intr_get_level() == INTR_OFF) {
             intr_enable();
         }
@@ -261,7 +274,7 @@ bool ready_less(struct list_elem *elem1, struct list_elem *elem2, void *aux) {
      * we will ensure that t1 will be placed before (closer to the HEAD of 
      * the ready queue) than t2.
      */
-    return t1->priority >= t2->priority; 
+    return (effective_priority(t1) >=  effective_priority(t2));
 }
 
 /*! Transitions a blocked thread T to the ready-to-run state.  This is an
@@ -453,7 +466,7 @@ void thread_set_priority(int new_priority) {
 
 /*! Returns the current thread's priority. */
 int thread_get_priority(void) {
-    return thread_current()->priority;
+    return effective_priority(thread_current());
 }
 
 /*! Sets the current thread's nice value to NICE. */
@@ -550,6 +563,7 @@ static void init_thread(struct thread *t, const char *name, int priority) {
     strlcpy(t->name, name, sizeof t->name);
     t->stack = (uint8_t *) t + PGSIZE;
     t->priority = priority;
+    t->donation_priority = -1;
     t->magic = THREAD_MAGIC;
 
     old_level = intr_disable();
@@ -658,12 +672,13 @@ static void schedule(void) {
 /* Schedules the donor of this thread, and sets the priority of the
  * current thread to its original priority
  */
-void schedule_donor(int original_priority) {
-    /* Assert correct bounds */
-    ASSERT((original_priority >= PRI_MIN) && (original_priority <= PRI_MAX));
-
-    /* Change current thread's priority */
-    thread_set_priority(original_priority);
+void schedule_donor() {
+    /* Reset current thread's donation priority */
+    thread_current()->donation_priority = -1;
+    if (intr_get_level() == INTR_OFF) {
+        intr_enable();
+    }
+    thread_yield();
 }
 
 /* Donate current thread's priority to donee */
@@ -676,7 +691,7 @@ void donate_priority(struct thread *donee) {
     old_level = intr_disable();
 
     /* Set donees priority to current thread's priority */
-    donee->priority = thread_get_priority();
+    donee->donation_priority = thread_get_priority();
 	list_remove(&donee->elem);
 	list_insert_ordered(&ready_list, &donee->elem, &ready_less, NULL);
 

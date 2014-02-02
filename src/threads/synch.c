@@ -120,7 +120,7 @@ void sema_up(struct semaphore *sema) {
         sema->value++;
 
         /* If the waiter that just got unblocked has higher priority */
-        if (waiter->priority >= thread_get_priority()) {
+        if (effective_priority(waiter) >= thread_get_priority()) {
 
             /* Context switch to highe rpriority thread */
             if (!intr_context()) {
@@ -212,7 +212,7 @@ void lock_acquire(struct lock *lock) {
      * donate priority to that thread
      */
     if ((lock->holder != NULL) && 
-        ((lock->holder)->priority < thread_current()->priority)) {
+        (effective_priority(lock->holder) < thread_get_priority())) {
         donate_priority(lock->holder);
     }
         
@@ -251,9 +251,6 @@ void lock_release(struct lock *lock) {
 
     /* Donor's data */
     struct priority_donation_state *donor; 
-    
-    /* The original thread's priority */
-    int original_priority;
 
     /* The lock we're looking for so we can trace back */
     struct lock *wanted_lock;
@@ -266,7 +263,6 @@ void lock_release(struct lock *lock) {
 
         /* His desired lock, and the current thread's initial priority */
         wanted_lock = donor->lock_desired;
-        original_priority = donor->prev_priority;
     }
     else {
         wanted_lock = NULL;
@@ -277,7 +273,7 @@ void lock_release(struct lock *lock) {
     /* If we have a donor, and if the donor wants this lock */
     if (lock == wanted_lock) {
         /* Schedule the donor thread, suspending the current one */
-        schedule_donor(original_priority);
+        schedule_donor();
     }
 
     sema_up(&lock->semaphore);
