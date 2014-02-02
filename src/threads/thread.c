@@ -615,6 +615,9 @@ void schedule_donor(int original_priority) {
     /* Change current thread's priority */
     thread_set_priority(original_priority);
 
+    /* Set current thread to ready */
+    thread_current()->status = THREAD_READY;
+
     /* Call scheduler immediately, so we go back to donor */
     schedule();
 }
@@ -626,6 +629,9 @@ void donate_priority(struct thread *donee) {
 
     /* Set donees priority to current thread's priority */
     donee->priority = thread_get_priority();
+
+    /* Set current thread to ready */
+    thread_current()->status = THREAD_READY;
 
     /* Schedule donee */
     schedule();

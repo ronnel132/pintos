@@ -118,10 +118,6 @@ struct thread {
     /**@}*/
 };
 
-/* TODO: Add the struct for the data structure we store in the priority donation stack.
- * It should contain fields for the lock that this current thread is trying to unlock, 
- * as well as this current thread's previous priority. That should be it basically.
- */
 struct priority_donation_state {
     /* The lock that the current thread is seeking to unlock so that the 
      * thread running previously can resume execution.
