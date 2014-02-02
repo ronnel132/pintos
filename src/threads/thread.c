@@ -437,6 +437,9 @@ void thread_set_priority(int new_priority) {
     list_remove(&thread_current()->elem);
     list_insert_ordered(&ready_list, &thread_current()->elem, &ready_less, NULL);
 
+    /* Make sure the list is ordered */
+    ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+
     /* Max priority thread */
     max = list_entry(list_begin(&ready_list), struct thread, elem);
 
@@ -448,8 +451,6 @@ void thread_set_priority(int new_priority) {
         thread_yield();
     }
 
-    /* Make sure the list is ordered */
-    ASSERT(list_sorted(&ready_list, &ready_less, NULL));
     intr_set_level(old_level);
 }
 
