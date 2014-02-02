@@ -664,19 +664,28 @@ void schedule_donor(int original_priority) {
 
 /* Donate current thread's priority to donee */
 void donate_priority(struct thread *donee) {
+    enum intr_level old_level;
+
     /* Check if donee is a valid thread */
     ASSERT (is_thread(donee));
+    
+    old_level = intr_disable();
 
     /* Set donees priority to current thread's priority */
     donee->priority = thread_get_priority();
 	list_remove(&donee->elem);
 	list_insert_ordered(&ready_list, &donee->elem, &ready_less, NULL);
 
+
     /* Make sure the list is ordered */
 	ASSERT(list_sorted(&ready_list, &ready_less, NULL));
 
     /* Yield control, so that the higher priority thread runs */
+    if (intr_get_level() == INTR_OFF) {
+        intr_enable();
+    }
     thread_yield();
+    intr_set_level(old_level);
 }
     
 
