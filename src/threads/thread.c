@@ -388,7 +388,6 @@ void thread_yield(void) {
             }
         }
         else {
-            printf("empty\n");
             list_insert_ordered(&ready_list, &cur->elem, &ready_less, NULL);
         }
     }
