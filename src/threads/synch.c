@@ -324,13 +324,13 @@ void lock_release(struct lock *lock) {
 
         thread_current()->donation_priority = largest_donated_pri;
 
-        if (thread_get_priority() < max_ready_priority()) {
-            /* Re schedule */
-            if (intr_get_level() == INTR_OFF) {
-                intr_enable();
-            }
-            thread_yield();
-        }
+//         if (thread_get_priority() < max_ready_priority()) {
+//             /* Re schedule */
+//             if (intr_get_level() == INTR_OFF) {
+//                 intr_enable();
+//             }
+//             thread_yield();
+//         }
     }
     intr_set_level(old_level);
 
