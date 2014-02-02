@@ -271,6 +271,9 @@ void thread_block(void) {
     thread struct is LESS than the other, by comparing priority values. */
 bool ready_less(struct list_elem *elem1, struct list_elem *elem2, void *aux) {
     struct thread *t1, *t2;
+    ASSERT ((t1->priority >= PRI_MIN) && (t1->priority <= PRI_MAX));
+    ASSERT ((t2->priority >= PRI_MIN) && (t2->priority <= PRI_MAX));
+
     t1 = list_entry(elem1, struct thread, elem);
     t2 = list_entry(elem2, struct thread, elem);
 
