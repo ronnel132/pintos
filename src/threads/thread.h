@@ -166,7 +166,7 @@ typedef void thread_func(void *aux);
 tid_t thread_create(const char *name, int priority, thread_func *, void *);
 
 void thread_block(void);
-bool ready_less(struct list_elem *elem1, struct list_elem *elem2);
+bool ready_less(struct list_elem *elem1, struct list_elem *elem2, void *aux);
 void thread_unblock(struct thread *);
 
 struct thread *thread_current (void);
@@ -175,7 +175,8 @@ const char *thread_name(void);
 
 void thread_exit(void) NO_RETURN;
 void thread_yield(void);
-bool thread_sleep_less(struct list_elem *elem1, struct list_elem *elem2);
+bool thread_sleep_less(struct list_elem *elem1, struct list_elem *elem2,
+                       void *aux);
 void thread_sleep(int64_t end_ticks);
 
 /*! Performs some operation on thread t, given auxiliary data AUX. */

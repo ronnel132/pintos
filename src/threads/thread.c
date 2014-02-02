@@ -242,7 +242,7 @@ void thread_block(void) {
 /*! The ready LESS function, as required by the list_insert_ordered function,
     since the ready_list will be an ordered list. Used for comparing if one
     thread struct is LESS than the other, by comparing priority values. */
-bool ready_less(struct list_elem *elem1, struct list_elem *elem2) {
+bool ready_less(struct list_elem *elem1, struct list_elem *elem2, void *aux) {
     struct thread *t1, *t2;
     t1 = list_entry(elem1, struct thread, elem);
     t2 = list_entry(elem2, struct thread, elem);
@@ -339,7 +339,8 @@ void thread_yield(void) {
 }
 
 /*! LESS function provided to list_insert_ordered for the sleep_list. */
-bool thread_sleep_less(struct list_elem *elem1, struct list_elem *elem2) {
+bool thread_sleep_less(struct list_elem *elem1, struct list_elem *elem2,
+					   void *aux) {
     /* The aux pointer is required, however we don't have need any auxiliary
      * data to perform our LESS comparison.
      */
@@ -614,6 +615,8 @@ void schedule_donor(int original_priority) {
 
     /* Change current thread's priority */
     thread_set_priority(original_priority);
+	list_remove(&thread_current()->elem);
+	list_insert_ordered(&ready_list, &thread_current()->elem, &ready_less, NULL);
 
     /* Set current thread to ready */
     thread_current()->status = THREAD_READY;
@@ -629,6 +632,8 @@ void donate_priority(struct thread *donee) {
 
     /* Set donees priority to current thread's priority */
     donee->priority = thread_get_priority();
+	list_remove(&donee->elem);
+	list_insert_ordered(&ready_list, &donee->elem, &ready_less, NULL);
 
     /* Set current thread to ready */
     thread_current()->status = THREAD_READY;
