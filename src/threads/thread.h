@@ -100,6 +100,10 @@ struct thread {
     int donation_priority;              /*!< Donation priority (-1 if N/A). */
     struct list_elem allelem;           /*!< List element for all threads list. */
     /**@}*/
+	
+	/* The thread this thread donates to. NULL if this thread doesn't donate
+	   to any thread. */
+	struct thread *donee;
 
     /*! Shared between thread.c and synch.c. */
     /**@{*/

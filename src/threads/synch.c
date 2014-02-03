@@ -205,6 +205,7 @@ void lock_init(struct lock *lock) {
     we need to sleep. */
 void lock_acquire(struct lock *lock) {
 	struct priority_donation_state *pd_state;
+	struct thread *next_donee;
     enum intr_level old_level;
     ASSERT(lock != NULL);
     ASSERT(!intr_context());
@@ -229,11 +230,23 @@ void lock_acquire(struct lock *lock) {
 			}
 			thread_yield();
 		}	
+		thread_current()->donee = lock->holder;
 		pd_state->donee = lock->holder;
 		pd_state->lock_desired = lock;
         pd_state->donor = thread_current();
 		list_push_front(&pri_donation_list, &pd_state->elem);	
         donate_priority(lock->holder);
+		/* Check if the donee is blocked. If so, then set priorities down
+		   the chain the last donee manually. */
+		if (lock->holder->status == THREAD_BLOCKED) {
+			next_donee = lock->holder->donee;
+			/* Iterate through the blocked threaad's donation chain, and set
+			   the priorities of these donees along this chain manually. */
+			while (next_donee != NULL) {
+				donate_priority(next_donee);
+				next_donee = next_donee->donee;
+			}
+		}
     }
 
     intr_set_level(old_level);
@@ -339,6 +352,9 @@ void lock_release(struct lock *lock) {
     intr_set_level(old_level);
 
     lock->holder = NULL;
+	/* If this thread donated to another thread, then its donee will be reset
+	   back to NULL (default value). */
+	thread_current()->donee = NULL;
     sema_up(&lock->semaphore);
 }
 
