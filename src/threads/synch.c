@@ -223,6 +223,7 @@ void lock_acquire(struct lock *lock) {
 			thread_yield();
 		}	
 		pd_state->prev_donation = lock->holder->donation_priority;
+		pd_state->donee = lock->holder;
 		pd_state->lock_desired = lock;
 		list_push_front(&pri_donation_list, &pd_state->elem);	
         donate_priority(lock->holder);
@@ -258,10 +259,11 @@ bool lock_try_acquire(struct lock *lock) {
     make sense to try to release a lock within an interrupt
     handler. */
 void lock_release(struct lock *lock) {
-    int previous_donation;
-	bool lock_found = false;
+    int largest_donated_pri;
+	bool donee_found = false;
 	struct list_elem *e;
-	struct priority_donation_state *cur_state;
+	struct priority_donation_state *cur_state, *donation_state_found;
+	largest_donated_pri = -1;
 
     ASSERT(lock != NULL);
     ASSERT(lock_held_by_current_thread(lock));
@@ -277,25 +279,28 @@ void lock_release(struct lock *lock) {
 		for (e = list_begin(&pri_donation_list); 
 			 e != list_end(&pri_donation_list); e = list_next(e)) {
 			cur_state = list_entry(e, struct priority_donation_state, elem);
-			if (cur_state->lock_desired == lock) {
-				lock_found = true;
-				break;
+			if (cur_state->lock_desired == lock && 
+				cur_state->donee == thread_current()) {
+				donee_found = true;
+				/* If we are unlocking the desired lock, and we are the correct
+				   donee to unlock the lock, then choose the donation priority 
+				   that is the largest in the list. */
+				if (cur_state->prev_donation > largest_donated_pri) {
+					largest_donated_pri = cur_state->prev_donation;
+					donation_state_found = cur_state;
+				}
 			}
 		}
-        if (lock_found) {
+        if (donee_found) {
             /* This is the previous donor */
-			donor = cur_state;
-			list_remove(&cur_state->elem);
+			donor = donation_state_found;
+			list_remove(&donor->elem);
 
-            /* Original donation priority */
-            previous_donation = donor->prev_donation;
-
-            thread_current()->donation_priority = previous_donation;
+            thread_current()->donation_priority = largest_donated_pri;
 			palloc_free_page(cur_state);
 
             /* Schedule the donor thread, suspending the current one */
             schedule_donor();
-
         }
     }
 

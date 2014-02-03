@@ -126,6 +126,8 @@ struct priority_donation_state {
      * thread running previously can resume execution.
      */
     struct lock *lock_desired;
+	/* The thread that we are donating priority to. */
+	struct thread *donee;
     struct list_elem elem;              /*!< List element. */
 };
 
