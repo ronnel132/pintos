@@ -35,6 +35,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "threads/interrupt.h"
+#include "threads/palloc.h"
 #include "threads/thread.h"
 
 /* Declare pri_donation_list struct from the header file definition */
@@ -203,6 +204,7 @@ void lock_init(struct lock *lock) {
     interrupts disabled, but interrupts will be turned back on if
     we need to sleep. */
 void lock_acquire(struct lock *lock) {
+	struct priority_donation_state *pd_state;
     ASSERT(lock != NULL);
     ASSERT(!intr_context());
     ASSERT(!lock_held_by_current_thread(lock));
@@ -213,6 +215,15 @@ void lock_acquire(struct lock *lock) {
      */
     if ((lock->holder != NULL) && 
         (effective_priority(lock->holder) < thread_get_priority())) {
+		pd_state = palloc_get_page(PAL_ZERO);
+		if (pd_state == NULL) {
+			if (intr_get_level() == INTR_OFF) {
+				intr_enable();
+			}
+			thread_yield();
+		}	
+		pd_state->lock_desired = lock;
+		list_push_front(&pri_donation_list, &pd_state->elem);	
         donate_priority(lock->holder);
     }
         
