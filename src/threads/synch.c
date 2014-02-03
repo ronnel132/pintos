@@ -38,6 +38,22 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 
+
+/*! The ready LESS function, as required by the list_insert_ordered function,
+    since the cond_list will be an ordered list. Used for comparing if one
+    thread struct is LESS than the other, by comparing priority values. */
+bool cond_less(struct list_elem *elem1, struct list_elem *elem2, void *aux) {
+    struct thread *t1, *t2;
+    t1 = list_entry(elem1, struct thread, elem);
+    t2 = list_entry(elem2, struct thread, elem);
+
+    /* We compare in this way so that if t1's priority is greater than t2's,
+     * we will ensure that t1 will be placed before (closer to the HEAD of 
+     * the ready queue) than t2.
+     */
+    return effective_priority(t1) >=  effective_priority(t2);
+}
+
 /* Declare pri_donation_list struct from the header file definition */
 extern struct list pri_donation_list;
 
@@ -126,7 +142,6 @@ void sema_up(struct semaphore *sema) {
             /* Context switch to highe rpriority thread */
             if (!intr_context()) {
                 old_level2 = intr_enable();
-                /* Yield current thread, as the created thread has higher priority */
                 thread_yield();
                 intr_set_level(old_level2);
             }
@@ -218,7 +233,7 @@ void lock_acquire(struct lock *lock) {
      * donate priority to that thread
      */
 
-    // TODO: Before donating, make sure that the guy we're donating to 
+    // Before donating, make sure that the guy we're donating to 
     // isn't blocked because he's already a donor to some other thread!
     // So we should transfer the donation to the end thread, recursively.
     if ((lock->holder != NULL) && 
@@ -411,7 +426,7 @@ void cond_wait(struct condition *cond, struct lock *lock) {
     ASSERT(lock_held_by_current_thread(lock));
   
     sema_init(&waiter.semaphore, 0);
-    list_insert_ordered(&cond->waiters, &waiter.elem, &ready_less, NULL);
+    list_insert_ordered(&cond->waiters, &waiter.elem, &cond_less, NULL);
     lock_release(lock);
     sema_down(&waiter.semaphore);
     lock_acquire(lock);
