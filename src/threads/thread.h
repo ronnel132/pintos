@@ -120,6 +120,8 @@ struct thread {
 };
 
 struct priority_donation_state {
+	/* The previous donation priority. */
+	int prev_donation;
     /* The lock that the current thread is seeking to unlock so that the 
      * thread running previously can resume execution.
      */

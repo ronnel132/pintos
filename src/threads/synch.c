@@ -222,6 +222,7 @@ void lock_acquire(struct lock *lock) {
 			}
 			thread_yield();
 		}	
+		pd_state->prev_donation = thread_get_priority();
 		pd_state->lock_desired = lock;
 		list_push_front(&pri_donation_list, &pd_state->elem);	
         donate_priority(lock->holder);
