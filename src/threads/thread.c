@@ -356,14 +356,29 @@ void thread_exit(void) {
     may be scheduled again immediately at the scheduler's whim. */
 void thread_yield(void) {
     struct thread *cur = thread_current();
+	struct thread *cur_ready;
+	struct list_elem *cur_ready_elem;
     enum intr_level old_level;
 
     ASSERT(!intr_context());
 
     old_level = intr_disable();
     if (cur != idle_thread) {
-		/* Do an insert into the ready_list, ordered by highest priority. */	
-        list_insert_ordered(&ready_list, &cur->elem, &ready_less, NULL);
+		/* If there are other threads with the same priority as the thread 
+		   we are currently yielding, then place the current running thread 
+		   behind those threads, per round-robin rules. */
+		cur_ready_elem = list_begin(&ready_list);
+		cur_ready = list_entry(cur_ready_elem, struct thread, elem);
+		if (effective_priority(cur_ready) == effective_priority(cur)) {
+			while (effective_priority(cur_ready) == effective_priority(cur)) {
+				cur_ready_elem = list_next(cur_ready_elem);
+				cur_ready = list_entry(cur_ready_elem, struct thread, elem);
+			}
+			list_insert(cur_ready_elem, &cur->elem);
+		}
+		else {
+			list_insert_ordered(&ready_list, &cur->elem, &ready_less, NULL);
+		}
     }
 
     /* Make sure the list is ordered */
