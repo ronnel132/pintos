@@ -402,6 +402,7 @@ void cond_signal(struct condition *cond, struct lock *lock UNUSED) {
 	struct list_elem *e;
 	struct semaphore *s;
 	struct thread *t;
+    struct semaphore_elem *max_sem_elem;
 	int max_pri = -1;
 	struct semaphore *max_sem;
     ASSERT(cond != NULL);
@@ -409,20 +410,24 @@ void cond_signal(struct condition *cond, struct lock *lock UNUSED) {
     ASSERT(!intr_context ());
     ASSERT(lock_held_by_current_thread (lock));
 
-	for (e = list_begin(&cond->waiters); e != list_end(&cond->waiters);
-		 e != list_next(e)) {
-		s = &list_entry(e, struct semaphore_elem, elem)->semaphore;
-		if (!list_empty(&s->waiters)) {
-			t = list_entry(list_pop_front(&s->waiters), struct thread, elem);
-			if (effective_priority(&t) > max_pri) {
-				max_pri = effective_priority(&t);
-				max_sem = s;
-			}	
-		}
-	}	
-	ASSERT(max_pri != -1);
-	/* Signal to the highest priority thread. */
-	sema_up(s);
+    if (!list_empty(&cond->waiters)) {
+        for (e = list_begin(&cond->waiters); e != list_end(&cond->waiters);
+             e = list_next(e)) {
+            s = &list_entry(e, struct semaphore_elem, elem)->semaphore;
+            if (!list_empty(&s->waiters)) {
+                t = list_entry(list_begin(&s->waiters), struct thread, elem);
+                if (effective_priority(&t) > max_pri) {
+                    max_pri = effective_priority(&t);
+                    max_sem = s;
+                    max_sem_elem = list_entry(e, struct semaphore_elem, elem);
+                }	
+            }
+        }	
+        ASSERT(max_pri != -1);
+        /* Signal to the highest priority thread. */
+        list_remove(max_sem_elem);
+        sema_up(max_sem);
+    }
 }
 
 /*! Wakes up all threads, if any, waiting on COND (protected by
