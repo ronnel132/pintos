@@ -182,7 +182,7 @@ void thread_tick(void) {
 		/* This should occur ever TIMER_FREQ ticks (every second). */
 		/* Iterate through all threads (running, ready or blocked) and 
 		   recalculate recent_cpu. */
-		for (e = list_begin(&all_list); e != list_end(&ready_list);
+		for (e = list_begin(&all_list); e != list_end(&all_list);
 			 e = list_next(e)) {
 			iter_thread = list_entry(e, struct thread, elem);
 			recalculate_recent_cpu(iter_thread);
@@ -651,7 +651,7 @@ static void init_thread(struct thread *t, const char *name, int priority) {
     t->donation_priority = -1;
 	/* If we're in the first thread, set recent_cpu to 0, otherwise set to
 	   current thread's recent_cpu. */
-	if (strcmp(thread_current()->name, "main") == 0) {
+	if (strcmp(name, "main") == 0) {
 		t->recent_cpu = 0;
 	}
 	else {
