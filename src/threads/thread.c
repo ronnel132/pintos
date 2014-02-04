@@ -23,6 +23,8 @@
     that are ready to run but not actually running. */
 static struct list ready_list;
 
+static struct list *ready_lists;
+
 /*! List of processes in THREAD_BLOCKED state and sleeping,
     that is, blocked processes that should be woken up after
     at a specified time. */
@@ -113,10 +115,23 @@ int max_ready_priority() {
 
     It is not safe to call thread_current() until this function finishes. */
 void thread_init(void) {
+	int i;
     ASSERT(intr_get_level() == INTR_OFF);
 
     lock_init(&tid_lock);
-    list_init(&ready_list);
+
+	if (!thread_mlfqs) {
+	    list_init(&ready_list);
+	}
+	else {
+		/* palloc the ready_lists and initialize. */
+		ready_lists = (struct list *) palloc_get_page(PAL_ZERO);
+		/* Initialize the 64 ready queues. */
+		for (i = 0; i <= PRI_MAX; i++) {
+			list_init(ready_lists[i]);
+		}  
+	}
+
     list_init(&sleep_list);
     list_init(&all_list);
     list_init(&pri_donation_list);
@@ -171,33 +186,35 @@ void thread_tick(void) {
     else
         kernel_ticks++;
 
-	/* Update recent_cpu. */
-	if (t != idle_thread) {
-		t->recent_cpu++;
-	}
-
-	current_ticks = timer_ticks();
-	/* Recalculate recent_cpu and load_avg every second */
-	if (current_ticks % TIMER_FREQ == 0) {
-		/* This should occur ever TIMER_FREQ ticks (every second). */
-		/* Iterate through all threads (running, ready or blocked) and 
-		   recalculate recent_cpu. */
-		for (e = list_begin(&all_list); e != list_end(&all_list);
-			 e = list_next(e)) {
-			iter_thread = list_entry(e, struct thread, elem);
-			recalculate_recent_cpu(iter_thread);
-		}
-
-		/* Recalculate recent_cpu for the current thread. */
-		recalculate_recent_cpu(t);
-
-		/* Update load_avg. */	
+	if (thread_mlfqs) {
+		/* Update recent_cpu. */
 		if (t != idle_thread) {
-			/* If we're not in the idle_thread, the number of ready threads is
-			   the number of ready or running threads. */
-			ready_threads = list_size(&ready_list) + 1;
+			t->recent_cpu++;
 		}
-		load_avg = (59 / 60) * load_avg + (1 / 60) * ready_threads; 
+
+		current_ticks = timer_ticks();
+		/* Recalculate recent_cpu and load_avg every second */
+		if (current_ticks % TIMER_FREQ == 0) {
+			/* This should occur ever TIMER_FREQ ticks (every second). */
+			/* Iterate through all threads (running, ready or blocked) and 
+			   recalculate recent_cpu. */
+			for (e = list_begin(&all_list); e != list_end(&all_list);
+				 e = list_next(e)) {
+				iter_thread = list_entry(e, struct thread, elem);
+				recalculate_recent_cpu(iter_thread);
+			}
+
+			/* Recalculate recent_cpu for the current thread. */
+			recalculate_recent_cpu(t);
+
+			/* Update load_avg. */	
+			if (t != idle_thread) {
+				/* If we're not in the idle_thread, the number of ready threads is
+				   the number of ready or running threads. */
+				ready_threads = list_size(&ready_list) + 1;
+			}
+			load_avg = (59 / 60) * load_avg + (1 / 60) * ready_threads; 
+		}
 	}
 
 	/* Unblock all sleeping threads that need to be woken up. */
@@ -407,28 +424,35 @@ void thread_yield(void) {
 
     old_level = intr_disable();
     if (cur != idle_thread) {
-		/* If there are other threads with the same priority as the thread 
-		   we are currently yielding, then place the current running thread 
-		   behind those threads, per round-robin rules. */
-        if (!list_empty(&ready_list)) {
-            cur_ready_elem = list_begin(&ready_list);
-            cur_ready = list_entry(cur_ready_elem, struct thread, elem);
-            if (effective_priority(cur_ready) == effective_priority(cur)) {
-                while (effective_priority(cur_ready) == effective_priority(cur)) {
-    //                 printf("=================================\n");
-                    cur_ready_elem = list_next(cur_ready_elem);
-    //                 printf("*******************************\n");
-                    cur_ready = list_entry(cur_ready_elem, struct thread, elem);
-                }
-                list_insert(cur_ready_elem, &cur->elem);
-            }
-            else {
-                list_insert_ordered(&ready_list, &cur->elem, &ready_less, NULL);
-            }
-        }
-        else {
-            list_insert_ordered(&ready_list, &cur->elem, &ready_less, NULL);
-        }
+		if (!thread_mlfqs) {
+			/* If there are other threads with the same priority as the thread 
+			   we are currently yielding, then place the current running thread 
+			   behind those threads, per round-robin rules. */
+			if (!list_empty(&ready_list)) {
+				cur_ready_elem = list_begin(&ready_list);
+				cur_ready = list_entry(cur_ready_elem, struct thread, elem);
+				if (effective_priority(cur_ready) == effective_priority(cur)) {
+					while (effective_priority(cur_ready) == effective_priority(cur)) {
+		//                 printf("=================================\n");
+						cur_ready_elem = list_next(cur_ready_elem);
+		//                 printf("*******************************\n");
+						cur_ready = list_entry(cur_ready_elem, struct thread, elem);
+					}
+					list_insert(cur_ready_elem, &cur->elem);
+				}
+				else {
+					list_insert_ordered(&ready_list, &cur->elem, &ready_less, NULL);
+				}
+			}
+			else {
+				list_insert_ordered(&ready_list, &cur->elem, &ready_less, NULL);
+			}
+		} 
+		else {
+			/* Yield the current thread with the MLFQ option. */
+			ASSERT(cur->priority >= PRI_MIN && cur->priority <= PRI_MAX);
+			
+		}
     }
 
     /* Make sure the list is ordered */
