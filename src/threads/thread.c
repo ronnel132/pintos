@@ -57,6 +57,11 @@ static long long idle_ticks;    /*!< # of timer ticks spent idle. */
 static long long kernel_ticks;  /*!< # of timer ticks in kernel threads. */
 static long long user_ticks;    /*!< # of timer ticks in user programs. */
 
+/* Global system load average. Initialized to zero. */
+static int load_avg = 0;
+
+static void recalculate_recent_cpu(struct thread *t);
+
 /* Scheduling. */
 #define TIME_SLICE 4            /*!< # of timer ticks to give each thread. */
 static unsigned thread_ticks;   /*!< # of timer ticks since last yield. */
@@ -138,13 +143,20 @@ void thread_start(void) {
     sema_down(&idle_started);
 }
 
+void recalculate_recent_cpu(struct thread *t) {
+	int coeff = (2 * load_avg) / (2 * load_avg + 1);
+	t->recent_cpu = coeff * t->recent_cpu + t->niceness; 
+}
+
 /*! Called by the timer interrupt handler at each timer tick.
     Thus, this function runs in an external interrupt context. */
 void thread_tick(void) {
     struct thread *t = thread_current();
+	struct thread *iter_thread;
     struct list_elem *e;
     struct thread_sleeping *current_sleeper;
     int64_t current_ticks;
+	int ready_threads;
 	int max_sleeper_pri = -1;
 
     ASSERT (intr_context());
@@ -159,9 +171,37 @@ void thread_tick(void) {
     else
         kernel_ticks++;
 
+	/* Update recent_cpu. */
+	if (t != idle_thread) {
+		t->recent_cpu++;
+	}
+
+	current_ticks = timer_ticks();
+	/* Recalculate recent_cpu and load_avg every second */
+	if (current_ticks % TIMER_FREQ == 0) {
+		/* This should occur ever TIMER_FREQ ticks (every second). */
+		/* Iterate through all threads (running, ready or blocked) and 
+		   recalculate recent_cpu. */
+		for (e = list_begin(&all_list); e != list_end(&ready_list);
+			 e = list_next(e)) {
+			iter_thread = list_entry(e, struct thread, elem);
+			recalculate_recent_cpu(iter_thread);
+		}
+
+		/* Recalculate recent_cpu for the current thread. */
+		recalculate_recent_cpu(t);
+
+		/* Update load_avg. */	
+		if (t != idle_thread) {
+			/* If we're not in the idle_thread, the number of ready threads is
+			   the number of ready or running threads. */
+			ready_threads = list_size(&ready_list) + 1;
+		}
+		load_avg = (59 / 60) * load_avg + (1 / 60) * ready_threads; 
+	}
+
 	/* Unblock all sleeping threads that need to be woken up. */
 	e = list_begin(&sleep_list);
-	current_ticks = timer_ticks();
 	while (e != list_end(&sleep_list)) {
 		current_sleeper = list_entry(e, struct thread_sleeping, elem);
 		if (current_sleeper->end_ticks > current_ticks) {
@@ -500,25 +540,40 @@ int thread_get_priority(void) {
 
 /*! Sets the current thread's nice value to NICE. */
 void thread_set_nice(int nice UNUSED) {
-    /* Not yet implemented. */
+	struct thread *cur = thread_current();
+	struct thread *next_ready;
+	struct list_elem *next_ready_elem;
+
+	cur->niceness = nice;
+	cur->priority = PRI_MAX - (cur->recent_cpu / 4) - (nice * 2);
+	if (list_size(&ready_list) > 0) {
+		next_ready_elem = list_begin(&ready_list);
+		next_ready = list_entry(next_ready_elem, struct thread, elem);
+		
+		/* If the current thread is no longer the highest priority thread,
+		   then yield. */
+		if (next_ready->priority > cur->priority) {
+			if (intr_get_level() == INTR_OFF) {
+				intr_enable();
+			}
+			thread_yield();
+		}
+	}
 }
 
 /*! Returns the current thread's nice value. */
 int thread_get_nice(void) {
-    /* Not yet implemented. */
-    return 0;
+	return thread_current()->niceness;
 }
 
 /*! Returns 100 times the system load average. */
 int thread_get_load_avg(void) {
-    /* Not yet implemented. */
-    return 0;
+	return 100 * load_avg;
 }
 
 /*! Returns 100 times the current thread's recent_cpu value. */
 int thread_get_recent_cpu(void) {
-    /* Not yet implemented. */
-    return 0;
+	return thread_current()->recent_cpu;
 }
 
 /*! Idle thread.  Executes when no other thread is ready to run.
@@ -594,6 +649,14 @@ static void init_thread(struct thread *t, const char *name, int priority) {
     t->stack = (uint8_t *) t + PGSIZE;
     t->priority = priority;
     t->donation_priority = -1;
+	/* If we're in the first thread, set recent_cpu to 0, otherwise set to
+	   current thread's recent_cpu. */
+	if (strcmp(thread_current()->name, "main") == 0) {
+		t->recent_cpu = 0;
+	}
+	else {
+		t->recent_cpu = thread_current()->recent_cpu;
+	}
     t->magic = THREAD_MAGIC;
 
     old_level = intr_disable();

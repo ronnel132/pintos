@@ -9,6 +9,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "devices/timer.h"
 #include "threads/synch.h"
 
 /*! States in a thread's life cycle. */
@@ -98,6 +99,8 @@ struct thread {
     uint8_t *stack;                     /*!< Saved stack pointer. */
     int priority;                       /*!< Priority. */
     int donation_priority;              /*!< Donation priority (-1 if N/A). */
+	int niceness;						/*!< Between -20 and 20. */
+	int recent_cpu;						/*!< CPU usage recently. */
     struct list_elem allelem;           /*!< List element for all threads list. */
     /**@}*/
 	
