@@ -412,12 +412,15 @@ void cond_signal(struct condition *cond, struct lock *lock UNUSED) {
 	for (e = list_begin(&cond->waiters); e != list_end(&cond->waiters);
 		 e != list_next(e)) {
 		s = &list_entry(e, struct semaphore_elem, elem)->semaphore;
-		t = list_entry(list_pop_front(&s->waiters), struct thread, elem);
-		if (effective_priority(&t) > max_pri) {
-			max_pri = effective_priority(&t);
-			max_sem = s;
-		}	
+		if (!list_empty(&s->waiters)) {
+			t = list_entry(list_pop_front(&s->waiters), struct thread, elem);
+			if (effective_priority(&t) > max_pri) {
+				max_pri = effective_priority(&t);
+				max_sem = s;
+			}	
+		}
 	}	
+	ASSERT(max_pri != -1);
 	/* Signal to the highest priority thread. */
 	sema_up(s);
 }
