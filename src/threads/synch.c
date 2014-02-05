@@ -39,24 +39,6 @@
 #include "threads/thread.h"
 
 
-/*! The ready LESS function, as required by the list_insert_ordered function,
-    since the cond_list will be an ordered list. Used for comparing if one
-    thread struct is LESS than the other, by comparing priority values. */
-bool cond_less(struct list_elem *elem1, struct list_elem *elem2, void *aux) {
-    struct thread *t1, *t2;
-    t1 = list_entry(elem1, struct thread, elem);
-    t2 = list_entry(elem2, struct thread, elem);
-
-    ASSERT ((t1->priority >= PRI_MIN) && (t1->priority <= PRI_MAX));
-    ASSERT ((t2->priority >= PRI_MIN) && (t2->priority <= PRI_MAX));
-
-    /* We compare in this way so that if t1's priority is greater than t2's,
-     * we will ensure that t1 will be placed before (closer to the HEAD of 
-     * the ready queue) than t2.
-     */
-    return effective_priority(t1) >=  effective_priority(t2);
-}
-
 /* Declare pri_donation_list struct from the header file definition */
 extern struct list pri_donation_list;
 
@@ -403,7 +385,7 @@ void cond_wait(struct condition *cond, struct lock *lock) {
     ASSERT(lock_held_by_current_thread(lock));
   
     sema_init(&waiter.semaphore, 0);
-    list_insert_ordered(&cond->waiters, &waiter.elem, &cond_less, NULL);
+    list_push_back(&cond->waiters, &waiter.elem);
     lock_release(lock);
     sema_down(&waiter.semaphore);
     lock_acquire(lock);
