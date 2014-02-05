@@ -23,7 +23,7 @@
     that are ready to run but not actually running. */
 static struct list ready_list;
 
-static struct list *ready_lists;
+static struct thread_mlfq_state *mlfq_state;
 
 /*! List of processes in THREAD_BLOCKED state and sleeping,
     that is, blocked processes that should be woken up after
@@ -60,8 +60,9 @@ static long long kernel_ticks;  /*!< # of timer ticks in kernel threads. */
 static long long user_ticks;    /*!< # of timer ticks in user programs. */
 
 /* Global system load average. Initialized to zero. */
-static int load_avg = 0;
+static double load_avg = 0.0;
 
+static void recalculate_priority(struct thread *t);
 static void recalculate_recent_cpu(struct thread *t);
 
 /* Scheduling. */
@@ -79,6 +80,7 @@ static void idle(void *aux UNUSED);
 static struct thread *running_thread(void);
 static struct thread *next_thread_to_run(void);
 static void init_thread(struct thread *, const char *name, int priority);
+static void add_to_a_ready_list(struct list *l, struct thread *t);
 static bool is_thread(struct thread *) UNUSED;
 static void *alloc_frame(struct thread *, size_t size);
 static void schedule(void);
@@ -94,14 +96,18 @@ int max(int a, int b) {
 
 /* Returns the effective priority */
 int effective_priority(struct thread *t) {
-    return max(t->priority, t->donation_priority);
+	if (!thread_mlfqs) {
+		return max(t->priority, t->donation_priority);
+	}
+	else {
+		return t->priority;
+	}
 }
 
 /* Return max priority of the list */
 int max_ready_priority() {
     return effective_priority(list_entry(list_begin(&ready_list), struct thread, elem));
 }
-    
 
 /*! Initializes the threading system by transforming the code
     that's currently running into a thread.  This can't work in
@@ -124,12 +130,16 @@ void thread_init(void) {
 	    list_init(&ready_list);
 	}
 	else {
+		/* Initialize the MLFQ state. */
+		mlfq_state = (struct thread_mlfq_state *) palloc_get_page(PAL_ZERO);
 		/* palloc the ready_lists and initialize. */
-		ready_lists = (struct list *) palloc_get_page(PAL_ZERO);
+		mlfq_state->ready_lists = (struct list *) palloc_get_page(PAL_ZERO);
 		/* Initialize the 64 ready queues. */
 		for (i = 0; i <= PRI_MAX; i++) {
-			list_init(ready_lists[i]);
+			list_init(&(mlfq_state->ready_lists[i]));
 		}  
+		mlfq_state->highest_non_empty_list = 0;
+		mlfq_state->num_ready = 0;
 	}
 
     list_init(&sleep_list);
@@ -158,8 +168,12 @@ void thread_start(void) {
     sema_down(&idle_started);
 }
 
-void recalculate_recent_cpu(struct thread *t) {
-	int coeff = (2 * load_avg) / (2 * load_avg + 1);
+static void recalculate_priority(struct thread *t) {
+	t->priority = (int) PRI_MAX - (t->recent_cpu / 4) - (t->niceness * 2);
+}
+
+static void recalculate_recent_cpu(struct thread *t) {
+	double coeff = (2 * load_avg) / (2 * load_avg + 1);
 	t->recent_cpu = coeff * t->recent_cpu + t->niceness; 
 }
 
@@ -191,7 +205,15 @@ void thread_tick(void) {
 		if (t != idle_thread) {
 			t->recent_cpu++;
 		}
-
+		
+		/* Recalculate priority for all threads every fourth clock tick. */
+		if (current_ticks % 4 == 0) {
+			for (e = list_begin(&all_list); e != list_end(&all_list);
+				 e = list_next(e)) {
+				iter_thread = list_entry(e, struct thread, elem);
+				recalculate_priority(iter_thread);
+			}
+		}
 		current_ticks = timer_ticks();
 		/* Recalculate recent_cpu and load_avg every second */
 		if (current_ticks % TIMER_FREQ == 0) {
@@ -211,9 +233,9 @@ void thread_tick(void) {
 			if (t != idle_thread) {
 				/* If we're not in the idle_thread, the number of ready threads is
 				   the number of ready or running threads. */
-				ready_threads = list_size(&ready_list) + 1;
+				ready_threads = mlfq_state->num_ready + 1;
 			}
-			load_avg = (59 / 60) * load_avg + (1 / 60) * ready_threads; 
+			load_avg = (59.0 / 60.0) * load_avg + (1.0 / 60.0) * ready_threads; 
 		}
 	}
 
@@ -295,6 +317,19 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
 
     /* Add to run queue. */
     thread_unblock(t);
+	
+	if (thread_mlfqs) {
+		/* Increment MLFQ num_ready by 1. */
+		mlfq_state->num_ready++;
+		
+		/* Update highest_non_empty_list for the mlfq state if the priority
+		   of the thread we're creating is larger than the value of
+		   highest_non_empty_list. */
+		recalculate_priority(t);
+		if (t->priority > mlfq_state->highest_non_empty_list) {
+			mlfq_state->highest_non_empty_list = priority;
+		}
+	}
 
     /* If this thread's priority is higher than or equal than the 
      * running thread's priority, yield the processor
@@ -320,13 +355,22 @@ void thread_block(void) {
     ASSERT(intr_get_level() == INTR_OFF);
 
     thread_current()->status = THREAD_BLOCKED;
+
+	if (thread_mlfqs) {
+		/* Since we are blocking the current thread, and we'lll have to pull
+		   a ready thread from one of the ready_lists, decrement num_ready by
+		   one. */
+		mlfq_state->num_ready--;
+	}
+
     schedule();
 }
 
 /*! The ready LESS function, as required by the list_insert_ordered function,
     since the ready_list will be an ordered list. Used for comparing if one
     thread struct is LESS than the other, by comparing priority values. */
-bool ready_less(struct list_elem *elem1, struct list_elem *elem2, void *aux) {
+bool ready_less(const struct list_elem *elem1, const struct list_elem *elem2,
+			    void *aux) {
     struct thread *t1, *t2;
     t1 = list_entry(elem1, struct thread, elem);
     t2 = list_entry(elem2, struct thread, elem);
@@ -355,9 +399,15 @@ void thread_unblock(struct thread *t) {
 
     old_level = intr_disable();
     ASSERT(t->status == THREAD_BLOCKED);
-	/* Do an ordered insert into ready_list, so that the ready_list maintains
-     * its ordering (by priority). */
-    list_insert_ordered(&ready_list, &t->elem, &ready_less, NULL);
+
+	if (!thread_mlfqs) {
+		/* Add the unblocked thread to the ready list. */
+		add_to_a_ready_list(&ready_list, t);	
+	}
+	else {
+		add_to_a_ready_list(&(mlfq_state->ready_lists[t->priority]), t);
+		mlfq_state->num_ready++;
+	}
 
     t->status = THREAD_READY;
 
@@ -408,16 +458,53 @@ void thread_exit(void) {
     intr_disable();
     list_remove(&thread_current()->allelem);
     thread_current()->status = THREAD_DYING;
+	if (thread_mlfqs) {
+		mlfq_state->num_ready--;
+	}
     schedule();
     NOT_REACHED();
 }
+
+/* Add a thread to the ready list (either an MLFQ or the ready_list, depending
+   on what option was selected. Use round robin ordering, and keep the ready
+   list sorted. */
+static void add_to_a_ready_list(struct list *l, struct thread *cur) {
+	struct list_elem *cur_ready_elem;
+	struct thread *cur_ready;
+	
+	if (thread_mlfqs) {
+		if (cur->priority > mlfq_state->highest_non_empty_list) {
+			mlfq_state->highest_non_empty_list = cur->priority;
+		}
+	}
+	if (!list_empty(l)) {
+		cur_ready_elem = list_begin(l);
+		cur_ready = list_entry(cur_ready_elem, struct thread, elem);
+
+		/* If there are other threads with the same priority as the thread 
+		   we are currently yielding, then place the current running thread 
+		   behind those threads, per round-robin rules. */
+		if (effective_priority(cur_ready) == effective_priority(cur)) {
+			while (effective_priority(cur_ready) == effective_priority(cur)) {
+				cur_ready_elem = list_next(cur_ready_elem);
+				cur_ready = list_entry(cur_ready_elem, struct thread, elem);
+			}
+			list_insert(cur_ready_elem, &cur->elem);
+		}
+		else {
+			list_insert_ordered(l, &cur->elem, &ready_less, NULL);
+		}
+	}
+	else {
+		list_insert_ordered(l, &cur->elem, &ready_less, NULL);
+	}
+}
+
 
 /*! Yields the CPU.  The current thread is not put to sleep and
     may be scheduled again immediately at the scheduler's whim. */
 void thread_yield(void) {
     struct thread *cur = thread_current();
-	struct thread *cur_ready;
-	struct list_elem *cur_ready_elem;
     enum intr_level old_level;
 
     ASSERT(!intr_context());
@@ -425,38 +512,19 @@ void thread_yield(void) {
     old_level = intr_disable();
     if (cur != idle_thread) {
 		if (!thread_mlfqs) {
-			/* If there are other threads with the same priority as the thread 
-			   we are currently yielding, then place the current running thread 
-			   behind those threads, per round-robin rules. */
-			if (!list_empty(&ready_list)) {
-				cur_ready_elem = list_begin(&ready_list);
-				cur_ready = list_entry(cur_ready_elem, struct thread, elem);
-				if (effective_priority(cur_ready) == effective_priority(cur)) {
-					while (effective_priority(cur_ready) == effective_priority(cur)) {
-		//                 printf("=================================\n");
-						cur_ready_elem = list_next(cur_ready_elem);
-		//                 printf("*******************************\n");
-						cur_ready = list_entry(cur_ready_elem, struct thread, elem);
-					}
-					list_insert(cur_ready_elem, &cur->elem);
-				}
-				else {
-					list_insert_ordered(&ready_list, &cur->elem, &ready_less, NULL);
-				}
-			}
-			else {
-				list_insert_ordered(&ready_list, &cur->elem, &ready_less, NULL);
-			}
+			/* If we are not in mlfq mode, add to the single ready_list. */
+			add_to_a_ready_list(&ready_list, cur);
+			/* Make sure the list is ordered */
+			ASSERT(list_sorted(&ready_list, &ready_less, NULL));
 		} 
 		else {
 			/* Yield the current thread with the MLFQ option. */
 			ASSERT(cur->priority >= PRI_MIN && cur->priority <= PRI_MAX);
-			
+			/* Add to the ready list corresponding to the yielding thread's 
+			   priority. */
+			add_to_a_ready_list(&mlfq_state->ready_lists[cur->priority], cur);	
 		}
     }
-
-    /* Make sure the list is ordered */
-    ASSERT(list_sorted(&ready_list, &ready_less, NULL));
 
     cur->status = THREAD_READY;
     schedule();
@@ -464,8 +532,8 @@ void thread_yield(void) {
 }
 
 /*! LESS function provided to list_insert_ordered for the sleep_list. */
-bool thread_sleep_less(struct list_elem *elem1, struct list_elem *elem2,
-					   void *aux) {
+bool thread_sleep_less(const struct list_elem *elem1, 
+				       const struct list_elem *elem2, void *aux) {
     /* The aux pointer is required, however we don't have need any auxiliary
      * data to perform our LESS comparison.
      */
@@ -592,12 +660,13 @@ int thread_get_nice(void) {
 
 /*! Returns 100 times the system load average. */
 int thread_get_load_avg(void) {
-	return 100 * load_avg;
+	return (int) 100 * load_avg;
 }
 
 /*! Returns 100 times the current thread's recent_cpu value. */
 int thread_get_recent_cpu(void) {
-	return thread_current()->recent_cpu;
+	/* TODO: Does int casting truncate? */
+	return (int) 100 * thread_current()->recent_cpu;
 }
 
 /*! Idle thread.  Executes when no other thread is ready to run.
@@ -673,14 +742,18 @@ static void init_thread(struct thread *t, const char *name, int priority) {
     t->stack = (uint8_t *) t + PGSIZE;
     t->priority = priority;
     t->donation_priority = -1;
-	/* If we're in the first thread, set recent_cpu to 0, otherwise set to
-	   current thread's recent_cpu. */
-	if (strcmp(name, "main") == 0) {
-		t->recent_cpu = 0;
+	
+	if (thread_mlfqs) {
+		/* If we're in the first thread, set recent_cpu to 0, otherwise set to
+		   current thread's recent_cpu. */
+		if (strcmp(name, "main") == 0) {
+			t->recent_cpu = 0;
+		}
+		else {
+			t->recent_cpu = thread_current()->recent_cpu;
+		}
 	}
-	else {
-		t->recent_cpu = thread_current()->recent_cpu;
-	}
+
     t->magic = THREAD_MAGIC;
 
     old_level = intr_disable();
@@ -704,13 +777,33 @@ static void * alloc_frame(struct thread *t, size_t size) {
     thread can continue running, then it will be in the run queue.)  If the
     run queue is empty, return idle_thread. */
 static struct thread * next_thread_to_run(void) {
-	/* Assert that the entire ready list is sorted. */
-	ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+	struct list chosen_ready_list;
+	int i;
+	if (!thread_mlfqs) {
+		if (list_empty(&ready_list))
+			return idle_thread;
+		/* Assert that the entire ready list is sorted. */
+		ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+		chosen_ready_list = ready_list;
+	}
+	else {
+		if (mlfq_state->num_ready == 0) 
+			return idle_thread;
+		chosen_ready_list = 
+				mlfq_state->ready_lists[mlfq_state->highest_non_empty_list];
+		if (list_size(&chosen_ready_list) == 1) {
+			/* In this case, this list will now be empty, so we must reset the
+			   value of highest_non_empty_list. */
+			for (i = mlfq_state->highest_non_empty_list - 1; i == 0;  i--) {
+				if (list_size(&(mlfq_state->ready_lists[i])) > 0) {
+					mlfq_state->highest_non_empty_list = i;
+					break;
+				}
+			}	
+		}
+	} 
 
-    if (list_empty(&ready_list))
-      return idle_thread;
-    else
-      return list_entry(list_pop_front(&ready_list), struct thread, elem);
+    return list_entry(list_pop_front(&chosen_ready_list), struct thread, elem);
 }
 
 /*! Completes a thread switch by activating the new thread's page tables, and,
@@ -769,8 +862,10 @@ static void schedule(void) {
     ASSERT(cur->status != THREAD_RUNNING);
     ASSERT(is_thread(next));
 
-	/* Assert that the entire ready list is sorted. */
-	ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+	if (!thread_mlfqs) {
+		/* Assert that the entire ready list is sorted. */
+		ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+	}
 
     /* The only thing the scheduler needs to 
      * worry about is ALWAYS running the thread with the highest priority. 
