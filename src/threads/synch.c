@@ -417,14 +417,27 @@ void cond_wait(struct condition *cond, struct lock *lock) {
     make sense to try to signal a condition variable within an
     interrupt handler. */
 void cond_signal(struct condition *cond, struct lock *lock UNUSED) {
+	struct list_elem *e;
+	struct semaphore *s;
+	struct thread *t;
+	int max_pri = -1;
+	struct semaphore *max_sem;
     ASSERT(cond != NULL);
     ASSERT(lock != NULL);
     ASSERT(!intr_context ());
     ASSERT(lock_held_by_current_thread (lock));
 
-    if (!list_empty(&cond->waiters)) 
-        sema_up(&list_entry(list_pop_front(&cond->waiters),
-                            struct semaphore_elem, elem)->semaphore);
+	for (e = list_begin(&cond->waiters); e != list_end(&cond->waiters);
+		 e != list_next(e)) {
+		s = &list_entry(e, struct semaphore_elem, elem)->semaphore;
+		t = list_entry(list_pop_front(&s->waiters), struct thread, elem);
+		if (effective_priority(&t) > max_pri) {
+			max_pri = effective_priority(&t);
+			max_sem = s;
+		}	
+	}	
+	/* Signal to the highest priority thread. */
+	sema_up(s);
 }
 
 /*! Wakes up all threads, if any, waiting on COND (protected by
