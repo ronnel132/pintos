@@ -83,7 +83,7 @@ tick to check if there are any threads that need to be woken up.
 >> A2: Briefly describe what happens in a call to timer_sleep(),
 >> including the effects of the timer interrupt handler.
 
-- When timer_sleep() called, thread_sleep is called, and passed the value
+- When timer_sleep() is called, thread_sleep is called, and passed the value
 timer_ticks() + ticks, and then we initialize a thread_sleeping struct with
 and end value timer_ticks() + ticks. We store this struct in sleep_list. When
 the timer interrupt handler takes us to thread_sleep(), we use the sleep_list
@@ -97,7 +97,8 @@ priority is greater.
 
 - sleep_list is kept as a sorted list, where threads that need to be woken up
 earliest are stored closer to the beginning of the sleep_list. Thus, we simply
-pop the first list_elem from the sleep_list to wake up the thread.
+pop the first list_elems (until we find a list_elem
+that needs to be woken up later) from the sleep_list to wake up the thread.
 
 ---- SYNCHRONIZATION ----
 
