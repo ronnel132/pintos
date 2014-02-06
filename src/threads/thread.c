@@ -188,7 +188,7 @@ void thread_tick(void) {
 	int ready_threads;
 	int max_sleeper_pri = -1;
 
-    ASSERT (intr_context());
+    ASSERT(intr_context());
 
     /* Update statistics. */
     if (t == idle_thread)
@@ -375,8 +375,8 @@ bool ready_less(const struct list_elem *elem1, const struct list_elem *elem2,
     t1 = list_entry(elem1, struct thread, elem);
     t2 = list_entry(elem2, struct thread, elem);
 
-    ASSERT ((t1->priority >= PRI_MIN) && (t1->priority <= PRI_MAX));
-    ASSERT ((t2->priority >= PRI_MIN) && (t2->priority <= PRI_MAX));
+    ASSERT((t1->priority >= PRI_MIN) && (t1->priority <= PRI_MAX));
+    ASSERT((t2->priority >= PRI_MIN) && (t2->priority <= PRI_MAX));
 
     /* We compare in this way so that if t1's priority is greater than t2's,
      * we will ensure that t1 will be placed before (closer to the HEAD of 
@@ -603,7 +603,7 @@ void thread_set_priority(int new_priority) {
     struct thread *max;
     enum intr_level old_level;
     
-    ASSERT ((new_priority >= PRI_MIN) && (new_priority <= PRI_MAX));
+    ASSERT((new_priority >= PRI_MIN) && (new_priority <= PRI_MAX));
     old_level = intr_disable();
 
     thread_current()->priority = new_priority;
@@ -889,7 +889,7 @@ void donate_priority(struct thread *donee) {
     enum intr_level old_level;
 
     /* Check if donee is a valid thread */
-    ASSERT (is_thread(donee));
+    ASSERT(is_thread(donee));
     
     old_level = intr_disable();
 
