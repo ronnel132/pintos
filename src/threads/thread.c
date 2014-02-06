@@ -79,7 +79,6 @@ static void idle(void *aux UNUSED);
 static struct thread *running_thread(void);
 static struct thread *next_thread_to_run(void);
 static void init_thread(struct thread *, const char *name, int priority);
-static void add_to_ready_list(struct thread *t);
 static bool is_thread(struct thread *) UNUSED;
 static void *alloc_frame(struct thread *, size_t size);
 static void schedule(void);
@@ -337,9 +336,6 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
      * running thread's priority, yield the processor
      */
     if (effective_priority(t) >= thread_get_priority()) {
-        if (intr_get_level() == INTR_OFF) {
-            intr_enable();
-        }
         /* Yield current thread, as the created thread has higher priority */
         thread_yield();
     }
@@ -395,7 +391,7 @@ void thread_unblock(struct thread *t) {
     old_level = intr_disable();
     ASSERT(t->status == THREAD_BLOCKED);
 
-	add_to_ready_list(t);	
+    list_insert_ordered(&ready_list, &t->elem, &ready_less, NULL);
 
     t->status = THREAD_READY;
 
@@ -450,50 +446,38 @@ void thread_exit(void) {
     NOT_REACHED();
 }
 
-/* Add a thread to the ready list (either an MLFQ or the ready_list, depending
-   on what option was selected. Use round robin ordering, and keep the ready
-   list sorted. */
-static void add_to_ready_list(struct thread *cur) {
-	struct list_elem *cur_ready_elem;
-	struct thread *cur_ready;
-	
-	if (!list_empty(&ready_list)) {
-		cur_ready_elem = list_begin(&ready_list);
-		cur_ready = list_entry(cur_ready_elem, struct thread, elem);
-
-		/* If there are other threads with the same priority as the thread 
-		   we are currently yielding, then place the current running thread 
-		   behind those threads, per round-robin rules. */
-		if (effective_priority(cur_ready) == effective_priority(cur)) {
-			while (effective_priority(cur_ready) == effective_priority(cur)) {
-				cur_ready_elem = list_next(cur_ready_elem);
-				cur_ready = list_entry(cur_ready_elem, struct thread, elem);
-			}
-			list_insert(cur_ready_elem, &cur->elem);
-		}
-		else {
-			list_insert_ordered(&ready_list, &cur->elem, &ready_less, NULL);
-		}
-	}
-	else {
-		list_insert_ordered(&ready_list, &cur->elem, &ready_less, NULL);
-	}
-}
-
-
 /*! Yields the CPU.  The current thread is not put to sleep and
     may be scheduled again immediately at the scheduler's whim. */
 void thread_yield(void) {
     struct thread *cur = thread_current();
+    struct thread *cur_ready;
+    struct list_elem *cur_ready_elem;
     enum intr_level old_level;
 
     ASSERT(!intr_context());
 
     old_level = intr_disable();
     if (cur != idle_thread) {
-        add_to_ready_list(cur);
-        /* Make sure the list is ordered */
-        ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+		/* If there are other threads with the same priority as the thread 
+		   we are currently yielding, then place the current running thread 
+		   behind those threads, per round-robin rules. */
+        if (!list_empty(&ready_list)) {
+            cur_ready_elem = list_begin(&ready_list);
+            cur_ready = list_entry(cur_ready_elem, struct thread, elem);
+            if (effective_priority(cur_ready) == effective_priority(cur)) {
+                while (effective_priority(cur_ready) == effective_priority(cur)) {
+                    cur_ready_elem = list_next(cur_ready_elem);
+                    cur_ready = list_entry(cur_ready_elem, struct thread, elem);
+                }
+                list_insert(cur_ready_elem, &cur->elem);
+            }
+            else {
+                list_insert_ordered(&ready_list, &cur->elem, &ready_less, NULL);
+            }
+        }
+        else {
+            list_insert_ordered(&ready_list, &cur->elem, &ready_less, NULL);
+        }
     }
 
     cur->status = THREAD_READY;
@@ -523,11 +507,8 @@ void thread_sleep(int64_t end_ticks) {
     /* This shouldn't be called on an interrupt context */
     ASSERT(!intr_context());
 
-
+    old_level = intr_disable();
     if (st == NULL) {
-        if (intr_get_level() == INTR_OFF) {
-            intr_enable();
-        }
         thread_yield();
     }
     else {
@@ -535,7 +516,6 @@ void thread_sleep(int64_t end_ticks) {
          * We're dealing with running/blocked queues, hence we are 
          * modifying global state.
          */
-        old_level = intr_disable();
 
         st->t = t;
         st->end_ticks = end_ticks;
@@ -546,9 +526,9 @@ void thread_sleep(int64_t end_ticks) {
         /* Make sure the list is ordered */
         ASSERT(list_sorted(&ready_list, &ready_less, NULL));
 
-        thread_block();
-        intr_set_level(old_level);
     }
+    thread_block();
+    intr_set_level(old_level);
 }
 
 
@@ -586,9 +566,6 @@ void thread_set_priority(int new_priority) {
 
     /* If the max thread is not the current thread */
     if (max != thread_current()) {
-        if (intr_get_level() == INTR_OFF) {
-            intr_enable();
-        }
         thread_yield();
     }
 
