@@ -366,8 +366,8 @@ bool ready_less(const struct list_elem *elem1, const struct list_elem *elem2,
     t1 = list_entry(elem1, struct thread, elem);
     t2 = list_entry(elem2, struct thread, elem);
 
-//    ASSERT((t1->priority >= PRI_MIN) && (t1->priority <= PRI_MAX));
-//    ASSERT((t2->priority >= PRI_MIN) && (t2->priority <= PRI_MAX));
+    ASSERT((t1->priority >= PRI_MIN) && (t1->priority <= PRI_MAX));
+    ASSERT((t2->priority >= PRI_MIN) && (t2->priority <= PRI_MAX));
 
     /* We compare in this way so that if t1's priority is greater than t2's,
      * we will ensure that t1 will be placed before (closer to the HEAD of 
@@ -792,9 +792,6 @@ static void schedule(void) {
     if (cur != next)
         prev = switch_threads(cur, next);
     thread_schedule_tail(prev);
-}
-
-void schedule_donor() {
 }
 
 /* Donate current thread's priority to donee */
