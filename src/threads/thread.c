@@ -642,7 +642,7 @@ int thread_get_nice(void) {
 
 /*! Returns 100 times the system load average. */
 int thread_get_load_avg(void) {
-    return fixedpt_to_int_zero(fixedpt_mul(int_to_fixedpt(100), 
+    return fixedpt_to_int_nearest(fixedpt_mul(int_to_fixedpt(100), 
            load_avg));
 }
 
