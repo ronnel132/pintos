@@ -159,11 +159,6 @@ static void recalculate_priority(struct thread *t) {
     ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
     ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
     ASSERT (thread_current() != idle_thread); 
-    /* Calculate priority, using fixed point arithmetic. */
-   // printf("name: %s", t->name);
-    //printf("niceness: %d", t->niceness);
-    //printf("recentcpu: %d", fixedpt_to_int_zero(t->recent_cpu));
-    printf("before: %d", t->priority);
     t->priority = fixedpt_to_int_zero( 
                   fixedpt_sub(fixedpt_sub(int_to_fixedpt(PRI_MAX), 
                   fixedpt_div(t->recent_cpu, int_to_fixedpt(4))),
@@ -716,7 +711,7 @@ static void init_thread(struct thread *t, const char *name, int priority) {
             t->recent_cpu = thread_current()->recent_cpu;
             t->niceness = thread_get_nice();
         }
-        //recalculate_priority(t);
+        recalculate_priority(t);
     }
 
     t->magic = THREAD_MAGIC;
