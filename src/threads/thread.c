@@ -158,6 +158,7 @@ void thread_start(void) {
 static void recalculate_priority(struct thread *t) {
     ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
     ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
+    ASSERT (t->priority >= PRI_MIN && t->priority <= PRI_MAX);
     ASSERT (thread_current() != idle_thread); 
     /* Calculate priority, using fixed point arithmetic. */
     t->priority = fixedpt_to_int_zero( 
@@ -166,11 +167,13 @@ static void recalculate_priority(struct thread *t) {
                   fixedpt_mul(int_to_fixedpt(t->niceness), 
                               int_to_fixedpt(2))));
     ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
+    ASSERT (t->priority >= PRI_MIN && t->priority <= PRI_MAX);
 }
 
 static void recalculate_recent_cpu(struct thread *t) {
     ASSERT (thread_current() != idle_thread); 
     ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
+    ASSERT (t->priority >= PRI_MIN && t->priority <= PRI_MAX);
     ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
     /* Calculate recent_cpu, using fixed point arithmetic. */
     fixedpt fp2 = int_to_fixedpt(2);
@@ -181,6 +184,7 @@ static void recalculate_recent_cpu(struct thread *t) {
     t->recent_cpu = fixedpt_add(fixedpt_mul(coeff, t->recent_cpu), 
                                 int_to_fixedpt(t->niceness)); 
     ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
+    ASSERT (t->priority >= PRI_MIN && t->priority <= PRI_MAX);
 }
 
 static void recalculate_load_avg(int ready_threads) {
