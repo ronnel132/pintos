@@ -166,6 +166,15 @@ static void recalculate_priority(struct thread *t) {
                   fixedpt_div(t->recent_cpu, int_to_fixedpt(4))),
                   fixedpt_mul(int_to_fixedpt(t->niceness), 
                               int_to_fixedpt(2))));
+
+    /* Adjust priority to within our range */
+    if (t->priority > PRI_MAX) {
+        t->priority = PRI_MAX;
+    }
+    else if (t->priority < PRI_MIN) {
+        t->priority = PRI_MIN;
+    }
+        
     ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
     ASSERT (t->priority >= PRI_MIN && t->priority <= PRI_MAX);
     ASSERT (t->niceness >= NICE_MIN && t->niceness <= NICE_MAX);
