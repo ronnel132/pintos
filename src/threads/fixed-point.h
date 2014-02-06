@@ -13,7 +13,7 @@
    performance hit. */
 #define FIXED_POINT_F (1 << FIXED_POINT_Q)
 
-#define MAX_FIXEDPT ((2 ** 31 - 1)/(2 ** FIXED_POINT_Q))
+#define MAX_FIXEDPT (((1 << 31) - 1)/(1 << FIXED_POINT_Q))
 
 
 /*! A fixed point type is just an integer */
@@ -35,7 +35,7 @@ fixedpt fixedpt_div(fixedpt x, fixedpt y);
 fixedpt int_to_fixedpt(int n) {
     ASSERT(n <= MAX_FIXEDPT);
 
-    return n * FIXED_POINT_F;
+    return ((fixedpt) (n * FIXED_POINT_F));
 }
 
 /*! Converts a fixed-point number to an integer.
