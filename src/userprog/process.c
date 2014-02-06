@@ -29,7 +29,7 @@ char **tokenize_process_args(const char *raw_args, int *argc);
     returns.  Returns the new process's thread id, or TID_ERROR if the thread
     cannot be created. */
 tid_t process_execute(const char *raw_args) {
-    char *raw_args_tok_copy, *raw_args_copy, *thread_name;
+    char *raw_args_tok_copy, *raw_args_copy, *thread_name, *delim, *saveptr;
     char **argv;
     tid_t tid;
     
@@ -46,7 +46,9 @@ tid_t process_execute(const char *raw_args) {
         return TID_ERROR:
     strlcpy(raw_args_copy, raw_args, PGSIZE);
 
-    thread_name = strtok(raw_args_tok_copy, ' ');
+    *delim = ' ';
+
+    thread_name = strtok_r(raw_args_tok_copy, delim, &saveptr);
 
     /* Create a new thread to execute process argv[0] (the first char * in 
        argv is the process name). */ 
@@ -80,7 +82,7 @@ char **tokenize_process_args(const char *raw_args, int *argc) {
             break;
         (*argc)++;
         
-        strcpy(offset, token); 
+        strlcpy(offset, token, strlen(token) + 1); 
         argv[i] = offset;
         offset += strlen(token) + 1;
     }
@@ -465,35 +467,39 @@ static bool setup_stack(void **esp, int argc, char **argv) {
                 /* Subtract from the offset the length of the string (plus 
                    the null byte), so we can write to this location. */
                 offset -= strlen(argv[i]) + 1; 
-                strcpy(offset, argv[i]);
+                strlcpy(offset, argv[i], strlen(argv[i]) + 1);
                 /* We set argv[i] to the current offset so that we can quickly
                    access the memory locations of strings we pushed onto the
                    virtual memory stack, in the for loop below. */
-                argv[i] = offset;
+                argv[i] = (char *) offset;
             }
 
             /* Push the word-align 0. */
-            offset -= sizeof(uint_t);
+            offset -= sizeof(uint8_t);
             /* Set one byte to 0. */
-            memset(offset, 0, sizeof(uint_t)); 
+            memset(offset, 0, sizeof(uint8_t)); 
 
             /* Set up pointers to args on the stack. */
             for (i = argc; i >= 0; i--) {
-                offset -= sizeof((char *));     
-                *offset = argv[i];
+                offset -= sizeof(char *);     
+                /* Typecast to a (char **) because argv[i] is a pointer to a 
+                   char * pointer. */
+                *((char **) offset) = argv[i];
             }
 
             /* Next push the pointer to the argv array. */
-            offset -= sizeof((char **));
-            *offset = offset + sizeof((char *));
+            offset -= sizeof(char **);
+            /* Typecast to (char ***) because the offset pointer at this
+               particular location will point to a (char **). */
+            *((char ***) offset) = offset + sizeof(uint8_t);
             
             /* Push argc. */
             offset -= sizeof(int);
-            *offset = argc;
+            *((int *) offset) = argc;
         
             /* Lastly, push the dummy return address, 0. */
             offset -= sizeof((void (*) ()));
-            *offset = 0;
+            *((int *) offset) = 0;
 
             *esp = offset;
             palloc_free_page(argv);
