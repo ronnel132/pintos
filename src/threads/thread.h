@@ -146,12 +146,12 @@ struct thread {
     /*! Owned by userprog/process.c. */
     /**@{*/
     uint32_t *pagedir;                  /*!< Page directory. */
-    /**@{*/
 
     /* Semaphore used by waiter. Parent downs this semaphore when he wait()s
      * for this child, and the child ups it when he exits
      */
     struct *semaphore waiter_sema;
+    /**@{*/
 #endif
 
     /*! Owned by thread.c. */
@@ -224,7 +224,7 @@ struct thread_dead {
     /* Semaphore used by waiter. Parent downs this semaphore when he wait()s
      * for this child, and the child ups it when he exits
      */
-    struct *semaphore = waiter_sema;
+    struct *semaphore waiter_sema;
 
     /* List element for dead list */
     struct list_elem elem;
