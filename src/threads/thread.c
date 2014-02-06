@@ -159,6 +159,7 @@ static void recalculate_priority(struct thread *t) {
     ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
     ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
     ASSERT (t->priority >= PRI_MIN && t->priority <= PRI_MAX);
+    ASSERT (t->niceness >= NICE_MIN && t->niceness <= NICE_MAX);
     ASSERT (thread_current() != idle_thread); 
     t->priority = fixedpt_to_int_zero( 
                   fixedpt_sub(fixedpt_sub(int_to_fixedpt(PRI_MAX), 
@@ -167,12 +168,14 @@ static void recalculate_priority(struct thread *t) {
                               int_to_fixedpt(2))));
     ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
     ASSERT (t->priority >= PRI_MIN && t->priority <= PRI_MAX);
+    ASSERT (t->niceness >= NICE_MIN && t->niceness <= NICE_MAX);
 }
 
 static void recalculate_recent_cpu(struct thread *t) {
     ASSERT (thread_current() != idle_thread); 
     ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
     ASSERT (t->priority >= PRI_MIN && t->priority <= PRI_MAX);
+    ASSERT (t->niceness >= NICE_MIN && t->niceness <= NICE_MAX);
     ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
     /* Calculate recent_cpu, using fixed point arithmetic. */
     fixedpt fp2 = int_to_fixedpt(2);
@@ -184,6 +187,7 @@ static void recalculate_recent_cpu(struct thread *t) {
                                 int_to_fixedpt(t->niceness)); 
     ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
     ASSERT (t->priority >= PRI_MIN && t->priority <= PRI_MAX);
+    ASSERT (t->niceness >= NICE_MIN && t->niceness <= NICE_MAX);
 }
 
 static void recalculate_load_avg(int ready_threads) {
@@ -234,8 +238,10 @@ void thread_tick(void) {
         if (current_ticks % 4 == 0) {
             for (e = list_begin(&all_list); e != list_end(&all_list);
                  e = list_next(e)) {
-                iter_thread = list_entry(e, struct thread, elem);
-                recalculate_priority(iter_thread);
+                iter_thread = list_entry(e, struct thread, allelem);
+                if (strcmp(iter_thread->name, "idle") != 0) {
+                    recalculate_priority(iter_thread);
+                }
             }
         }
         /* Recalculate recent_cpu and load_avg every second */
@@ -245,7 +251,7 @@ void thread_tick(void) {
                recalculate recent_cpu. */
             for (e = list_begin(&all_list); e != list_end(&all_list);
                  e = list_next(e)) {
-                iter_thread = list_entry(e, struct thread, elem);
+                iter_thread = list_entry(e, struct thread, allelem);
                 recalculate_recent_cpu(iter_thread);
             }
 
@@ -715,7 +721,7 @@ static void init_thread(struct thread *t, const char *name, int priority) {
             t->recent_cpu = thread_current()->recent_cpu;
             t->niceness = thread_get_nice();
         }
-        recalculate_priority(t);
+//         recalculate_priority(t);
     }
 
     t->magic = THREAD_MAGIC;
