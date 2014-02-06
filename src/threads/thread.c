@@ -243,9 +243,6 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
      * running thread's priority, yield the processor
      */
     if (effective_priority(t) >= thread_get_priority()) {
-        if (intr_get_level() == INTR_OFF) {
-            intr_enable();
-        }
         /* Yield current thread, as the created thread has higher priority */
         thread_yield();
     }
@@ -419,11 +416,8 @@ void thread_sleep(int64_t end_ticks) {
     /* This shouldn't be called on an interrupt context */
     ASSERT(!intr_context());
 
-
+    old_level = intr_disable();
     if (st == NULL) {
-        if (intr_get_level() == INTR_OFF) {
-            intr_enable();
-        }
         thread_yield();
     }
     else {
@@ -431,7 +425,6 @@ void thread_sleep(int64_t end_ticks) {
          * We're dealing with running/blocked queues, hence we are 
          * modifying global state.
          */
-        old_level = intr_disable();
 
         st->t = t;
         st->end_ticks = end_ticks;
@@ -442,9 +435,9 @@ void thread_sleep(int64_t end_ticks) {
         /* Make sure the list is ordered */
         ASSERT(list_sorted(&ready_list, &ready_less, NULL));
 
-        thread_block();
-        intr_set_level(old_level);
     }
+    thread_block();
+    intr_set_level(old_level);
 }
 
 
@@ -482,9 +475,6 @@ void thread_set_priority(int new_priority) {
 
     /* If the max thread is not the current thread */
     if (max != thread_current()) {
-        if (intr_get_level() == INTR_OFF) {
-            intr_enable();
-        }
         thread_yield();
     }
 

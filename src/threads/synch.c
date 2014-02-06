@@ -109,7 +109,7 @@ bool sema_try_down(struct semaphore *sema) {
 
     This function may be called from an interrupt handler. */
 void sema_up(struct semaphore *sema) {
-    enum intr_level old_level, old_level2;
+    enum intr_level old_level;
     struct list_elem *e;
     struct thread *max_waiter, *t;
     int max_pri = -1;
@@ -123,7 +123,7 @@ void sema_up(struct semaphore *sema) {
          */
         for (e = list_begin(&sema->waiters); e != list_end(&sema->waiters);
              e = list_next(e)) {
-            t = list_entry(list_begin(&sema->waiters), struct thread, elem);
+            t = list_entry(e, struct thread, elem);
 
             /* Make sure priority makes sense */
             ASSERT ((effective_priority(t) >= PRI_MIN) && 
@@ -132,13 +132,11 @@ void sema_up(struct semaphore *sema) {
             if (effective_priority(t) > max_pri) {
                 max_pri = effective_priority(t);
                 max_waiter = t;
-            // TODO: Fix memleak
-//                 max_waiter_elem = list_entry(e, struct semaphore_elem, elem);
             }	
         }	
         ASSERT(max_pri != -1);
 
-//         list_remove(max_sem_elem);
+        list_remove(&max_waiter->elem);
 
         sema->value++;
         thread_unblock(max_waiter);
@@ -245,9 +243,6 @@ void lock_acquire(struct lock *lock) {
         (effective_priority(lock->holder) < thread_get_priority())) {
 		pd_state = palloc_get_page(PAL_ZERO);
 		if (pd_state == NULL) {
-			if (intr_get_level() == INTR_OFF) {
-				intr_enable();
-			}
 			thread_yield();
 		}	
 		thread_current()->donee = lock->holder;
@@ -398,6 +393,9 @@ void cond_init(struct condition *cond) {
     we need to sleep. */
 void cond_wait(struct condition *cond, struct lock *lock) {
     struct semaphore_elem waiter;
+    enum intr_level old_level;
+
+    old_level = intr_disable();
 
     ASSERT(cond != NULL);
     ASSERT(lock != NULL);
@@ -409,6 +407,8 @@ void cond_wait(struct condition *cond, struct lock *lock) {
     lock_release(lock);
     sema_down(&waiter.semaphore);
     lock_acquire(lock);
+
+    intr_set_level(old_level);
 }
 
 /*! If any threads are waiting on COND (protected by LOCK), then
@@ -425,10 +425,14 @@ void cond_signal(struct condition *cond, struct lock *lock UNUSED) {
     struct semaphore_elem *max_sem_elem;
 	int max_pri = -1;
 	struct semaphore *max_sem;
+    enum intr_level old_level;
+
     ASSERT(cond != NULL);
     ASSERT(lock != NULL);
     ASSERT(!intr_context ());
     ASSERT(lock_held_by_current_thread (lock));
+
+    old_level = intr_disable();
 
     if (!list_empty(&cond->waiters)) {
         for (e = list_begin(&cond->waiters); e != list_end(&cond->waiters);
@@ -448,6 +452,8 @@ void cond_signal(struct condition *cond, struct lock *lock UNUSED) {
         list_remove(max_sem_elem);
         sema_up(max_sem);
     }
+
+    intr_set_level(old_level);
 }
 
 /*! Wakes up all threads, if any, waiting on COND (protected by
