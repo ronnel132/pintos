@@ -475,6 +475,7 @@ void thread_yield(void) {
     struct thread *cur_ready;
     struct list_elem *cur_ready_elem;
     enum intr_level old_level;
+    int i = 0;
 
     ASSERT(!intr_context());
 
@@ -488,7 +489,9 @@ void thread_yield(void) {
             cur_ready_elem = list_begin(&ready_list);
             cur_ready = list_entry(cur_ready_elem, struct thread, elem);
             if (effective_priority(cur_ready) == effective_priority(cur)) {
-                while (effective_priority(cur_ready) == effective_priority(cur)) {
+                i = 0;
+                while (effective_priority(cur_ready) == effective_priority(cur) &&  i < list_size(&ready_list)) {
+                    i++;
                     cur_ready_elem = list_next(cur_ready_elem);
                     cur_ready = list_entry(cur_ready_elem, struct thread, elem);
                 }
@@ -765,6 +768,9 @@ static struct thread * next_thread_to_run(void) {
     struct list_elem *e;
     int max_pri = -1;
     struct thread *max_thread, *iter;
+
+    ASSERT(intr_get_level() == INTR_OFF);
+
     /* Only assert sorted for NON mlfqs, other approach is manual in schedule */
     if (!get_thread_mlfqs()) {
         ASSERT(list_sorted(&ready_list, &ready_less, NULL));
