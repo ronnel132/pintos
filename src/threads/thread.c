@@ -582,6 +582,9 @@ void thread_set_nice(int nice UNUSED) {
 	struct thread *cur = thread_current();
 	struct thread *next_ready;
 	struct list_elem *next_ready_elem;
+    enum intr_level old_level;
+
+    old_level = intr_disable();
 
     recalculate_priority(cur);
 	if (list_size(&ready_list) > 0) {
@@ -591,12 +594,10 @@ void thread_set_nice(int nice UNUSED) {
 		/* If the current thread is no longer the highest priority thread,
 		   then yield. */
 		if (next_ready->priority > cur->priority) {
-			if (intr_get_level() == INTR_OFF) {
-				intr_enable();
-			}
 			thread_yield();
 		}
 	}
+    intr_set_level(old_level);
 }
 
 /*! Returns the current thread's nice value. */
