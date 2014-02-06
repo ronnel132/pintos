@@ -503,6 +503,7 @@ tid_t thread_tid(void) {
     returns to the caller. */
 void thread_exit(void) {
     ASSERT(!intr_context());
+    struct thread_dead *dead; 
 
 #ifdef USERPROG
     struct thread_dead *td;
@@ -525,7 +526,7 @@ void thread_exit(void) {
     /* Else if no one is waiting for us, add us to the dead_list */
     else {
         /* Initialize stuff */
-        thread_dead = palloc_get_page(PAL_ZERO);
+        dead = palloc_get_page(PAL_ZERO);
         td->tid = thread_current()->tid;
 
         td->status = thread_current()->exit_status;
@@ -533,7 +534,7 @@ void thread_exit(void) {
         td->parent_id = thread_current()->process_details->parent_id;
         
         /* NOTE: td->elem will be alloced inside the struct */
-        list_push_front(&dead_list, &td->elem)
+        list_push_front(&dead_list, &td->elem);
     }
 #endif
     schedule();
