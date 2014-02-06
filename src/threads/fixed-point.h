@@ -1,3 +1,8 @@
+/*! \file fixed-point.h
+ *
+ * Contains routines for doing fixed-point arithmetic.
+ */
+
 #define FIXED_POINT_P 17
 #define FIXED_POINT_Q 14
 #define FIXED_POINT_F 1 << FIXED_POINT_Q
