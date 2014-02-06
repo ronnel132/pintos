@@ -457,6 +457,7 @@ static bool setup_stack(void **esp, int argc, char **argv) {
     /* Keep track of the page of strings in argv, so we may free it later. */
     char *argv_string_page = argv[0];
     bool success = false;
+    int i;
 
     kpage = palloc_get_page(PAL_USER | PAL_ZERO);
     if (kpage != NULL) {
