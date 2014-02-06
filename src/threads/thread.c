@@ -574,6 +574,10 @@ void thread_set_priority(int new_priority) {
     intr_set_level(old_level);
 }
 
+bool get_thread_mlfqs(void) {
+    return thread_mlfqs;
+}
+
 /*! Returns the current thread's priority. */
 int thread_get_priority(void) {
     return effective_priority(thread_current());

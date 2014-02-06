@@ -229,42 +229,44 @@ void lock_acquire(struct lock *lock) {
     ASSERT(!intr_context());
     ASSERT(!lock_held_by_current_thread(lock));
 
-    old_level = intr_disable();
 
-    /* If this lock is being held by another thread, and
-     * that threads priority is less than current thread's priority,
-     * donate priority to that thread
-     */
-
-    // Before donating, make sure that the guy we're donating to 
-    // isn't blocked because he's already a donor to some other thread!
-    // So we should transfer the donation to the end thread, recursively.
-    if ((lock->holder != NULL) && 
-        (effective_priority(lock->holder) < thread_get_priority())) {
-		pd_state = palloc_get_page(PAL_ZERO);
-		if (pd_state == NULL) {
-			thread_yield();
-		}	
-		thread_current()->donee = lock->holder;
-		pd_state->donee = lock->holder;
-		pd_state->lock_desired = lock;
-        pd_state->donor = thread_current();
-		list_push_front(&pri_donation_list, &pd_state->elem);	
-        donate_priority(lock->holder);
-		/* Check if the donee is blocked. If so, then set priorities down
-		   the chain the last donee manually. */
-		if (lock->holder->status == THREAD_BLOCKED) {
-			next_donee = lock->holder->donee;
-			/* Iterate through the blocked threaad's donation chain, and set
-			   the priorities of these donees along this chain manually. */
-			while (next_donee != NULL) {
-				donate_priority(next_donee);
-				next_donee = next_donee->donee;
-			}
-		}
+    /* Only do this if we aren't using MLFQS option. */
+    if (!get_thread_mlfqs()) {
+        old_level = intr_disable();
+        /* If this lock is being held by another thread, and
+         * that threads priority is less than current thread's priority,
+         * donate priority to that thread
+         */
+        // Before donating, make sure that the guy we're donating to 
+        // isn't blocked because he's already a donor to some other thread!
+        // So we should transfer the donation to the end thread, recursively.
+        if ((lock->holder != NULL) && 
+            (effective_priority(lock->holder) < thread_get_priority())) {
+            pd_state = palloc_get_page(PAL_ZERO);
+            if (pd_state == NULL) {
+                thread_yield();
+            }	
+            thread_current()->donee = lock->holder;
+            pd_state->donee = lock->holder;
+            pd_state->lock_desired = lock;
+            pd_state->donor = thread_current();
+            list_push_front(&pri_donation_list, &pd_state->elem);	
+            donate_priority(lock->holder);
+            /* Check if the donee is blocked. If so, then set priorities down
+               the chain the last donee manually. */
+            if (lock->holder->status == THREAD_BLOCKED) {
+                next_donee = lock->holder->donee;
+                /* Iterate through the blocked threaad's donation chain, and set
+                   the priorities of these donees along this chain manually. */
+                while (next_donee != NULL) {
+                    donate_priority(next_donee);
+                    next_donee = next_donee->donee;
+                }
+            }
+        }
+        intr_set_level(old_level);
     }
 
-    intr_set_level(old_level);
         
 
     sema_down(&lock->semaphore);
@@ -305,40 +307,43 @@ void lock_release(struct lock *lock) {
     ASSERT(!intr_context());
     ASSERT(lock != NULL);
     ASSERT(lock_held_by_current_thread(lock));
+    
+    /* If MLFQS option is not enabled, use priority donation. */
+    if (!get_thread_mlfqs()) {
+        old_level = intr_disable();
 
-    old_level = intr_disable();
+        /* If the stack isn't empty */
+        if (!list_empty(&pri_donation_list)) {
+            e = list_begin(&pri_donation_list);
+            while (e != list_end(&pri_donation_list)) {
+                cur_state = list_entry(e, struct priority_donation_state, elem);
+                if (cur_state->lock_desired == lock && 
+                    cur_state->donee == thread_current()) {
 
-    /* If the stack isn't empty */
-    if (!list_empty(&pri_donation_list)) {
-        e = list_begin(&pri_donation_list);
-        while (e != list_end(&pri_donation_list)) {
-            cur_state = list_entry(e, struct priority_donation_state, elem);
-			if (cur_state->lock_desired == lock && 
-				cur_state->donee == thread_current()) {
-
-                /* Jump to next one, then delete */
-                e = list_next(e);
-                list_remove(&cur_state->elem);
-                palloc_free_page(cur_state);
-			}
-            else {
-                e = list_next(e);
+                    /* Jump to next one, then delete */
+                    e = list_next(e);
+                    list_remove(&cur_state->elem);
+                    palloc_free_page(cur_state);
+                }
+                else {
+                    e = list_next(e);
+                }
+                
             }
-            
-        }
 
-        for (e = list_begin(&pri_donation_list); 
-             e != list_end(&pri_donation_list); e = list_next(e)) {
-            cur_state = list_entry(e, struct priority_donation_state, elem);
-            if ((effective_priority(cur_state->donor) > largest_donated_pri) && 
-                    (cur_state->donee == thread_current())) {
-                largest_donated_pri = effective_priority(cur_state->donor);
+            for (e = list_begin(&pri_donation_list); 
+                 e != list_end(&pri_donation_list); e = list_next(e)) {
+                cur_state = list_entry(e, struct priority_donation_state, elem);
+                if ((effective_priority(cur_state->donor) > largest_donated_pri) && 
+                        (cur_state->donee == thread_current())) {
+                    largest_donated_pri = effective_priority(cur_state->donor);
+                }
             }
-        }
 
-        thread_current()->donation_priority = largest_donated_pri;
+            thread_current()->donation_priority = largest_donated_pri;
+        }
+        intr_set_level(old_level);
     }
-    intr_set_level(old_level);
 
     lock->holder = NULL;
 	/* If this thread donated to another thread, then its donee will be reset

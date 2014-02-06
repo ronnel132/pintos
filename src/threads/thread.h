@@ -209,6 +209,8 @@ void thread_foreach(thread_action_func *, void *);
 int thread_get_priority(void);
 void thread_set_priority(int);
 
+bool get_thread_mlfqs(void);
+
 /* Schedules the donor of this thread, and sets the priority of the
  * current thread to its original priority
  */
