@@ -648,7 +648,7 @@ int thread_get_load_avg(void) {
 
 /*! Returns 100 times the current thread's recent_cpu value. */
 int thread_get_recent_cpu(void) {
-    return fixedpt_to_int_zero(fixedpt_mul(int_to_fixedpt(100),
+    return fixedpt_to_int_nearest(fixedpt_mul(int_to_fixedpt(100),
            thread_current()->recent_cpu));
 }
 
