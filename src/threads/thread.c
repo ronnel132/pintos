@@ -3,6 +3,7 @@
 #include <random.h>
 #include <stdio.h>
 #include <string.h>
+#include "threads/fixed-point.h"
 #include "threads/flags.h"
 #include "threads/interrupt.h"
 #include "threads/intr-stubs.h"
@@ -60,10 +61,11 @@ static long long kernel_ticks;  /*!< # of timer ticks in kernel threads. */
 static long long user_ticks;    /*!< # of timer ticks in user programs. */
 
 /* Global system load average. Initialized to zero. */
-static double load_avg = 0.0;
+static fixedpt load_avg = 0;
 
 static void recalculate_priority(struct thread *t);
 static void recalculate_recent_cpu(struct thread *t);
+static void recalculate_load_avg(int ready_threads);
 
 /* Scheduling. */
 #define TIME_SLICE 4            /*!< # of timer ticks to give each thread. */
@@ -169,12 +171,32 @@ void thread_start(void) {
 }
 
 static void recalculate_priority(struct thread *t) {
-	t->priority = (int) PRI_MAX - (t->recent_cpu / 4) - (t->niceness * 2);
+    /* Calculate priority, using fixed point arithmetic. */
+    t->priority = fixedpt_to_int_zero( 
+                  int_to_fixedpt(PRI_MAX) - 
+                  fixedpt_div(t->recent_cpu, int_to_fixed_pt(4)) -
+                  fixedpt_mul(int_to_fixedpt(t->niceness), int_to_fixedpt(2)));
 }
 
 static void recalculate_recent_cpu(struct thread *t) {
-	double coeff = (2 * load_avg) / (2 * load_avg + 1);
-	t->recent_cpu = coeff * t->recent_cpu + t->niceness; 
+    /* Calculate recent_cpu, using fixed point arithmetic. */
+    fixedpt fp2 = int_to_fixedpt(2);
+    fixedpt fp1 = int_to_fixedpt(1);
+	fixedpt coeff = fixedpt_div(fixedpt_mul(fp2, load_avg), 
+                                fixedpt_add(fixedpt_mul(fp2, load_avg), fp1));
+
+	t->recent_cpu = fixedpt_add(fixedpt_mul(coeff, t->recent_cpu), 
+                                t->niceness); 
+}
+
+static void recalculate_load_avg(int ready_threads) {
+    load_avg = (59.0 / 60.0) * load_avg + (1.0 / 60.0) * ready_threads; 
+    fixedpt fp59 = int_to_fixedpt(59);
+    fixedpt fp60 = int_to_fixedpt(60);
+    fixedpt fp1 = int_to_fixedpt(1);
+
+    load_avg = fixedpt_mul(fixedpt_div(fp59, fp60), load_avg) + 
+               fixedpt_mul(fixedpt_div(fp1, fp60), ready_threads);
 }
 
 /*! Called by the timer interrupt handler at each timer tick.
@@ -235,7 +257,7 @@ void thread_tick(void) {
 				   the number of ready or running threads. */
 				ready_threads = mlfq_state->num_ready + 1;
 			}
-			load_avg = (59.0 / 60.0) * load_avg + (1.0 / 60.0) * ready_threads; 
+            recalculate_load_avg(ready_threads);
 		}
 	}
 
@@ -660,13 +682,12 @@ int thread_get_nice(void) {
 
 /*! Returns 100 times the system load average. */
 int thread_get_load_avg(void) {
-	return (int) 100 * load_avg;
+	return 100 * fixedpt_to_int_zero(load_avg);
 }
 
 /*! Returns 100 times the current thread's recent_cpu value. */
 int thread_get_recent_cpu(void) {
-	/* TODO: Does int casting truncate? */
-	return (int) 100 * thread_current()->recent_cpu;
+	return 100 * fixedpt_to_int_zero(thread_current()->recent_cpu);
 }
 
 /*! Idle thread.  Executes when no other thread is ready to run.
