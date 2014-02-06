@@ -162,7 +162,8 @@ static void recalculate_priority(struct thread *t) {
     ASSERT (t->niceness >= NICE_MIN && t->niceness <= NICE_MAX);
 
     /* If not idle */
-    if (t->tid != 2) {
+//     if (t->tid != 2) {
+    if (strcmp(t->name, "idle") != 0) {
         t->priority = fixedpt_to_int_zero( 
                       fixedpt_sub(fixedpt_sub(int_to_fixedpt(PRI_MAX), 
                       fixedpt_div(t->recent_cpu, int_to_fixedpt(4))),
@@ -189,7 +190,8 @@ static void recalculate_recent_cpu(struct thread *t) {
     ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
 
     /* If not idle */
-    if (t->tid != 2) {
+//     if (t->tid != 2) {
+    if (strcmp(t->name, "idle") != 0) {
         /* Calculate recent_cpu, using fixed point arithmetic. */
         fixedpt fp2 = int_to_fixedpt(2);
         fixedpt fp1 = int_to_fixedpt(1);
@@ -742,15 +744,14 @@ static void init_thread(struct thread *t, const char *name, int priority) {
     if (thread_mlfqs) {
         /* If we're in the first thread, set recent_cpu to 0, otherwise set to
            current thread's recent_cpu. */
+        t->recent_cpu = int_to_fixedpt(0);
         if (strcmp(name, "main") == 0 || strcmp(t->name, "idle") == 0) {
-            t->recent_cpu = int_to_fixedpt(0);
             t->niceness = 0;
         }
         else {
-            t->recent_cpu = thread_current()->recent_cpu;
+//             t->recent_cpu = thread_current()->recent_cpu;
             t->niceness = thread_get_nice();
         }
-//         recalculate_priority(t);
     }
 
     t->magic = THREAD_MAGIC;
