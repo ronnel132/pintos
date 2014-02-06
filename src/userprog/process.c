@@ -54,7 +54,8 @@ tid_t process_execute(const char *raw_args) {
        argv is the process name). */ 
     tid = thread_create(thread_name, PRI_DEFAULT, start_process, raw_args_copy);
     if (tid == TID_ERROR)
-        palloc_free_page(fn_copy); 
+        palloc_free_page(raw_args_tok_copy); 
+        palloc_free_page(raw_args_copy); 
     return tid;
 }
 
@@ -243,7 +244,7 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
 /*! Loads an ELF executable from FILE_NAME into the current thread.  Stores the
     executable's entry point into *EIP and its initial stack pointer into *ESP.
     Returns true if successful, false otherwise. */
-bool load(int argc, const char **argvc, void (**eip) (void), void **esp) {
+bool load(int argc, const char **argv, void (**eip) (void), void **esp) {
     struct thread *t = thread_current();
     struct Elf32_Ehdr ehdr;
     struct file *file = NULL;
