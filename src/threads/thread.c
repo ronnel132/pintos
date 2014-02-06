@@ -3,7 +3,6 @@
 #include <random.h>
 #include <stdio.h>
 #include <string.h>
-#include "threads/fixed-point.h"
 #include "threads/flags.h"
 #include "threads/interrupt.h"
 #include "threads/intr-stubs.h"
@@ -173,9 +172,10 @@ void thread_start(void) {
 static void recalculate_priority(struct thread *t) {
     /* Calculate priority, using fixed point arithmetic. */
     t->priority = fixedpt_to_int_zero( 
-                  int_to_fixedpt(PRI_MAX) - 
-                  fixedpt_div(t->recent_cpu, int_to_fixedpt(4)) -
-                  fixedpt_mul(int_to_fixedpt(t->niceness), int_to_fixedpt(2)));
+                  fixedpt_sub(int_to_fixedpt(PRI_MAX), 
+                  fixedpt_sub(fixedpt_div(t->recent_cpu, int_to_fixedpt(4)),
+                  fixedpt_mul(int_to_fixedpt(t->niceness), 
+                              int_to_fixedpt(2)))));
 }
 
 static void recalculate_recent_cpu(struct thread *t) {
@@ -190,13 +190,12 @@ static void recalculate_recent_cpu(struct thread *t) {
 }
 
 static void recalculate_load_avg(int ready_threads) {
-    load_avg = (59.0 / 60.0) * load_avg + (1.0 / 60.0) * ready_threads; 
     fixedpt fp59 = int_to_fixedpt(59);
     fixedpt fp60 = int_to_fixedpt(60);
     fixedpt fp1 = int_to_fixedpt(1);
 
-    load_avg = fixedpt_mul(fixedpt_div(fp59, fp60), load_avg) + 
-               fixedpt_mul(fixedpt_div(fp1, fp60), ready_threads);
+    load_avg = fixedpt_add(fixedpt_mul(fixedpt_div(fp59, fp60), load_avg),
+               fixedpt_mul(fixedpt_div(fp1, fp60), ready_threads));
 }
 
 /*! Called by the timer interrupt handler at each timer tick.
@@ -658,8 +657,7 @@ void thread_set_nice(int nice UNUSED) {
 	struct thread *next_ready;
 	struct list_elem *next_ready_elem;
 
-	cur->niceness = nice;
-	cur->priority = PRI_MAX - (cur->recent_cpu / 4) - (nice * 2);
+    recalculate_priority(cur);
 	if (list_size(&ready_list) > 0) {
 		next_ready_elem = list_begin(&ready_list);
 		next_ready = list_entry(next_ready_elem, struct thread, elem);

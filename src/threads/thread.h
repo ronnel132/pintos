@@ -10,6 +10,7 @@
 #include <list.h>
 #include <stdint.h>
 #include "devices/timer.h"
+#include "threads/fixed-point.h"
 #include "threads/synch.h"
 
 /*! States in a thread's life cycle. */
@@ -100,7 +101,7 @@ struct thread {
     int priority;                       /*!< Priority. */
     int donation_priority;              /*!< Donation priority (-1 if N/A). */
 	int niceness;						/*!< Between -20 and 20. */
-	double recent_cpu;					/*!< CPU usage recently. */
+	fixedpt recent_cpu;					/*!< CPU usage recently. */
     struct list_elem allelem;           /*!< List element for all threads list. */
     /**@}*/
 	
