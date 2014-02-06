@@ -151,7 +151,7 @@ struct thread {
      * for this child, and the child ups it when he exits
      */
     struct *semaphore waiter_sema;
-    /**@{*/
+    /**@}*/
 #endif
 
     /*! Owned by thread.c. */
