@@ -62,7 +62,7 @@ static fixedpt load_avg;
 
 static void recalculate_priority(struct thread *t);
 static void recalculate_recent_cpu(struct thread *t);
-static void recalculate_load_avg(int ready_threads);
+static void recalculate_load_avg();
 
 /* Scheduling. */
 #define TIME_SLICE 4            /*!< # of timer ticks to give each thread. */
@@ -199,11 +199,11 @@ static void recalculate_recent_cpu(struct thread *t) {
     ASSERT (t->niceness >= NICE_MIN && t->niceness <= NICE_MAX);
 }
 
-static void recalculate_load_avg(int ready_threads) {
+static void recalculate_load_avg() {
     ASSERT (thread_current() != idle_thread); 
     ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
     ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
-    fixedpt ready = int_to_fixedpt(ready_threads);
+    fixedpt ready = int_to_fixedpt(list_size(&ready_list) + 1);
     fixedpt fp59 = int_to_fixedpt(59);
     fixedpt fp60 = int_to_fixedpt(60);
     fixedpt fp1 = int_to_fixedpt(1);
@@ -221,7 +221,6 @@ void thread_tick(void) {
     struct list_elem *e;
     struct thread_sleeping *current_sleeper;
     int64_t current_ticks;
-    int ready_threads;
     int max_sleeper_pri = -1;
 
     ASSERT(intr_context());
@@ -268,8 +267,7 @@ void thread_tick(void) {
             recalculate_recent_cpu(t);
 
             /* Update load_avg. */  
-            ready_threads = list_size(&ready_list) + 1;
-            recalculate_load_avg(ready_threads);
+            recalculate_load_avg();
         }
     }
 
