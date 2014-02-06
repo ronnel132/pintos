@@ -209,12 +209,9 @@ void thread_tick(void) {
         kernel_ticks++;
 
     current_ticks = timer_ticks();
-	if (thread_mlfqs) {
-		/* Update recent_cpu. */
-		if (t != idle_thread) {
-            /* Increment recent_cpu with fixed point arithmetic. */
-			t->recent_cpu = fixedpt_add(t->recent_cpu, int_to_fixedpt(1));
-		}
+	if (thread_mlfqs && t != idle_thread) {
+        /* Increment recent_cpu with fixed point arithmetic. */
+        t->recent_cpu = fixedpt_add(t->recent_cpu, int_to_fixedpt(1));
 		
 		/* Recalculate priority for all threads every fourth clock tick. */
 		if (current_ticks % 4 == 0) {
@@ -239,11 +236,7 @@ void thread_tick(void) {
 			recalculate_recent_cpu(t);
 
 			/* Update load_avg. */	
-			if (t != idle_thread) {
-				/* If we're not in the idle_thread, the number of ready threads is
-				   the number of ready or running threads. */
-				ready_threads = list_size(&ready_list) + 1;
-			}
+            ready_threads = list_size(&ready_list) + 1;
             recalculate_load_avg(ready_threads);
 		}
 	}
@@ -607,12 +600,14 @@ int thread_get_nice(void) {
 
 /*! Returns 100 times the system load average. */
 int thread_get_load_avg(void) {
-	return 100 * fixedpt_to_int_zero(load_avg);
+	return fixedpt_to_int_zero(fixedpt_mul(int_to_fixedpt(100), 
+           load_avg));
 }
 
 /*! Returns 100 times the current thread's recent_cpu value. */
 int thread_get_recent_cpu(void) {
-	return 100 * fixedpt_to_int_zero(thread_current()->recent_cpu);
+	return fixedpt_to_int_zero(fixedpt_mul(int_to_fixedpt(100),
+           thread_current()->recent_cpu));
 }
 
 /*! Idle thread.  Executes when no other thread is ready to run.
