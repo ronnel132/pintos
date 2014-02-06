@@ -17,7 +17,7 @@
 
 
 /*! A fixed point type is just an integer */
-typedef fixedpt int;
+typedef int fixedpt;
 
 
 /* Fixed point function prototypes */
