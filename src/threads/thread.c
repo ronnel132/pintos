@@ -160,7 +160,9 @@ static void recalculate_priority(struct thread *t) {
     ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
     ASSERT (t->priority >= PRI_MIN && t->priority <= PRI_MAX);
     ASSERT (t->niceness >= NICE_MIN && t->niceness <= NICE_MAX);
-    if (t->tid != 0) {
+
+    /* If not idle */
+    if (t->tid != 2) {
         t->priority = fixedpt_to_int_zero( 
                       fixedpt_sub(fixedpt_sub(int_to_fixedpt(PRI_MAX), 
                       fixedpt_div(t->recent_cpu, int_to_fixedpt(4))),
@@ -190,9 +192,11 @@ static void recalculate_recent_cpu(struct thread *t) {
     fixedpt fp1 = int_to_fixedpt(1);
     fixedpt coeff = fixedpt_div(fixedpt_mul(fp2, load_avg), 
                                 fixedpt_add(fixedpt_mul(fp2, load_avg), fp1));
-
-    t->recent_cpu = fixedpt_add(fixedpt_mul(coeff, t->recent_cpu), 
+    /* If not idle */
+    if (t->tid != 2) {
+        t->recent_cpu = fixedpt_add(fixedpt_mul(coeff, t->recent_cpu), 
                                 int_to_fixedpt(t->niceness)); 
+    }
     ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
     ASSERT (t->priority >= PRI_MIN && t->priority <= PRI_MAX);
     ASSERT (t->niceness >= NICE_MIN && t->niceness <= NICE_MAX);
@@ -222,7 +226,6 @@ void thread_tick(void) {
     int max_sleeper_pri = -1;
 
     ASSERT(intr_context());
-    ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
 
     /* Update statistics. */
     if (t == idle_thread)
@@ -247,23 +250,24 @@ void thread_tick(void) {
                 iter_thread = list_entry(e, struct thread, allelem);
                 recalculate_priority(iter_thread);
             }
-        }
-        /* Recalculate recent_cpu and load_avg every second */
-        if (current_ticks % TIMER_FREQ == 0) {
-            /* This should occur ever TIMER_FREQ ticks (every second). */
-            /* Iterate through all threads (running, ready or blocked) and 
-               recalculate recent_cpu. */
-            for (e = list_begin(&all_list); e != list_end(&all_list);
-                 e = list_next(e)) {
-                iter_thread = list_entry(e, struct thread, allelem);
-                recalculate_recent_cpu(iter_thread);
+
+            /* Recalculate recent_cpu and load_avg every second */
+            if (current_ticks % TIMER_FREQ == 0) {
+                /* This should occur ever TIMER_FREQ ticks (every second). */
+                /* Iterate through all threads (running, ready or blocked) and 
+                   recalculate recent_cpu. */
+                for (e = list_begin(&all_list); e != list_end(&all_list);
+                     e = list_next(e)) {
+                    iter_thread = list_entry(e, struct thread, allelem);
+                    recalculate_recent_cpu(iter_thread);
+                }
+
+                /* Recalculate recent_cpu for the current running thread. */
+                recalculate_recent_cpu(t);
+
+                /* Update load_avg. */  
+                recalculate_load_avg();
             }
-
-            /* Recalculate recent_cpu for the current running thread. */
-            recalculate_recent_cpu(t);
-
-            /* Update load_avg. */  
-            recalculate_load_avg();
         }
     }
 
