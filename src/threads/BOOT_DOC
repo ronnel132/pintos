@@ -1,0 +1,120 @@
+			+-----------------------+
+			|         CS 124        |
+			| PROJECT 2: BOOTLOADER |
+			|    DESIGN DOCUMENT    |
+			+-----------------------+
+
+---- GROUP ----
+
+>> Fill in the names and email addresses of your group members.
+
+Aleksander Bello <abello@caltech.edu>
+Ronnel Boettcher <ronnel@caltech.edu>
+Archan Luhar <archan@caltech.edu>
+
+>> Specify how many late tokens you are using on this assignment:  
+0
+
+>> What is the Git repository and commit hash for your submission?
+
+   Repository URL: rboettch@login.cms.caltech.edu:/cs/courses/cs124/teams/pintos-bbl 
+   commit ...
+
+---- PRELIMINARIES ----
+
+>> If you have any preliminary comments on your submission, notes for the
+>> TAs, or extra credit, please give them here.
+
+>> Please cite any offline or online sources you consulted while
+>> preparing your submission, other than the Pintos documentation, course
+>> text, lecture notes, and course instructors.
+IA32 Manuals
+int 13 wiki page
+
+			     BOOTLOADER
+			     ==========
+
+---- DATA STRUCTURES ----
+
+>> A1: In the order that they are used, specify the areas of memory that
+>> your bootloader code uses (both starting address and size) during the
+>> bootstrap process.  Briefly describe the purpose of each memory area.
+>> Note that you do not have to enumerate the structure of sector data or
+>> anything like that; simply state the general purpose of the various
+>> memory areas used by your bootload code.
+
+%dl - hard drive number, starting from 0x80 and incremented every time
+%eax - LBA starting sector index
+%di - number of sectors reading
+%cx - buffer segment address
+%bx - iterator for partitions (starting from 0x1EE, until 0x1EE (not incl))
+%di - holds the number of sectors to read
+
+---- ALGORITHMS ----
+
+>> A2: Write a pseudocode description (e.g. at the level of Python and
+>> English phrases) of the sequence of operations that your bootloader
+>> performs when searching for, and then loading, the Pintos kernel.
+
+In a high level, the bootloader starts at the first hard drive loads the
+MBR, then checks if sector ends with 0x55, 0xAA to see if it's a boot
+sector; otherwise skip drive.
+
+Then, if it's a boot sector, it goes ahead and reads the partitions
+(up to 4) and checks if the drive status of the current partition is 0x80
+(bootable), and if the current partition is a pintos partition (0x20).
+If it's not, skip partition (or if 4th partition, next drive). If it is,
+load the kernel at address 0x20000 (determining the number of sectors
+it needs to load from the disc, on the fly). Then it's good to go, and
+proceeds with the given code, jumping to the kernel.
+
+>> A3: Did you have any difficulties making the entire bootloader fit
+>> within the space allotted?  If so, what steps did you take to reduce
+>> the size of your bootstrap code?
+We were caucions about this since the beginning (especially about printing)
+so we didn't have this issue.
+UPDATE: Towards the end we did hit this problem, and we ended up making
+the strings less verbose.
+
+---- RATIONALE ----
+
+>> A4: Why did you choose your final implementation?  Did you encounter
+>> any major obstacles or difficulties that forced you to change your
+>> approach?  If so, describe the obstacles and how you overcame them.
+
+We chooose to make an init_dap function since we would do a similar procedure
+twice, once for loading the MBR, once for loading the kernel. Hence it would
+be helpful (more debuggable and less code) to have init_dap.
+The major issues we encountered were addressing in real-mode; we had to read 
+the slides, manual, and ask people about how it works. Other than that, just 
+dealing with bugs in assembly level.
+
+			   SURVEY QUESTIONS
+			   ================
+
+Answering these questions is optional, but it will help us improve the
+course in future quarters.  Feel free to tell us anything you
+want--these questions are just to spur your thoughts.  You may also
+choose to respond anonymously in the feedback survey on the course
+website.
+
+>> In your opinion, was this assignment, or any one of the three problems
+>> in it, too easy or too hard?  Did it take too long or too little time?
+
+No more ia32 plz. Being this close to the hardware doesn't feel
+comfortable at all.
+
+>> Did you find that working on a particular part of the assignment gave
+>> you greater insight into some aspect of OS design?
+
+Generally, yes. However, other than the conceptual stuff, most of the time
+was spent doing nasty assembly-level debugging.
+
+>> Is there some particular fact or hint we should give students in
+>> future quarters to help them solve the problems?  Conversely, did you
+>> find any of our guidance to be misleading?
+
+>> Do you have any suggestions for the TAs to more effectively assist
+>> students, either for future quarters or the remaining projects?
+
+>> Any other comments?
