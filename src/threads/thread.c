@@ -67,7 +67,7 @@ static fixedpt load_avg = 0;
 
 static void recalculate_priority(struct thread *t);
 static void recalculate_recent_cpu(struct thread *t);
-static void recalculate_load_avg();
+static void recalculate_load_avg(void);
 
 /* Scheduling. */
 #define TIME_SLICE 4            /*!< # of timer ticks to give each thread. */
@@ -804,7 +804,7 @@ static void init_thread(struct thread *t, const char *name, int priority) {
 
     /* Addd process details */
     t->process_details = malloc(sizeof(struct process));
-    memset(t->process_details->files, NULL, sizeof(struct file *) * MAX_OPEN_FILES);
+    memset(t->process_details->files, 0, sizeof(struct file *) * MAX_OPEN_FILES);
     t->process_details->num_files_open = 0;
 	
     if (thread_mlfqs) {
