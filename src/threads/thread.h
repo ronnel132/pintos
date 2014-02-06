@@ -103,14 +103,14 @@ struct thread {
     uint8_t *stack;                     /*!< Saved stack pointer. */
     int priority;                       /*!< Priority. */
     int donation_priority;              /*!< Donation priority (-1 if N/A). */
-	int niceness;						/*!< Between -20 and 20. */
-	fixedpt recent_cpu;					/*!< CPU usage recently. */
+  int niceness;           /*!< Between -20 and 20. */
+  fixedpt recent_cpu;         /*!< CPU usage recently. */
     struct list_elem allelem;           /*!< List element for all threads list. */
     /**@}*/
-	
-	/* The thread this thread donates to. NULL if this thread doesn't donate
-	   to any thread. */
-	struct thread *donee;
+  
+  /* The thread this thread donates to. NULL if this thread doesn't donate
+     to any thread. */
+  struct thread *donee;
 
     /*! Shared between thread.c and synch.c. */
     /**@{*/
@@ -136,19 +136,19 @@ struct priority_donation_state {
      */
     struct lock *lock_desired;
     struct thread *donor;
-	struct thread *donee;
+  struct thread *donee;
     struct list_elem elem;              /*!< List element. */
 };
 
 /* Keeps track of the state of current running threads under the MLFQ 
    option. */ 
 struct thread_mlfq_state {
-	struct list *ready_lists;
-	/* Keep track of the highest priority non-empty list in ready_lists, so 
-	   that we may access it quickly. */
-	int highest_non_empty_list;
-	/* Keep track of the number of ready threads in all of the ready_lists. */
-	int num_ready;
+  struct list *ready_lists;
+  /* Keep track of the highest priority non-empty list in ready_lists, so 
+     that we may access it quickly. */
+  int highest_non_empty_list;
+  /* Keep track of the number of ready threads in all of the ready_lists. */
+  int num_ready;
 };
 
 /*! List of priority donation states, for keeping track of chains of priority 
@@ -188,7 +188,7 @@ tid_t thread_create(const char *name, int priority, thread_func *, void *);
 
 void thread_block(void);
 bool ready_less(const struct list_elem *elem1, const struct list_elem *elem2,
-			    void *aux);
+          void *aux);
 void thread_unblock(struct thread *);
 
 struct thread *thread_current (void);
@@ -198,7 +198,7 @@ const char *thread_name(void);
 void thread_exit(void) NO_RETURN;
 void thread_yield(void);
 bool thread_sleep_less(const struct list_elem *elem1, 
-					   const struct list_elem *elem2, void *aux);
+             const struct list_elem *elem2, void *aux);
 void thread_sleep(int64_t end_ticks);
 
 /*! Performs some operation on thread t, given auxiliary data AUX. */
