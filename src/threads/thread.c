@@ -174,7 +174,7 @@ static void recalculate_priority(struct thread *t) {
     /* Calculate priority, using fixed point arithmetic. */
     t->priority = fixedpt_to_int_zero( 
                   int_to_fixedpt(PRI_MAX) - 
-                  fixedpt_div(t->recent_cpu, int_to_fixed_pt(4)) -
+                  fixedpt_div(t->recent_cpu, int_to_fixedpt(4)) -
                   fixedpt_mul(int_to_fixedpt(t->niceness), int_to_fixedpt(2)));
 }
 
