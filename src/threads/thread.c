@@ -239,6 +239,10 @@ void thread_tick(void) {
     struct thread_sleeping *current_sleeper;
     int64_t current_ticks;
     int max_sleeper_pri = -1;
+    enum intr_level old_level;
+
+
+    old_level = intr_disable();
 
     ASSERT(intr_context());
 
@@ -277,9 +281,6 @@ void thread_tick(void) {
                     recalculate_recent_cpu(iter_thread);
                 }
 
-                /* Recalculate recent_cpu for the current running thread. */
-                recalculate_recent_cpu(t);
-
                 /* Update load_avg. */  
                 recalculate_load_avg();
             }
@@ -306,6 +307,8 @@ void thread_tick(void) {
     if (++thread_ticks >= TIME_SLICE || 
         max_sleeper_pri >= thread_get_priority())
         intr_yield_on_return();
+
+    intr_set_level(old_level);
 }
 
 /*! Prints thread statistics. */
