@@ -794,9 +794,6 @@ static void schedule(void) {
     thread_schedule_tail(prev);
 }
 
-void schedule_donor() {
-}
-
 /* Donate current thread's priority to donee */
 void donate_priority(struct thread *donee) {
     enum intr_level old_level;
