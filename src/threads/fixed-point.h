@@ -3,10 +3,12 @@
  * Contains routines for doing fixed-point arithmetic.
  */
 
+/*! P.Q Fixed point arithmetic definitions. */
 #define FIXED_POINT_P 17
 #define FIXED_POINT_Q 14
 #define FIXED_POINT_F 1 << FIXED_POINT_Q
 
+/*! A fixed point type is just an integer */
 typedef fixedpt int;
 
 
