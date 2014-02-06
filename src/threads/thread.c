@@ -260,9 +260,6 @@ void thread_tick(void) {
 
 	if (thread_mlfqs) {
         /* Increment recent_cpu with fixed point arithmetic. */
-        if (t != idle_thread) {
-            t->recent_cpu = fixedpt_add(t->recent_cpu, int_to_fixedpt(1));
-        }
         
         /* Recalculate priority for all threads every fourth clock tick. */
         if (current_ticks % 4 == 0) {
@@ -286,6 +283,9 @@ void thread_tick(void) {
                 /* Update load_avg. */  
                 recalculate_load_avg();
             }
+        }
+        if (t != idle_thread) {
+            t->recent_cpu = fixedpt_add(t->recent_cpu, int_to_fixedpt(1));
         }
     }
 
