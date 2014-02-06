@@ -158,10 +158,10 @@ void thread_start(void) {
 static void recalculate_priority(struct thread *t) {
     /* Calculate priority, using fixed point arithmetic. */
     t->priority = fixedpt_to_int_zero( 
-                  fixedpt_sub(int_to_fixedpt(PRI_MAX), 
-                  fixedpt_sub(fixedpt_div(t->recent_cpu, int_to_fixedpt(4)),
+                  fixedpt_sub(fixedpt_sub(int_to_fixedpt(PRI_MAX), 
+                  fixedpt_div(t->recent_cpu, int_to_fixedpt(4))),
                   fixedpt_mul(int_to_fixedpt(t->niceness), 
-                              int_to_fixedpt(2)))));
+                              int_to_fixedpt(2))));
 }
 
 static void recalculate_recent_cpu(struct thread *t) {
@@ -172,7 +172,7 @@ static void recalculate_recent_cpu(struct thread *t) {
                                 fixedpt_add(fixedpt_mul(fp2, load_avg), fp1));
 
 	t->recent_cpu = fixedpt_add(fixedpt_mul(coeff, t->recent_cpu), 
-                                t->niceness); 
+                                int_to_fixedpt(t->niceness)); 
 }
 
 static void recalculate_load_avg(int ready_threads) {
