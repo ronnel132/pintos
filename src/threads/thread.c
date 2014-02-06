@@ -207,6 +207,7 @@ static void recalculate_load_avg() {
     ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
     ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
     fixedpt ready;
+    static int i = 0;
     if (strcmp(thread_current()->name, "idle") == 0) {
         ready = int_to_fixedpt(list_size(&ready_list));
     } else {
@@ -216,8 +217,14 @@ static void recalculate_load_avg() {
     fixedpt fp60 = int_to_fixedpt(60);
     fixedpt fp1 = int_to_fixedpt(1);
 
+    printf("========  %d  ==========\n", ++i);
+    printf("Prev load avg: %d\n", fixedpt_to_int_nearest(load_avg));
+    printf("Ready threads: %d\n", fixedpt_to_int_nearest(ready));
+
     load_avg = fixedpt_add(fixedpt_mul(fixedpt_div(fp59, fp60), load_avg),
                fixedpt_mul(fixedpt_div(fp1, fp60), ready));
+
+    printf("Updated load avg: %d\n", fixedpt_to_int_nearest(load_avg));
     ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
 }
 
