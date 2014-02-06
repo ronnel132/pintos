@@ -30,7 +30,7 @@ bool create(const char *file, unsigned initial_size);
 
 /* Deletes the file called file. Returns true if successful, false otherwise.
  */
-bool remove(const char (file);
+bool remove(const char *file);
 
 /* Opens the file called file. Returns a nonnegative integer handle called 
  * a "file descriptor" (fd), or -1 if the file could not be opened. 
