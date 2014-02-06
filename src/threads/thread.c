@@ -159,11 +159,19 @@ static void recalculate_priority(struct thread *t) {
     ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
     ASSERT (thread_current() != idle_thread); 
     /* Calculate priority, using fixed point arithmetic. */
+   // printf("name: %s", t->name);
+    //printf("niceness: %d", t->niceness);
+    //printf("recentcpu: %d", fixedpt_to_int_zero(t->recent_cpu));
+    printf("before: %d", t->priority);
     t->priority = fixedpt_to_int_zero( 
                   fixedpt_sub(fixedpt_sub(int_to_fixedpt(PRI_MAX), 
                   fixedpt_div(t->recent_cpu, int_to_fixedpt(4))),
                   fixedpt_mul(int_to_fixedpt(t->niceness), 
                               int_to_fixedpt(2))));
+    //printf("after: %d", t->priority);
+    //printf("name: %s", t->name);
+    //printf("niceness: %d", t->niceness);
+    printf("recentcpu: %d", fixedpt_to_int_zero(t->recent_cpu));
 }
 
 static void recalculate_recent_cpu(struct thread *t) {
@@ -328,11 +336,6 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
     /* Add to run queue. */
     thread_unblock(t);
     
-    if (thread_mlfqs && strcmp(t->name, "idle") != 0) {
-        /* Calculate the priority per MLFQ specifications. */
-        recalculate_priority(t);
-    }
-
     /* If this thread's priority is higher than or equal than the 
      * running thread's priority, yield the processor
      */
@@ -590,8 +593,10 @@ void thread_set_nice(int nice UNUSED) {
     struct list_elem *next_ready_elem;
     enum intr_level old_level;
 
+    cur->niceness = nice;
     ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
     old_level = intr_disable();
+
 
     recalculate_priority(cur);
     if (list_size(&ready_list) > 0) {
@@ -709,6 +714,7 @@ static void init_thread(struct thread *t, const char *name, int priority) {
             t->recent_cpu = thread_current()->recent_cpu;
             t->niceness = thread_get_nice();
         }
+        //recalculate_priority(t);
     }
 
     t->magic = THREAD_MAGIC;
