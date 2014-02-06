@@ -1,6 +1,7 @@
 /*! \file fixed-point.h
  *
- * Contains routines for doing fixed-point arithmetic.
+ * Type definitions and routines for fixed-point arithmetic.
+ * Use the type fixedpt for indicating a fixed-point variable.
  */
 
 /*! P.Q Fixed point arithmetic definitions. */
@@ -10,6 +11,7 @@
 
 /*! A fixed point type is just an integer */
 typedef fixedpt int;
+
 
 
 fixedpt int_to_fixedpt(int n);
