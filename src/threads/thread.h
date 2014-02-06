@@ -50,7 +50,7 @@ struct process {
     bool open_file_descriptors[MAX_OPEN_FILES];
     // TODO: Eventually, we may wanna keep track of the children here so that
     // we can verify parent-child relationships quickly
-    File * files[MAX_OPEN_FILES];
+    struct file * files[MAX_OPEN_FILES];
 };
 
 /*! A kernel thread or user process.
