@@ -126,9 +126,9 @@ void sema_up(struct semaphore *sema) {
 
             /* Context switch to highe rpriority thread */
             if (!intr_context()) {
-                old_level2 = intr_enable();
+//                 old_level2 = intr_enable();
                 thread_yield();
-                intr_set_level(old_level2);
+//                 intr_set_level(old_level2);
             }
             else {
                 intr_yield_on_return();
@@ -416,8 +416,8 @@ void cond_signal(struct condition *cond, struct lock *lock UNUSED) {
             s = &list_entry(e, struct semaphore_elem, elem)->semaphore;
             if (!list_empty(&s->waiters)) {
                 t = list_entry(list_begin(&s->waiters), struct thread, elem);
-                if (effective_priority(&t) > max_pri) {
-                    max_pri = effective_priority(&t);
+                if (effective_priority(t) > max_pri) {
+                    max_pri = effective_priority(t);
                     max_sem = s;
                     max_sem_elem = list_entry(e, struct semaphore_elem, elem);
                 }	
