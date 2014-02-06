@@ -762,7 +762,6 @@ static void * alloc_frame(struct thread *t, size_t size) {
     thread can continue running, then it will be in the run queue.)  If the
     run queue is empty, return idle_thread. */
 static struct thread * next_thread_to_run(void) {
-    ASSERT(list_sorted(&ready_list, &ready_less, NULL));
     struct list_elem *e;
     int max_pri = -1;
     struct thread *max_thread, *iter;
