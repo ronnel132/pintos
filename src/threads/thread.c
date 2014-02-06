@@ -206,7 +206,12 @@ static void recalculate_recent_cpu(struct thread *t) {
 static void recalculate_load_avg() {
     ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
     ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
-    fixedpt ready = int_to_fixedpt(list_size(&ready_list) + 1);
+    fixedpt ready;
+    if (strcmp(thread_current()->name, "idle") == 0) {
+        ready = int_to_fixedpt(list_size(&ready_list));
+    } else {
+        ready = int_to_fixedpt(list_size(&ready_list) + 1);
+    }
     fixedpt fp59 = int_to_fixedpt(59);
     fixedpt fp60 = int_to_fixedpt(60);
     fixedpt fp1 = int_to_fixedpt(1);
