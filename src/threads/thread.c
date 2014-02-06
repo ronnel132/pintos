@@ -302,7 +302,7 @@ void thread_tick(void) {
         thread_unblock(current_sleeper->t);
 
         e = list_next(e);
-        palloc_free_page(current_sleeper);
+//         palloc_free_page(current_sleeper);
     }
     
     /* Enforce preemption. */
