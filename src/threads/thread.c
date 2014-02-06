@@ -327,9 +327,8 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
 
     /* Add to run queue. */
     thread_unblock(t);
-	
-    // TODO: Fix this
-	if (thread_mlfqs && thread_current() != idle_thread) {
+    
+    if (thread_mlfqs && t != idle_thread) {
         /* Calculate the priority per MLFQ specifications. */
         recalculate_priority(t);
     }
