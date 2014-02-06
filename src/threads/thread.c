@@ -216,7 +216,8 @@ void thread_tick(void) {
         kernel_ticks++;
 
     current_ticks = timer_ticks();
-    if (thread_mlfqs && t != idle_thread) {
+    // TODO: Change this
+	if (thread_mlfqs && t != idle_thread) {
         /* Increment recent_cpu with fixed point arithmetic. */
         t->recent_cpu = fixedpt_add(t->recent_cpu, int_to_fixedpt(1));
         
@@ -457,6 +458,7 @@ void thread_yield(void) {
     ASSERT(!intr_context());
 
     old_level = intr_disable();
+    // TODO: Fix this
     if (cur != idle_thread) {
         /* If there are other threads with the same priority as the thread 
            we are currently yielding, then place the current running thread 
@@ -691,7 +693,7 @@ static void init_thread(struct thread *t, const char *name, int priority) {
     t->stack = (uint8_t *) t + PGSIZE;
     t->priority = priority;
     t->donation_priority = -1;
-    
+	
     if (thread_mlfqs) {
         if (t != idle_thread) {
             /* If we're in the first thread, set recent_cpu to 0, otherwise set to
