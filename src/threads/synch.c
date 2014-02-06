@@ -110,25 +110,45 @@ bool sema_try_down(struct semaphore *sema) {
     This function may be called from an interrupt handler. */
 void sema_up(struct semaphore *sema) {
     enum intr_level old_level, old_level2;
-    struct thread *waiter;
+    struct list_elem *e;
+    struct thread *max_waiter, *t;
+    int max_pri = -1;
 
     ASSERT(sema != NULL);
 
     old_level = intr_disable();
     if (!list_empty(&sema->waiters)) {
-        waiter = list_entry(list_pop_front(&sema->waiters),
-                                  struct thread, elem);
-        thread_unblock(waiter);
+        /* Find thread with maximum priority that's waiting on this
+         * semaphore
+         */
+        for (e = list_begin(&sema->waiters); e != list_end(&sema->waiters);
+             e = list_next(e)) {
+            t = list_entry(list_begin(&sema->waiters), struct thread, elem);
+
+            /* Make sure priority makes sense */
+            ASSERT ((effective_priority(t) >= PRI_MIN) && 
+                (effective_priority(t) <= PRI_MAX));
+
+            if (effective_priority(t) > max_pri) {
+                max_pri = effective_priority(t);
+                max_waiter = t;
+            // TODO: Fix memleak
+//                 max_waiter_elem = list_entry(e, struct semaphore_elem, elem);
+            }	
+        }	
+        ASSERT(max_pri != -1);
+
+//         list_remove(max_sem_elem);
+
         sema->value++;
+        thread_unblock(max_waiter);
 
         /* If the waiter that just got unblocked has higher priority */
-        if (effective_priority(waiter) >= thread_get_priority()) {
+        if (max_pri >= thread_get_priority()) {
 
             /* Context switch to highe rpriority thread */
             if (!intr_context()) {
-//                 old_level2 = intr_enable();
                 thread_yield();
-//                 intr_set_level(old_level2);
             }
             else {
                 intr_yield_on_return();
