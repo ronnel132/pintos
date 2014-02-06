@@ -157,6 +157,7 @@ void thread_start(void) {
 
 static void recalculate_priority(struct thread *t) {
     ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
+    ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
     ASSERT (thread_current() != idle_thread); 
     /* Calculate priority, using fixed point arithmetic. */
    // printf("name: %s", t->name);
@@ -168,14 +169,12 @@ static void recalculate_priority(struct thread *t) {
                   fixedpt_div(t->recent_cpu, int_to_fixedpt(4))),
                   fixedpt_mul(int_to_fixedpt(t->niceness), 
                               int_to_fixedpt(2))));
-    //printf("after: %d", t->priority);
-    //printf("name: %s", t->name);
-    //printf("niceness: %d", t->niceness);
-    printf("recentcpu: %d", fixedpt_to_int_zero(t->recent_cpu));
+    ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
 }
 
 static void recalculate_recent_cpu(struct thread *t) {
     ASSERT (thread_current() != idle_thread); 
+    ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
     ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
     /* Calculate recent_cpu, using fixed point arithmetic. */
     fixedpt fp2 = int_to_fixedpt(2);
@@ -185,10 +184,12 @@ static void recalculate_recent_cpu(struct thread *t) {
 
     t->recent_cpu = fixedpt_add(fixedpt_mul(coeff, t->recent_cpu), 
                                 int_to_fixedpt(t->niceness)); 
+    ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
 }
 
 static void recalculate_load_avg(int ready_threads) {
     ASSERT (thread_current() != idle_thread); 
+    ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
     ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
     fixedpt ready = int_to_fixedpt(ready_threads);
     fixedpt fp59 = int_to_fixedpt(59);
@@ -197,6 +198,7 @@ static void recalculate_load_avg(int ready_threads) {
 
     load_avg = fixedpt_add(fixedpt_mul(fixedpt_div(fp59, fp60), load_avg),
                fixedpt_mul(fixedpt_div(fp1, fp60), ready));
+    ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
 }
 
 /*! Called by the timer interrupt handler at each timer tick.
