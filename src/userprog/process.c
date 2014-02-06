@@ -43,7 +43,7 @@ tid_t process_execute(const char *raw_args) {
     /* create the copy for passing to start_process. */
     raw_args_copy = palloc_get_page(0);
     if (raw_args_copy == NULL)
-        return TID_ERROR:
+        return TID_ERROR
     strlcpy(raw_args_copy, raw_args, PGSIZE);
 
     *delim = ' ';
