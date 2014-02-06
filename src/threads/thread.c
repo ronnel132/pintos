@@ -695,17 +695,15 @@ static void init_thread(struct thread *t, const char *name, int priority) {
     t->donation_priority = -1;
 	
     if (thread_mlfqs) {
-        if (strcmp(t->name, "idle") != 0) {
-            /* If we're in the first thread, set recent_cpu to 0, otherwise set to
-               current thread's recent_cpu. */
-            if (strcmp(name, "main") == 0) {
-                t->recent_cpu = int_to_fixedpt(0);
-                t->niceness = 0;
-            }
-            else {
-                t->recent_cpu = thread_current()->recent_cpu;
-                t->niceness = thread_get_nice();
-            }
+        /* If we're in the first thread, set recent_cpu to 0, otherwise set to
+           current thread's recent_cpu. */
+        if (strcmp(name, "main") == 0 || strcmp(t->name, "idle") == 0) {
+            t->recent_cpu = int_to_fixedpt(0);
+            t->niceness = 0;
+        }
+        else {
+            t->recent_cpu = thread_current()->recent_cpu;
+            t->niceness = thread_get_nice();
         }
     }
 
