@@ -697,7 +697,7 @@ static void init_thread(struct thread *t, const char *name, int priority) {
             /* If we're in the first thread, set recent_cpu to 0, otherwise set to
                current thread's recent_cpu. */
             if (strcmp(name, "main") == 0) {
-                t->recent_cpu = 0;
+                t->recent_cpu = int_to_fixedpt(0);
                 t->niceness = 0;
             }
             else {
