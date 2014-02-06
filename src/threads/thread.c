@@ -156,6 +156,8 @@ void thread_start(void) {
 }
 
 static void recalculate_priority(struct thread *t) {
+    ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
+    ASSERT (thread_current() != idle_thread); 
     /* Calculate priority, using fixed point arithmetic. */
     t->priority = fixedpt_to_int_zero( 
                   fixedpt_sub(fixedpt_sub(int_to_fixedpt(PRI_MAX), 
@@ -165,6 +167,8 @@ static void recalculate_priority(struct thread *t) {
 }
 
 static void recalculate_recent_cpu(struct thread *t) {
+    ASSERT (thread_current() != idle_thread); 
+    ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
     /* Calculate recent_cpu, using fixed point arithmetic. */
     fixedpt fp2 = int_to_fixedpt(2);
     fixedpt fp1 = int_to_fixedpt(1);
@@ -176,6 +180,8 @@ static void recalculate_recent_cpu(struct thread *t) {
 }
 
 static void recalculate_load_avg(int ready_threads) {
+    ASSERT (thread_current() != idle_thread); 
+    ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
     fixedpt ready = int_to_fixedpt(ready_threads);
     fixedpt fp59 = int_to_fixedpt(59);
     fixedpt fp60 = int_to_fixedpt(60);
@@ -197,6 +203,7 @@ void thread_tick(void) {
 	int max_sleeper_pri = -1;
 
     ASSERT(intr_context());
+    ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
 
     /* Update statistics. */
     if (t == idle_thread)
@@ -320,7 +327,7 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
     /* Add to run queue. */
     thread_unblock(t);
 	
-	if (thread_mlfqs) {
+	if (thread_mlfqs && thread_current() != idle_thread) {
         /* Calculate the priority per MLFQ specifications. */
 		recalculate_priority(t);
 	}
@@ -577,6 +584,7 @@ void thread_set_nice(int nice UNUSED) {
 	struct list_elem *next_ready_elem;
     enum intr_level old_level;
 
+    ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
     old_level = intr_disable();
 
     recalculate_priority(cur);
@@ -685,14 +693,18 @@ static void init_thread(struct thread *t, const char *name, int priority) {
     t->donation_priority = -1;
 	
 	if (thread_mlfqs) {
-		/* If we're in the first thread, set recent_cpu to 0, otherwise set to
-		   current thread's recent_cpu. */
-		if (strcmp(name, "main") == 0) {
-			t->recent_cpu = 0;
-		}
-		else {
-			t->recent_cpu = thread_current()->recent_cpu;
-		}
+        if (t != idle_thread) {
+            /* If we're in the first thread, set recent_cpu to 0, otherwise set to
+               current thread's recent_cpu. */
+            if (strcmp(name, "main") == 0) {
+                t->recent_cpu = 0;
+                t->niceness = 0;
+            }
+            else {
+                t->recent_cpu = thread_current()->recent_cpu;
+                t->niceness = thread_get_nice();
+            }
+        }
 	}
 
     t->magic = THREAD_MAGIC;
