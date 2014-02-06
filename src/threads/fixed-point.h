@@ -24,14 +24,25 @@ fixedpt fixedpt_mul(fixedpt x, fixedpt y);
 fixedpt fixedpt_div(fixedpt x, fixedpt y);
 
 
+/*! Converts an integer to fixed-point type. */
 fixedpt int_to_fixedpt(int n) {
     return n * FIXED_POINT_F;
 }
 
+/*! Converts a fixed-point number to an integer.
+    Rounds towards 0.
+    E.g. -3.9 -> -3
+          2.1 ->  2
+          2.9 ->  2 */
 int fixedpt_to_int_zero(fixedpt x) {
     return x / FIXED_POINT_F;
 }
 
+/*! Converts a fixed-point number to an integer.
+    Rounds canonically.
+    E.g. -3.9 -> -4
+          2.1 ->  2
+          2.9 ->  3 */
 int fixedpt_to_int_nearest(fixedpt x) {
     if (x >= 0) {
         return (x + FIXED_POINT_F / 2) / FIXED_POINT_F;
