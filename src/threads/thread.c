@@ -757,12 +757,28 @@ static void * alloc_frame(struct thread *t, size_t size) {
     run queue is empty, return idle_thread. */
 static struct thread * next_thread_to_run(void) {
     ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+    struct list_elem *e;
+    int max_pri = -1;
+    struct thread *max_thread, *iter;
 
     if (list_empty(&ready_list)) {
         return idle_thread;
     } 
-
-    return list_entry(list_pop_front(&ready_list), struct thread, elem);
+    if (!thread_mlfqs) {    
+        return list_entry(list_pop_front(&ready_list), struct thread, elem);
+    }
+    else {
+        for (e = list_begin(&ready_list); e != list_end(&ready_list); 
+             e = list_next(e)) {
+            iter = list_entry(e, struct thread, elem);
+            if (iter->priority > max_pri) {
+                max_pri = iter->priority;
+                max_thread = iter;
+            } 
+        }
+        list_remove(&max_thread->elem);
+        return max_thread;
+    }
 }
 
 /*! Completes a thread switch by activating the new thread's page tables, and,
