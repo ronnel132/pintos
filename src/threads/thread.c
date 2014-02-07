@@ -416,7 +416,9 @@ void thread_unblock(struct thread *t) {
     t->status = THREAD_READY;
 
     /* Make sure the list is ordered */
-    ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+    if (!get_thread_mlfqs()) {
+        ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+    }
     intr_set_level(old_level);
 }
 
@@ -545,7 +547,9 @@ void thread_sleep(int64_t end_ticks) {
         list_insert_ordered(&sleep_list, &st->elem, &thread_sleep_less, NULL);
 
         /* Make sure the list is ordered */
-        ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+        if (!get_thread_mlfqs()) {
+            ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+        }
 
     }
     thread_block();
@@ -580,7 +584,9 @@ void thread_set_priority(int new_priority) {
     thread_current()->priority = new_priority;
 
     /* Make sure the list is ordered */
-    ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+    if (!get_thread_mlfqs()) {
+        ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+    }
 
     /* Max priority thread */
     max = list_entry(list_begin(&ready_list), struct thread, elem);
@@ -760,6 +766,10 @@ static struct thread * next_thread_to_run(void) {
     struct list_elem *e;
     int max_pri = -1;
     struct thread *max_thread, *iter;
+    /* Only assert sorted for NON mlfqs, other approach is manual in schedule */
+    if (!get_thread_mlfqs()) {
+        ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+    }
 
     if (list_empty(&ready_list)) {
         return idle_thread;
@@ -837,7 +847,10 @@ static void schedule(void) {
     ASSERT(cur->status != THREAD_RUNNING);
     ASSERT(is_thread(next));
 
-    ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+    /* Only assert sorted for NON mlfqs, other approach is manual in schedule */
+    if (!get_thread_mlfqs()) {
+        ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+    }
 
     if (cur != next)
         prev = switch_threads(cur, next);
@@ -860,7 +873,9 @@ void donate_priority(struct thread *donee) {
     list_sort(&ready_list, &ready_less, NULL);
 
     /* Make sure the list is ordered */
-    ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+    if (!get_thread_mlfqs()) {
+        ASSERT(list_sorted(&ready_list, &ready_less, NULL));
+    }
 
     intr_set_level(old_level);
 }
