@@ -241,6 +241,24 @@ and nested donations.
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+struct thread {
+    ...
+    int niceness;           /*!< Between -20 and 20. */
+    fixedpt recent_cpu;         /*!< CPU usage recently. */
+    ...
+};
+
+- We added the niceness and recent_cpu fields because under the advanced 
+scheduler each thread kept track of these values.
+
+static fixedpt load_avg = 0;
+
+- load_avg is a global variable to keep track of the load average for the 
+threading system.
+
+
+
+
 ---- ALGORITHMS ----
 
 >> C2: Suppose threads A, B, and C have nice values 0, 1, and 2.  Each
