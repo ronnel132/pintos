@@ -188,12 +188,12 @@ static void recalculate_recent_cpu(struct thread *t) {
     ASSERT (t->niceness >= NICE_MIN && t->niceness <= NICE_MAX);
     ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
     /* Calculate recent_cpu, using fixed point arithmetic. */
-    fixedpt fp2 = int_to_fixedpt(2);
-    fixedpt fp1 = int_to_fixedpt(1);
-    fixedpt coeff = fixedpt_div(fixedpt_mul(fp2, load_avg), 
-                                fixedpt_add(fixedpt_mul(fp2, load_avg), fp1));
     /* If not idle */
     if (t->tid != 2) {
+        fixedpt fp2 = int_to_fixedpt(2);
+        fixedpt fp1 = int_to_fixedpt(1);
+        fixedpt coeff = fixedpt_div(fixedpt_mul(fp2, load_avg), 
+                                    fixedpt_add(fixedpt_mul(fp2, load_avg), fp1));
         t->recent_cpu = fixedpt_add(fixedpt_mul(coeff, t->recent_cpu), 
                                 int_to_fixedpt(t->niceness)); 
     }
