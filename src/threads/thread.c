@@ -58,7 +58,7 @@ static long long kernel_ticks;  /*!< # of timer ticks in kernel threads. */
 static long long user_ticks;    /*!< # of timer ticks in user programs. */
 
 /* Global system load average. Initialized to zero. */
-static fixedpt load_avg;
+static fixedpt load_avg = 0;
 
 static void recalculate_priority(struct thread *t);
 static void recalculate_recent_cpu(struct thread *t);
@@ -125,7 +125,7 @@ void thread_init(void) {
     lock_init(&tid_lock);
 
     /* Initialize the load_avg to fixed point 0. */
-    load_avg = int_to_fixedpt(0);  
+    //load_avg = int_to_fixedpt(0);  
 
     list_init(&ready_list);
 
@@ -294,7 +294,7 @@ void thread_tick(void) {
     
     /* Enforce preemption. */
     if (++thread_ticks >= TIME_SLICE || 
-        max_sleeper_pri >= thread_get_priority())
+        max_sleeper_pri >= effective_priority(thread_current()))
         intr_yield_on_return();
 }
 
