@@ -109,20 +109,25 @@ condition, as if a number isn't divisible by 4, it won't be divisible by
 >> A4: How are race conditions avoided when multiple threads call
 >> timer_sleep() simultaneously?
 
-We created a global lock for when thread_sleep() (called by timer_sleep)
+We tried creating a global lock for when thread_sleep() (called by timer_sleep)
 is called, so that when we access the global sleep_list list struct, if 
 a thread has already acquired that lock than no other thread is allowed to
 modify the sleep_list. When the thread is done with the sleep_list, it 
-releases the lock. 
+releases the lock. We have to be careful to release lock before blocking,
+and disable interrupts before that.
+
+However, we didn't end up impelmenting this. We had a small complication
+last minute and thought that it wasn't worth risking. Interrupts have to 
+be disabled for block anyway, and time spent in thread_sleep should
+be minimal, so we just ended up disabling interrupts in that function.
 
 >> A5: How are race conditions avoided when a timer interrupt occurs
 >> during a call to timer_sleep()?
 
-The lock described above should ensure that if a thread is interrupted 
-while trying to sleep, it has the lock already so if another thread tries
-to sleep it will be unable to until the first thread does so. So even if
-a timer interrupt occurs and we context switch to another thread, this should
-not cause any issues.
+Essentially, while one thread is going to sleep, it can't be interrupted
+as will have disabled its interrupts. There's no race condition as whoever
+disables interrupts first gets to finish (can't get interrupted with
+interrupts off).
 
 
 ---- RATIONALE ----
@@ -130,11 +135,16 @@ not cause any issues.
 >> A6: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
 
-- We chose this design because it minimized the amount of time spend in
+- We chose the setting to sleep design over locks mainly for simplicity. Being
+that we're not on a multicore system it shouldn't be a big deal, and we
+shouldn't be spending too much time putting a thread to sleep.
+
+- We chose the wakeup design because it minimized the amount of time spend in
 thread_tick(), since we only have to check the beginning of sleep_list to 
 determine whether or not we have to wake up any threads. 
+
 - Another possibility was spinlocking, but that's clearly out of the question
-on a single-core machine.
+, especially on a single-core machine.
 
 			 PRIORITY SCHEDULING
 			 ===================
