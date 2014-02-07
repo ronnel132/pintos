@@ -24,6 +24,27 @@ One.
 
 >> If you have any preliminary comments on your submission, notes for the
 >> TAs, or extra credit, please give them here.
+Note that all but two tests fail:
+
+- priority-donate-chain: We quadruple checked all the priority
+donation stuff multiple times, and couldn't think of anything wrong
+with our logic. The interloopers should not be running before the
+main thread, because the main thread will become a donee from the
+higher priority thread. When we try to debug it by adding msg() statements
+in the test, the erraneous behaviour dissapears = impossible to debug.
+
+We're suspecting a strange race condition somewhere, but we also triple checked
+that we have disabled interrupts for all critical sections (i.e. where
+global state is being modified, or otherwise we can't be interrupted).
+
+- mlfqs-nice-10
+Our scheduler gives a 704 tick count, 7 more than expected. That's like
+less than 1%, hence we suspect that we may be doing a little bit too much
+work on the thread_tick() function. Different optimizations were made to
+minimize time spent in thread_tick() (some if-s were combined, redundant
+asserts were removed post-debugging, etc), but we still couldn't get
+the first thread's ticks close enough. 
+
 
 >> Please cite any offline or online sources you consulted while
 >> preparing your submission, other than the Pintos documentation, course
