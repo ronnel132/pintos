@@ -105,8 +105,21 @@ that needs to be woken up later) from the sleep_list to wake up the thread.
 >> A4: How are race conditions avoided when multiple threads call
 >> timer_sleep() simultaneously?
 
+We created a global lock for when thread_sleep() (called by timer_sleep)
+is called, so that when we access the global sleep_list list struct, if 
+a thread has already acquired that lock than no other thread is allowed to
+modify the sleep_list. When the thread is done with the sleep_list, it 
+releases the lock. 
+
 >> A5: How are race conditions avoided when a timer interrupt occurs
 >> during a call to timer_sleep()?
+
+The lock described above should ensure that if a thread is interrupted 
+while trying to sleep, it has the lock already so if another thread tries
+to sleep it will be unable to until the first thread does so. So even if
+a timer interrupt occurs and we context switch to another thread, this should
+not cause any issues.
+
 
 ---- RATIONALE ----
 
@@ -242,6 +255,12 @@ unblocked thread with the highest priority will run next.
 >> B6: Describe a potential race in thread_set_priority() and explain
 >> how your implementation avoids it.  Can you use a lock to avoid
 >> this race?
+
+We prevent the race condition in thread_set_priority() by disabling interrupts
+in this function, thus any thread in this function would not be able to be 
+interrupted. This should be fine because changing the current threads priority
+should not be a very time consuming operation. It is not necessary to use 
+locks here, because threads aren't modifying each other's priorities.
 
 ---- RATIONALE ----
 
@@ -391,7 +410,7 @@ website.
 >> In your opinion, was this assignment, or any one of the three problems
 >> in it, too easy or too hard?  Did it take too long or too little time?
 
-This assignment was very difficult and took
+This assignment was very difficult and took a very long time to debug.
 
 >> Did you find that working on a particular part of the assignment gave
 >> you greater insight into some aspect of OS design?
