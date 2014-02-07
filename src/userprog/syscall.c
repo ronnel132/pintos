@@ -10,9 +10,12 @@
 #include "filesys/filesys.h"
 #include "filesys/inode.h"
 
+#include "userprog/process.h"
+
 static void syscall_handler(struct intr_frame *);
 
 extern struct list dead_list;
+extern struct list all_list;
 
 void syscall_init(void) {
     intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
@@ -43,6 +46,7 @@ void exit(int status) {
  * arguments, and returns the new process's program id (pid).
  */
 pid_t exec(const char *cmd_line) {
+    tid_t tid = -1;
     // TODO: What synchronization are they suggesting in the assignment?
     // seems like this should work...
     if (is_user_vaddr(cmd_line)) {
@@ -65,7 +69,7 @@ int wait(pid_t pid) {
 
 
     /* If child is running, down its semaphore hence blocking yourself */
-    for (e = list_begin(&ready_list); e != list_end(&ready_list); 
+    for (e = list_begin(&all_list); e != list_end(&all_list); 
          e = list_next(e)) {
         iter = list_entry(e, struct thread, elem);
         if (iter->tid == tid) {
@@ -85,7 +89,7 @@ int wait(pid_t pid) {
     /* If we're here, the child should be already dead */
     for (e = list_begin(&dead_list); e != list_end(&dead_list); 
          e = list_next(e)) {
-        dead = list_entry(e, struct thread, elem);
+        dead = list_entry(e, struct thread_dead, elem);
         if (dead->tid == tid) {
             /* Check that it's our own child */
             if (dead->parent_id != thread_current()->tid) {
