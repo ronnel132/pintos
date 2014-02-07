@@ -262,7 +262,7 @@ unsigned tell(int fd) {
 
         cur_thread->process_details->num_files_open--;
     }
- }
+}
 
 /* Returns true if file descriptor refers to an open file */
 bool file_is_open(int fd) {
