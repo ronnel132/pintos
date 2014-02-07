@@ -38,8 +38,8 @@ that we have disabled interrupts for all critical sections (i.e. where
 global state is being modified, or otherwise we can't be interrupted).
 
 - mlfqs-nice-10
-Our scheduler gives a 704 tick count, 7 more than expected. That's like
-less than 1%, hence we suspect that we may be doing a little bit too much
+Our scheduler gives a 704 tick count, 11 more than expected. That's like
+1%, hence we suspect that we may be doing a little bit too much
 work on the thread_tick() function. Different optimizations were made to
 minimize time spent in thread_tick() (some if-s were combined, redundant
 asserts were removed post-debugging, etc), but we still couldn't get
@@ -100,6 +100,10 @@ earliest are stored closer to the beginning of the sleep_list. Thus, we simply
 pop the first list_elems (until we find a list_elem
 that needs to be woken up later) from the sleep_list to wake up the thread.
 
+- Moreover, we check if the number of ticks is % 100 inside the (% 4) if 
+condition, as if a number isn't divisible by 4, it won't be divisible by 
+100 either. This is a minor improvement though.
+
 ---- SYNCHRONIZATION ----
 
 >> A4: How are race conditions avoided when multiple threads call
@@ -116,6 +120,8 @@ that needs to be woken up later) from the sleep_list to wake up the thread.
 - We chose this design because it minimized the amount of time spend in
 thread_tick(), since we only have to check the beginning of sleep_list to 
 determine whether or not we have to wake up any threads. 
+- Another possibility was spinlocking, but that's clearly out of the question
+on a single-core machine.
 
 			 PRIORITY SCHEDULING
 			 ===================
