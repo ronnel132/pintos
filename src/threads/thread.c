@@ -503,7 +503,6 @@ tid_t thread_tid(void) {
     returns to the caller. */
 void thread_exit(void) {
     ASSERT(!intr_context());
-    struct thread_dead *dead; 
 
 #ifdef USERPROG
     struct thread_dead *td;
@@ -526,7 +525,7 @@ void thread_exit(void) {
     /* Else if no one is waiting for us, add us to the dead_list */
     else {
         /* Initialize stuff */
-        dead = palloc_get_page(PAL_ZERO);
+        td = palloc_get_page(PAL_ZERO);
         td->tid = thread_current()->tid;
 
         td->status = thread_current()->exit_status;
