@@ -124,9 +124,6 @@ void thread_init(void) {
 
     lock_init(&tid_lock);
 
-    /* Initialize the load_avg to fixed point 0. */
-    //load_avg = int_to_fixedpt(0);  
-
     list_init(&ready_list);
 
     list_init(&sleep_list);
@@ -162,8 +159,8 @@ static void recalculate_priority(struct thread *t) {
     ASSERT (t->niceness >= NICE_MIN && t->niceness <= NICE_MAX);
 
     /* If not idle */
-//     if (t->tid != 2) {
-    if (strcmp(t->name, "idle") != 0) {
+    if (t->tid != 2) {
+//     if (strcmp(t->name, "idle") != 0) {
         t->priority = fixedpt_to_int_zero( 
                       fixedpt_sub(fixedpt_sub(int_to_fixedpt(PRI_MAX), 
                       fixedpt_div(t->recent_cpu, int_to_fixedpt(4))),
@@ -190,8 +187,8 @@ static void recalculate_recent_cpu(struct thread *t) {
     ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
 
     /* If not idle */
-//     if (t->tid != 2) {
-    if (strcmp(t->name, "idle") != 0) {
+    if (t->tid != 2) {
+//     if (strcmp(t->name, "idle") != 0) {
         /* Calculate recent_cpu, using fixed point arithmetic. */
         fixedpt fp2 = int_to_fixedpt(2);
         fixedpt fp1 = int_to_fixedpt(1);
@@ -260,9 +257,6 @@ void thread_tick(void) {
 
 	if (thread_mlfqs) {
         /* Increment recent_cpu with fixed point arithmetic. */
-        if (t != idle_thread) {
-            t->recent_cpu = fixedpt_add(t->recent_cpu, int_to_fixedpt(1));
-        }
         
         /* Recalculate priority for all threads every fourth clock tick. */
         if (current_ticks % 4 == 0) {
@@ -286,6 +280,9 @@ void thread_tick(void) {
                 /* Update load_avg. */  
                 recalculate_load_avg();
             }
+        }
+        if (t != idle_thread) {
+            t->recent_cpu = fixedpt_add(t->recent_cpu, int_to_fixedpt(1));
         }
     }
 
@@ -891,7 +888,6 @@ void donate_priority(struct thread *donee) {
     /* Set donees priority to current thread's priority */
     donee->donation_priority = thread_get_priority();
 
-    /* TODO: ONLY If donee is in ready list, remove and reinsert, to reorder */
     list_sort(&ready_list, &ready_less, NULL);
 
     /* Make sure the list is ordered */
