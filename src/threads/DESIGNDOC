@@ -139,6 +139,28 @@ priority_donation_state.
 >> B2: Explain the data structure used to track priority donation.
 >> Use ASCII art to diagram a nested donation.  (Alternately, submit a
 >> .png file.)
+   
+   A                B               C
+________         ________       ________
+|      |        |      |        |      |
+|  5   |------->|  2   |------->|   0  |
+|______|        |______|        |______|
+
+The ASCII art above demonstrates a nested donation donation scenario, where
+the blocks represent threads, the number inside the block represents the 
+priority of that thread, the arrows above representing the donor/donee
+relation (donee has arrow pointing to it, donor has arrow leaving it), due to
+the donor lacking the lock its donee has. In this situation, A would be 
+running, because it has the highest priority. A would try to aquire lock a,
+but B has lock a. It would then donate its priority to B. Now B has "effective
+priority" 5. A would yield to B, letting B run. B would try to aquire lock b,
+but C has lock b. Then, B would donate its priority to C, so then C's 
+"effective priority" would now be 5. B would then yield to C, allowing C to 
+run. C finishes, and its donation priority will now be -1 because it no longer
+has any donations. Then B would run, acquire lock b, and finish, setting its 
+donation priority to -1, since it no longer has any donations either. Now,
+thread A, the original donor, is free to acquire lock a, and continue. 
+
 
 ---- ALGORITHMS ----
 
