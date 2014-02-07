@@ -256,8 +256,11 @@ static fixedpt load_avg = 0;
 - load_avg is a global variable to keep track of the load average for the 
 threading system.
 
+typedef int fixedpt;
 
-
+- fixedpt was typedef to keep track of when we are using fixed points instead
+of plain integers, so that we could use them with the various fixedpt 
+functions (add, mul, div, etc.). 
 
 ---- ALGORITHMS ----
 
@@ -269,23 +272,36 @@ threading system.
 timer  recent_cpu    priority   thread
 ticks   A   B   C   A   B   C   to run
 -----  --  --  --  --  --  --   ------
- 0
- 4
- 8
-12
-16
-20
-24
-28
-32
-36
+ 0      0   0   0  63  61  59     A
+ 4      4   0   0  62  61  59     A
+ 8      8   0   0  61  61  59     B 
+12      8   4   0  61  60  59     A
+16      12  4   0  60  60  59     B
+20      12  8   0  60  59  59     A
+24      16  8   0  59  59  59     B
+28      16  12  0  59  58  59     C
+32      16  12  4  59  58  58     A
+36      20  12  4  58  58  58     B
 
 >> C3: Did any ambiguities in the scheduler specification make values
 >> in the table uncertain?  If so, what rule did you use to resolve
 >> them?  Does this match the behavior of your scheduler?
 
+There were some ambiguities, like for when timer ticks is 24, and all
+of them were the same. In this situation, we rely on the round robin
+scheduling to determine which thread to run next. Whenever threads are
+placed in our ready_list, they are placed behind all threads of the same 
+priority. This gives other threads with the same priority the chance to 
+run.
+
 >> C4: How is the way you divided the cost of scheduling between code
 >> inside and outside interrupt context likely to affect performance?
+
+Most of the logic dealing with using the method in the advanced scheduler
+was located inside the interrupt context. which seemed necessary to us
+because many things in the advanced scheduler are based on time dependent.
+This could slow performance because the thread_tick function is expected to
+do a few operations then immediately be able to handle the next tick.
 
 ---- RATIONALE ----
 
@@ -294,12 +310,26 @@ ticks   A   B   C   A   B   C   to run
 >> time to work on this part of the project, how might you choose to
 >> refine or improve your design?
 
+As stated in C4, all our code was handled in interrupt context, but this is 
+because many calculations are time dependent. However, there are still a 
+few speedups that we could have made to improve the code. The one major 
+improvement would have been to keep the ready list sorted, so that in 
+next_thread_to_run() we can quickly determine which thread to run next, 
+rather than iterating through all threads and finding the max. However, this
+is a tradeoff, because in thread_tick(), since we recalculate the priorities
+of every thread, this implies that we would have had to sort the list in
+thread_tick. Thus, it is somewhat of a tradeoff, although given enough 
+time we probably could have gotten a faster, workable solution with a sorted
+ready_list.
+
 >> C6: The assignment explains arithmetic for fixed-point math in
 >> detail, but it leaves it open to you to implement it.  Why did you
 >> decide to implement it the way you did?  If you created an
 >> abstraction layer for fixed-point math, that is, an abstract data
 >> type and/or a set of functions or macros to manipulate fixed-point
 >> numbers, why did you do so?  If not, why not?
+
+
 
 			   SURVEY QUESTIONS
 			   ================
