@@ -301,6 +301,12 @@ ticks   A   B   C   A   B   C   to run
 >> type and/or a set of functions or macros to manipulate fixed-point
 >> numbers, why did you do so?  If not, why not?
 
+We implemented fixed-point numbers as just an integer type typedef'd
+to our own type, a fixedpt. Several functions were in charge of manipulating
+these these fixedpts: adding, subtracting, multiplying, and dividing. This
+was done so there was no confusion as to what type of number fixedpt was and
+what certain manipulation code was doing.
+
 			   SURVEY QUESTIONS
 			   ================
 
