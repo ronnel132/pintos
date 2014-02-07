@@ -238,6 +238,7 @@ void thread_tick(void) {
     struct thread_sleeping *current_sleeper;
     int64_t current_ticks;
     int max_sleeper_pri = -1;
+    int max_pri = -1;
     enum intr_level old_level;
 
 
@@ -265,6 +266,8 @@ void thread_tick(void) {
                  e = list_next(e)) {
                 iter_thread = list_entry(e, struct thread, allelem);
                 recalculate_priority(iter_thread);
+                if (iter_thread->priority > max_pri)
+                    max_pri = iter_thread->priority;
             }
 
             /* Recalculate recent_cpu and load_avg every second */
@@ -297,7 +300,7 @@ void thread_tick(void) {
             break;
         }
         if (effective_priority(current_sleeper->t) > max_sleeper_pri)
-            max_sleeper_pri = effective_priority(current_sleeper->t);
+            max_sleeper_pri = max(effective_priority(current_sleeper->t), max_pri);
         list_remove(&current_sleeper->elem);    
         thread_unblock(current_sleeper->t);
 
