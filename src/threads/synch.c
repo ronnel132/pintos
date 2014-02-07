@@ -73,7 +73,9 @@ void sema_down(struct semaphore *sema) {
 
     old_level = intr_disable();
     while (sema->value == 0) {
-        list_insert_ordered(&sema->waiters, &thread_current()->elem, &ready_less, NULL);
+        /* Insert thread ordered by priority */
+        list_insert_ordered(&sema->waiters, &thread_current()->elem, 
+            &ready_less, NULL);
         thread_block();
     }
     sema->value--;
@@ -139,6 +141,8 @@ void sema_up(struct semaphore *sema) {
         list_remove(&max_waiter->elem);
 
         sema->value++;
+
+        /* Unblock that thread, as it's good to go */
         thread_unblock(max_waiter);
 
         /* If the waiter that just got unblocked has higher priority */
@@ -190,7 +194,7 @@ static void sema_test_helper(void *sema_) {
         sema_up(&sema[1]);
     }
 }
-
+
 /*! Initializes LOCK.  A lock can be held by at most a single
     thread at any given time.  Our locks are not "recursive", that
     is, it is an error for the thread currently holding a lock to
@@ -237,9 +241,6 @@ void lock_acquire(struct lock *lock) {
          * that threads priority is less than current thread's priority,
          * donate priority to that thread
          */
-        // Before donating, make sure that the guy we're donating to 
-        // isn't blocked because he's already a donor to some other thread!
-        // So we should transfer the donation to the end thread, recursively.
         if ((lock->holder != NULL) && 
             (effective_priority(lock->holder) < thread_get_priority())) {
             pd_state = palloc_get_page(PAL_ZERO);
@@ -312,7 +313,7 @@ void lock_release(struct lock *lock) {
     if (!get_thread_mlfqs()) {
         old_level = intr_disable();
 
-        /* If the stack isn't empty */
+        /* If the donation list isn't empty */
         if (!list_empty(&pri_donation_list)) {
             e = list_begin(&pri_donation_list);
             while (e != list_end(&pri_donation_list)) {
@@ -320,7 +321,9 @@ void lock_release(struct lock *lock) {
                 if (cur_state->lock_desired == lock && 
                     cur_state->donee == thread_current()) {
 
-                    /* Jump to next one, then delete */
+                    /* Jump to next one, then delete current, as this
+                     * lock is being released
+                     */
                     e = list_next(e);
                     list_remove(&cur_state->elem);
                     palloc_free_page(cur_state);
@@ -331,6 +334,9 @@ void lock_release(struct lock *lock) {
                 
             }
 
+            /* Set the donated priority of the current thread to the
+             * largest donated priority of all its current donors
+             */
             for (e = list_begin(&pri_donation_list); 
                  e != list_end(&pri_donation_list); e = list_next(e)) {
                 cur_state = list_entry(e, struct priority_donation_state, elem);
@@ -360,7 +366,7 @@ bool lock_held_by_current_thread(const struct lock *lock) {
 
     return lock->holder == thread_current();
 }
-
+
 /*! One semaphore in a list. */
 struct semaphore_elem {
     struct list_elem elem;              /*!< List element. */
@@ -439,6 +445,10 @@ void cond_signal(struct condition *cond, struct lock *lock UNUSED) {
 
     old_level = intr_disable();
 
+    /* Loop through all waiters and wake up the waiter with the
+     * highest priority. We can't guarantee that this list is sorted
+     * as it may have changed in the meantime
+     */
     if (!list_empty(&cond->waiters)) {
         for (e = list_begin(&cond->waiters); e != list_end(&cond->waiters);
              e = list_next(e)) {

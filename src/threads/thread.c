@@ -239,10 +239,8 @@ void thread_tick(void) {
     int64_t current_ticks;
     int max_sleeper_pri = -1;
     int max_pri = -1;
-    enum intr_level old_level;
 
 
-    old_level = intr_disable();
 
     ASSERT(intr_context());
 
@@ -300,7 +298,7 @@ void thread_tick(void) {
             break;
         }
         if (effective_priority(current_sleeper->t) > max_sleeper_pri)
-            max_sleeper_pri = effective_priority(current_sleeper->t);
+            max_sleeper_pri = max(effective_priority(current_sleeper->t), max_pri);
         list_remove(&current_sleeper->elem);    
         thread_unblock(current_sleeper->t);
 
@@ -309,11 +307,9 @@ void thread_tick(void) {
     
     /* Enforce preemption. */
     if (++thread_ticks >= TIME_SLICE || 
-        max_sleeper_pri >= thread_get_priority() ||
-        max_pri >= thread_get_priority())
+        max_sleeper_pri >= thread_get_priority())
         intr_yield_on_return();
 
-    intr_set_level(old_level);
 }
 
 /*! Prints thread statistics. */
