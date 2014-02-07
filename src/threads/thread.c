@@ -105,7 +105,8 @@ int effective_priority(struct thread *t) {
 
 /* Return max priority of the list */
 int max_ready_priority() {
-    return effective_priority(list_entry(list_begin(&ready_list), struct thread, elem));
+    return effective_priority(list_entry(list_begin(&ready_list), 
+        struct thread, elem));
 }
 
 /*! Initializes the threading system by transforming the code
@@ -153,8 +154,10 @@ void thread_start(void) {
 }
 
 static void recalculate_priority(struct thread *t) {
-    ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
-    ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
+    ASSERT (thread_get_nice() >= NICE_MIN 
+        && thread_get_nice() <= NICE_MAX);
+    ASSERT (thread_get_priority() >= PRI_MIN 
+        && thread_get_priority() <= PRI_MAX);
     ASSERT (t->priority >= PRI_MIN && t->priority <= PRI_MAX);
     ASSERT (t->niceness >= NICE_MIN && t->niceness <= NICE_MAX);
 
@@ -176,7 +179,8 @@ static void recalculate_priority(struct thread *t) {
         }
     }
         
-    ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
+    ASSERT (thread_get_priority() >= PRI_MIN 
+        && thread_get_priority() <= PRI_MAX);
     ASSERT (t->priority >= PRI_MIN && t->priority <= PRI_MAX);
     ASSERT (t->niceness >= NICE_MIN && t->niceness <= NICE_MAX);
 }
@@ -193,17 +197,19 @@ static void recalculate_recent_cpu(struct thread *t) {
         fixedpt fp2 = int_to_fixedpt(2);
         fixedpt fp1 = int_to_fixedpt(1);
         fixedpt coeff = fixedpt_div(fixedpt_mul(fp2, load_avg), 
-                                    fixedpt_add(fixedpt_mul(fp2, load_avg), fp1));
+                                fixedpt_add(fixedpt_mul(fp2, load_avg), fp1));
         t->recent_cpu = fixedpt_add(fixedpt_mul(coeff, t->recent_cpu), 
                                 int_to_fixedpt(t->niceness)); 
     }
-    ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
+    ASSERT (thread_get_priority() >= PRI_MIN 
+        && thread_get_priority() <= PRI_MAX);
     ASSERT (t->priority >= PRI_MIN && t->priority <= PRI_MAX);
     ASSERT (t->niceness >= NICE_MIN && t->niceness <= NICE_MAX);
 }
 
 static void recalculate_load_avg() {
-    ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
+    ASSERT (thread_get_priority() >= PRI_MIN 
+        && thread_get_priority() <= PRI_MAX);
     ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
     fixedpt ready;
     static int i = 0;
@@ -216,15 +222,11 @@ static void recalculate_load_avg() {
     fixedpt fp60 = int_to_fixedpt(60);
     fixedpt fp1 = int_to_fixedpt(1);
 
-//     printf("========  %d  ==========\n", ++i);
-//     printf("Prev load avg: %d\n", thread_get_load_avg());
-//     printf("Ready threads: %d\n", fixedpt_to_int_nearest(ready));
-
     load_avg = fixedpt_add(fixedpt_mul(fixedpt_div(fp59, fp60), load_avg),
                fixedpt_mul(fixedpt_div(fp1, fp60), ready));
 
-//     printf("Updated load avg: %d\n", thread_get_load_avg());
-    ASSERT (thread_get_priority() >= PRI_MIN && thread_get_priority() <= PRI_MAX);
+    ASSERT (thread_get_priority() >= PRI_MIN 
+        && thread_get_priority() <= PRI_MAX);
 }
 
 /*! Called by the timer interrupt handler at each timer tick.
@@ -257,7 +259,6 @@ void thread_tick(void) {
     current_ticks = timer_ticks();
 
 	if (thread_mlfqs) {
-        /* Increment recent_cpu with fixed point arithmetic. */
         
         /* Recalculate priority for all threads every fourth clock tick. */
         if (current_ticks % 4 == 0) {
@@ -284,7 +285,9 @@ void thread_tick(void) {
                 recalculate_load_avg();
             }
         }
+
         if (t != idle_thread) {
+            /* Increment recent_cpu with fixed point arithmetic. */
             t->recent_cpu = fixedpt_add(t->recent_cpu, int_to_fixedpt(1));
         }
     }
@@ -302,7 +305,6 @@ void thread_tick(void) {
         thread_unblock(current_sleeper->t);
 
         e = list_next(e);
-//         palloc_free_page(current_sleeper);
     }
     
     /* Enforce preemption. */
@@ -509,7 +511,8 @@ void thread_yield(void) {
             cur_ready = list_entry(cur_ready_elem, struct thread, elem);
             if (effective_priority(cur_ready) == effective_priority(cur)) {
                 i = 0;
-                while (effective_priority(cur_ready) == effective_priority(cur) &&  i < list_size(&ready_list)) {
+                while (effective_priority(cur_ready) == effective_priority(cur)
+                        &&  i < list_size(&ready_list)) {
                     i++;
                     cur_ready_elem = list_next(cur_ready_elem);
                     cur_ready = list_entry(cur_ready_elem, struct thread, elem);
@@ -544,6 +547,7 @@ bool thread_sleep_less(const struct list_elem *elem1,
     return (st1->end_ticks <= st2->end_ticks);
 }
 
+/* Puts a thread to sleep until end_ticks */
 void thread_sleep(int64_t end_ticks) {
     struct thread *t = thread_current();
     struct thread_sleeping *st = palloc_get_page(PAL_ZERO);
@@ -552,16 +556,16 @@ void thread_sleep(int64_t end_ticks) {
     /* This shouldn't be called on an interrupt context */
     ASSERT(!intr_context());
 
+    /* Disable interrupts, as we shouldn't be interrupted here.
+     * We're dealing with running/blocked queues, hence we are 
+     * modifying global state.
+     */
     old_level = intr_disable();
+
     if (st == NULL) {
         thread_yield();
     }
     else {
-        /* Disable interrupts, as we shouldn't be interrupted here.
-         * We're dealing with running/blocked queues, hence we are 
-         * modifying global state.
-         */
-
         st->t = t;
         st->end_ticks = end_ticks;
         
@@ -574,6 +578,8 @@ void thread_sleep(int64_t end_ticks) {
         }
 
     }
+    
+    /* Take this thread off the ready list */
     thread_block();
     intr_set_level(old_level);
 }
@@ -801,6 +807,9 @@ static struct thread * next_thread_to_run(void) {
         return list_entry(list_pop_front(&ready_list), struct thread, elem);
     }
     else {
+        /* Loop through all threads and find the one that has the max
+         * priority. Return that one to get scheduled.
+         */
         for (e = list_begin(&ready_list); e != list_end(&ready_list); 
              e = list_next(e)) {
             iter = list_entry(e, struct thread, elem);
