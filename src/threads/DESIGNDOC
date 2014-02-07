@@ -145,7 +145,38 @@ priority_donation_state.
 >> B3: How do you ensure that the highest priority thread waiting for
 >> a lock, semaphore, or condition variable wakes up first?
 
-- In the case of locks, when a lock is released in lock_release, we remove 
+Thread yield is called at the end of the functions responsible for lifting
+locks, semaphores and conditions, and since we maintain always that the ready
+list remain sorted, threads that are unblocked will be placed in their correct
+position in the ready_list, so that when yield is called, we can always pop
+the first thread from the list, and be sure that it is the highest priority
+thread.
+
+
+>> B4: Describe the sequence of events when a call to lock_acquire()
+>> causes a priority donation.  How is nested donation handled?
+
+When lock_aquire() causes a priority donation, the following happens: The 
+thread running creates a priority donation state struct, and stores the
+lock it desires as well as the thread it is donating to in this struct,
+then stores this in the pri_donation_list. We deal with nested donation 
+through the following. Each time a thread donates it donates its 
+"effective priority", which is the max of its donation priority and its normal
+priority. Thus, if a thread donates to another thread whose priority is lower,
+and that donee donates to another lower priority thread, it donates its 
+"effective priority", and hence it will donate the original thread's priority
+(which is the highest of all three threads). Also, there is the special case
+we deal with when the thread we wish to donate to is blocked, in which case
+this would indicate that the donee is waiting for a lock, so we would donate
+the priority to the donee's donee (which we do by accessing the "donee" field
+in the thread struct). This idea is refined by following the path of blocked
+"donees" until we find an unblock donee who we can donate all the priority
+to. Thus, this will handle the nested donations. 
+
+>> B5: Describe the sequence of events when lock_release() is called
+>> on a lock that a higher-priority thread is waiting for.
+
+When a lock is released in lock_release, we remove 
 any priority_donation_state from pri_donation_list where lock_desired is the 
 lock we are releasing, and the donee is the current thread. In this case, the
 current thread running has "done its job" as a priority donee, by releasing 
@@ -162,12 +193,6 @@ newly unblocked threads are placed into their correct location in the sorted
 ready_list. Thus, when thread_yield is called, we can be sure that the newly
 unblocked thread with the highest priority will run next. 
 
->> B4: Describe the sequence of events when a call to lock_acquire()
->> causes a priority donation.  How is nested donation handled?
-
->> B5: Describe the sequence of events when lock_release() is called
->> on a lock that a higher-priority thread is waiting for.
-
 ---- SYNCHRONIZATION ----
 
 >> B6: Describe a potential race in thread_set_priority() and explain
@@ -178,6 +203,34 @@ unblocked thread with the highest priority will run next.
 
 >> B7: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
+
+We chose this design because it allows for any complicated forms of multiple
+donation and nested donations, which we encounter in the tests. We considered
+an idea before this one, of storing the previous priority (before the 
+priority donation) in the priority_donation_state, and then when the correct
+lock is released by the donee, the previous priority could be restored with
+the value in the priority_donation_state. However, we realized this idea was
+flawed, because it does not take into consideration multiple donations to the 
+same thread. For example, if thread A donates to thread B, then thread C 
+donates to thread B, under this method, the priority donation field of B would
+be set to -1 after it had finished acquiring A's lock. However, what if C had
+a larger donation to B than A did? Then B should should accept C's donation
+before we run A again. Our updated design iterates through the donation list,
+and checks if B is a donee for any other threads, and accepts the donation 
+from the largest donor if one exists. 
+
+There were several other design considerations that had to be carefully 
+implemented, for example dealing with when we wanted to donate to a blocked
+thread. In this case, it's not enough to donate to the blocked thread 
+directly, because that thread wouldn't be able to use the donation (since its
+blocked). Thus, we added a "donee" field to each thread, so that if we ever
+encountered a blocked thread, we can follow the path of "donees", until we
+find a thread that can run, and that we can donate to. This accomplishes the
+original donor's desire to get its own lock released, by "helping out" the 
+threads that hold its lock aquire their own desired locks. 
+
+Thus, our design is robust enough to handle any amount of priority donation
+and nested donations.
 
 			  ADVANCED SCHEDULER
 			  ==================
