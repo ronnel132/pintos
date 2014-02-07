@@ -31,7 +31,7 @@ static struct list sleep_list;
 
 /*! List of all processes.  Processes are added to this list
     when they are first scheduled and removed when they exit. */
-static struct list all_list;
+struct list all_list;
 
 /* Processes that are dead but haven't been reaped yet */
 #ifdef USERPROG
