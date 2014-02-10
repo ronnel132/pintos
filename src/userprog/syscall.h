@@ -8,7 +8,7 @@ void syscall_init(void);
  * "devices/shutdown.h"). This should be seldom used, because you 
  * lose some information about possible deadlock situations, etc. 
  */
-void halt (void);
+void halt(void);
 
 /* Terminates the current user program, returning status to the kernel. */
 void exit(int status);
