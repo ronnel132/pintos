@@ -94,6 +94,8 @@ typedef int tid_t;
    ready state is on the run queue, whereas only a thread in the
    blocked state is on a semaphore wait list.
 */
+
+// TODO: Add parent id field
 struct thread {
     /*! Owned by thread.c. */
     /**@{*/
@@ -103,8 +105,8 @@ struct thread {
     uint8_t *stack;                     /*!< Saved stack pointer. */
     int priority;                       /*!< Priority. */
     int donation_priority;              /*!< Donation priority (-1 if N/A). */
-  int niceness;           /*!< Between -20 and 20. */
-  fixedpt recent_cpu;         /*!< CPU usage recently. */
+    int niceness;           /*!< Between -20 and 20. */
+    fixedpt recent_cpu;         /*!< CPU usage recently. */
     struct list_elem allelem;           /*!< List element for all threads list. */
     /**@}*/
   

@@ -20,6 +20,8 @@
 
 static thread_func start_process NO_RETURN;
 static bool load(const char *cmdline, void (**eip)(void), void **esp);
+// TODO: Declare a list of dead processes, i.e. those who ahve terminated but
+// haven't been reaped yet
 
 /*! Starts a new thread running a user program loaded from FILENAME.  The new
     thread may be scheduled (and may even exit) before process_execute()
