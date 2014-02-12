@@ -19,7 +19,8 @@
 #include "threads/vaddr.h"
 
 static thread_func start_process NO_RETURN;
-static bool load(const char *cmdline, void (**eip)(void), void **esp);
+static bool load(const char **cmdline, void (**eip)(void), void **esp);
+char **tokenize_process_args(const char *raw_args, int *argc);
 // TODO: Declare a list of dead processes, i.e. those who ahve terminated but
 // haven't been reaped yet
 
@@ -27,27 +28,52 @@ static bool load(const char *cmdline, void (**eip)(void), void **esp);
     thread may be scheduled (and may even exit) before process_execute()
     returns.  Returns the new process's thread id, or TID_ERROR if the thread
     cannot be created. */
-tid_t process_execute(const char *file_name) {
+tid_t process_execute(const char *raw_args) {
     char *fn_copy;
+    char **argv;
+    int argc;
     tid_t tid;
-
-    /* Make a copy of FILE_NAME.
+    
+    /* Make a copy of RAW_ARGS.
        Otherwise there's a race between the caller and load(). */
-    fn_copy = palloc_get_page(0);
-    if (fn_copy == NULL)
+    raw_args_copy = palloc_get_page(0);
+    if (raw_args == NULL)
         return TID_ERROR;
-    strlcpy(fn_copy, file_name, PGSIZE);
+    strlcpy(raw_args_copy, raw_args, PGSIZE);
 
-    /* Create a new thread to execute FILE_NAME. */
-    tid = thread_create(file_name, PRI_DEFAULT, start_process, fn_copy);
+    /* Tokenize the input, obtain argv and argc for the process we are
+       starting. */
+    argv = tokenize_process_args(raw_args_copy, &argc);
+
+    /* Create a new thread to execute process argv[0] (the first char * in 
+       argv is the process name). */ 
+    tid = thread_create(argv[0], PRI_DEFAULT, start_process, (void *) argv);
     if (tid == TID_ERROR)
         palloc_free_page(fn_copy); 
     return tid;
 }
 
+char **tokenize_process_args(const char *raw_args, int *argc) {
+    char *token, *saveptr;
+    char **tokenized = palloc_get_page(0);
+    int i;
+
+    /* Use strtok_r, the reentrant version of strtok, to tokenize the input 
+       string. */
+    for (i = 0; ; i++, raw_args = NULL) {
+        token = strtok_r(raw_args, ' ', &saveptr);
+        if (token == NULL) 
+            break;
+        tokenized[i] = token;
+    }
+    /* Set the last value of the tokenized array to be NULL. */
+    tokenized[i] = NULL;
+    return tokenized;
+}
+
 /*! A thread function that loads a user process and starts it running. */
-static void start_process(void *file_name_) {
-    char *file_name = file_name_;
+static void start_process(void *argv_) {
+    char **argv = (char **) argv_;
     struct intr_frame if_;
     bool success;
 
@@ -56,10 +82,10 @@ static void start_process(void *file_name_) {
     if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
     if_.cs = SEL_UCSEG;
     if_.eflags = FLAG_IF | FLAG_MBS;
-    success = load(file_name, &if_.eip, &if_.esp);
+    success = load(argv, &if_.eip, &if_.esp);
 
     /* If load failed, quit. */
-    palloc_free_page(file_name);
+    palloc_free_page(argv);
     if (!success) 
         thread_exit();
 
@@ -192,7 +218,8 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
 /*! Loads an ELF executable from FILE_NAME into the current thread.  Stores the
     executable's entry point into *EIP and its initial stack pointer into *ESP.
     Returns true if successful, false otherwise. */
-bool load(const char *file_name, void (**eip) (void), void **esp) {
+/* TODO: Modify load() to use inputs argv and argc. */
+bool load(const char **argv, void (**eip) (void), void **esp) {
     struct thread *t = thread_current();
     struct Elf32_Ehdr ehdr;
     struct file *file = NULL;
