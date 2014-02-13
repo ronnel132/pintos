@@ -34,6 +34,16 @@ typedef int tid_t;
 #define NICE_MIN -20
 #define NICE_MAX 20
 
+
+/*! Process struct used by the kernel to keep track of process specific
+    information as opposed to thread specific information. */
+// TODO: Add parent id field
+struct process {
+    tid_t parent_id;
+    int num_files_open;
+    File * files[128];
+};
+
 /*! A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -95,7 +105,6 @@ typedef int tid_t;
    blocked state is on a semaphore wait list.
 */
 
-// TODO: Add parent id field
 struct thread {
     /*! Owned by thread.c. */
     /**@{*/
@@ -110,9 +119,12 @@ struct thread {
     struct list_elem allelem;           /*!< List element for all threads list. */
     /**@}*/
   
-  /* The thread this thread donates to. NULL if this thread doesn't donate
-     to any thread. */
-  struct thread *donee;
+    /* Process information */
+    struct process * process_details;
+
+    /* The thread this thread donates to. NULL if this thread doesn't donate
+       to any thread. */
+    struct thread *donee;
 
     /*! Shared between thread.c and synch.c. */
     /**@{*/

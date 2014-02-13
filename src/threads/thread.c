@@ -350,6 +350,7 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
     /* Initialize thread. */
     init_thread(t, name, priority);
     tid = t->tid = allocate_tid();
+    t->process_details->parent_id = tid;
 
     /* Stack frame for kernel_thread(). */
     kf = alloc_frame(t, sizeof *kf);
@@ -748,6 +749,10 @@ static void init_thread(struct thread *t, const char *name, int priority) {
     t->stack = (uint8_t *) t + PGSIZE;
     t->priority = priority;
     t->donation_priority = -1;
+
+    /* Addd process details */
+    t->process_details = malloc(sizeof(struct process));
+    t->process_details->num_files_open = 0;
 	
     if (thread_mlfqs) {
         /* If we're in the first thread, set recent_cpu to 0, otherwise set to
