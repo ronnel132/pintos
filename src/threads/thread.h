@@ -34,14 +34,18 @@ typedef int tid_t;
 #define NICE_MIN -20
 #define NICE_MAX 20
 
+/*! A process can have a max of 128 open files */
+#define MAX_OPEN_FILES 128
+
 
 /*! Process struct used by the kernel to keep track of process specific
     information as opposed to thread specific information. */
-// TODO: Add parent id field
+
 struct process {
     tid_t parent_id;
     int num_files_open;
-    File * files[128];
+    bool open_file_descriptors[MAX_OPEN_FILES];
+    File * files[MAX_OPEN_FILES];
 };
 
 /*! A kernel thread or user process.
