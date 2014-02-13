@@ -96,7 +96,7 @@ static void start_process(void *raw_args_) {
     if_.cs = SEL_UCSEG;
     if_.eflags = FLAG_IF | FLAG_MBS;
     
-    argv = process_process_args(raw_args, &argc); 
+    argv = tokenize_process_args(raw_args, &argc); 
     success = load(argc, argv, &if_.eip, &if_.esp);
 
     /* If load failed, quit. */
