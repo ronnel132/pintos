@@ -4,6 +4,7 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "devices/shutdown.h"
+#include "filesys/filesys.h"
 
 static void syscall_handler(struct intr_frame *);
 
@@ -44,26 +45,71 @@ int wait(pid_t pid) {
  * Returns true if successful, false otherwise. 
  */
 bool create(const char *file, unsigned initial_size) {
-	return false;
+	bool status = false;
+	// TODO LOCK
+	status = filesys_create(file, initial_size);
+	// TODO UNLOCK
+	return status;
 }
 
 /* Deletes the file called file. Returns true if successful, false otherwise.
  */
 bool remove(const char (file) {
-	return false;
+	bool status = false;
+	// TODO LOCK
+	status = filesys_remove(file, initial_size);
+	// TODO UNLOCK
+	return status;
 }
 
 /* Opens the file called file. Returns a nonnegative integer handle called 
  * a "file descriptor" (fd), or -1 if the file could not be opened. 
  */
 int open(const char *file) {
-	return false;
+	struct file * opened_file;
+	struct process_details * pd;
+	int file_descriptor = -1;
+	unsigned i;
+
+	// TODO filesys LOCK
+
+	opened_file = filesys_open(file, initial_size);
+
+	if (opened_file != NULL) {
+		pd = thread_current()->process_details;
+
+		if (pd->num_files_open < MAX_OPEN_FILES) {
+			/* Search for first available file descriptor */
+			for (i = 0; i < MAX_OPEN_FILES; i++) {
+				if (cur_thread->process_details->open_file_descriptors[i] == false) {
+					file_descriptor = i;
+					break;
+				}
+			}
+
+			pd->open_file_descriptors[file_descriptor] = true;
+			pd->files[num_files_open] = opened_file;
+			pds->num_files_open++;
+		}
+	}
+
+	// TODO UNLOCK
+	return file_descriptor;
 }
 
 
 /* Returns the size, in bytes, of the file open as fd. */
 int filesize(int fd) {
-	return false;
+	int size = -1;
+
+	// TODO: LOCK NEEDED OR NOT??
+	/* If file is indeed open */
+	if (thread_current()->process_details->open_file_descriptors[fd]) {
+		size = pd->files[fd]->inode->data->length;
+	}
+	// TODO UNLOCK
+
+	return file_descriptor;
 }
 
 /* Reads size bytes from the file open as fd into buffer. Returns the number
