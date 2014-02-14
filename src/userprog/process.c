@@ -29,16 +29,24 @@ char **tokenize_process_args(const char *raw_args, int *argc);
     returns.  Returns the new process's thread id, or TID_ERROR if the thread
     cannot be created. */
 tid_t process_execute(const char *raw_args) {
-    char *raw_args_copy, *thread_name;
+    char *raw_args_tok_copy, *raw_args_copy, *thread_name;
     char **argv;
     tid_t tid;
     
+    /* create one copy for tokenizing, since strtok modifies the original 
+       string. */
+    raw_args_tok_copy = palloc_get_page(0);
+    if (raw_args_tok_copy == NULL)
+        return TID_ERROR;
+    strlcpy(raw_args_tok_copy, raw_args, PGSIZE);
+
+    /* create the copy for passing to start_process. */
     raw_args_copy = palloc_get_page(0);
     if (raw_args_copy == NULL)
-        return TID_ERROR;
+        return TID_ERROR:
     strlcpy(raw_args_copy, raw_args, PGSIZE);
 
-    thread_name = strtok(raw_args_copy, ' ');
+    thread_name = strtok(raw_args_tok_copy, ' ');
 
     /* Create a new thread to execute process argv[0] (the first char * in 
        argv is the process name). */ 
