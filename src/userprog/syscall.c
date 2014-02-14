@@ -4,7 +4,9 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "devices/shutdown.h"
+
 #include "filesys/filesys.h"
+#include "filesys/inode.h"
 
 static void syscall_handler(struct intr_frame *);
 
@@ -103,9 +105,9 @@ int filesize(int fd) {
 	int size = -1;
 
 	// TODO: LOCK NEEDED OR NOT??
-	/* If file is indeed open */
+	/* If file is indeed open, return length */
 	if (thread_current()->process_details->open_file_descriptors[fd]) {
-		size = pd->files[fd]->inode->data->length;
+		size = inode_length(file_get_inode(pd->files[fd]));
 	}
 	// TODO UNLOCK
 
@@ -151,3 +153,12 @@ unsigned tell(int fd) {
  void close(int fd) {
  	return;
  }
+
+/* Returns true if file descriptor refers to an open file */
+bool file_is_open(int fd) {
+	return thread_current()->process_details->open_file_descriptors[fd];
+}
+
+struct file * get_file_struct(int fd) {
+	return thread_current()->process_details->files[fd];
+}
