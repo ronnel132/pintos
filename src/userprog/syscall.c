@@ -153,3 +153,12 @@ unsigned tell(int fd) {
  void close(int fd) {
  	return;
  }
+
+/* Returns true if file descriptor refers to an open file */
+bool file_is_open(int fd) {
+	return thread_current()->process_details->open_file_descriptors[fd];
+}
+
+struct file * get_file_struct(int fd) {
+	return thread_current()->process_details->files[fd];
+}
