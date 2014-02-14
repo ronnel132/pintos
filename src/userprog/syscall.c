@@ -120,7 +120,16 @@ int filesize(int fd) {
  * keyboard using input_getc().
  */
 int read(int fd, void *buffer, unsigned size) {
-	return false;
+	struct file * f;
+	int bytes_read = -1;
+
+	// TODO LOCKS
+	if (file_is_open(fd)) {
+		bytes_read = file_read(get_file_struct(fd), buffer, size);
+	}
+	// TODO UNLOCK
+
+	return bytes_read;
 }
 
 /* Writes size bytes from buffer to the open file fd. Returns the number of
