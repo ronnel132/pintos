@@ -752,6 +752,7 @@ static void init_thread(struct thread *t, const char *name, int priority) {
 
     /* Addd process details */
     t->process_details = malloc(sizeof(struct process));
+    memset(t->process_details->files, NULL, sizeof(struct file *) * MAX_OPEN_FILES);
     t->process_details->num_files_open = 0;
 	
     if (thread_mlfqs) {

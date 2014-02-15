@@ -119,7 +119,7 @@ int filesize(int fd) {
     // TODO: LOCK NEEDED OR NOT??
     /* If file is indeed open, return length */
     if (thread_current()->process_details->open_file_descriptors[fd]) {
-        size = inode_length(file_get_inode(pd->files[fd]));
+        size = file_length(pd->files[fd]);
     }
     // TODO UNLOCK
 
@@ -170,14 +170,24 @@ int write(int fd, const void *buffer, unsigned size) {
  * is the file's start.)
  */
 void seek(int fd, unsigned position) {
-    return false;
+    if (file_is_open(fd)) {
+        file_seek(get_file_struct(fd), position);
+    }
 }
 
 /* Returns the position of the next byte to be read or written in open file
  * fd, expressed in bytes from the beginning of the file.
  */
 unsigned tell(int fd) {
-    return 0;
+    unsigned pos = 0;
+
+    // TODO is this check needed??
+
+    if (file_is_open(fd)) {
+        pos = file_tell(get_file_struct(fd), position);
+    }
+
+    return pos;
 }
 
 /* Closes file descriptor fd. Exiting or terminating a process implicitly
@@ -185,7 +195,14 @@ unsigned tell(int fd) {
  * each one.
  */
  void close(int fd) {
-    return;
+    thread * cur_thread = thread_current();
+
+     if (file_is_open(fd)) {
+        file_close(get_file_struct(fd));
+        thread_current()->process_details->files[fd] = NULL;
+
+        cur_thread->process_details->num_files_open--;
+    }
  }
 
 /* Returns true if file descriptor refers to an open file */
