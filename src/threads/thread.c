@@ -387,6 +387,10 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
      * for this thread
      */
     waiter_sema = palloc_get_page(PAL_ZERO);
+    if (waiter_sema == NULL) {
+        return TID_ERROR;
+    }
+
     sema_init(waiter_sema, 1);
     t->waiter_sema = waiter_sema;
 
