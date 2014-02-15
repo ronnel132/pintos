@@ -5,6 +5,8 @@
 #include "threads/thread.h"
 #include "devices/shutdown.h"
 
+#include "threads/vaddr.h"
+
 #include "filesys/filesys.h"
 #include "filesys/inode.h"
 
@@ -38,7 +40,9 @@ void exit(int status) {
  * arguments, and returns the new process's program id (pid).
  */
 pid_t exec(const char *cmd_line) {
-    // TODO VERIFY POINTER
+    if (is_user_vaddr(cmd_line)) {
+        // TODO
+    }
     return -1;
 }
 
@@ -53,11 +57,12 @@ int wait(pid_t pid) {
 bool create(const char *file, unsigned initial_size) {
     bool status = false;
 
-    // TODO VERIFY POINTER
+    if (is_user_vaddr(file)) {
+        // TODO LOCK
+        status = filesys_create(file, initial_size);
+        // TODO UNLOCK
+    }
 
-    // TODO LOCK
-    status = filesys_create(file, initial_size);
-    // TODO UNLOCK
     return status;
 }
 
@@ -66,11 +71,12 @@ bool create(const char *file, unsigned initial_size) {
 bool remove(const char *file) {
     bool status = false;
     
-    // TODO VERIFY POINTER
+    if (is_user_vaddr(file)) {
+        // TODO LOCK
+        status = filesys_remove(file, initial_size);
+        // TODO UNLOCK
+    }
 
-    // TODO LOCK
-    status = filesys_remove(file, initial_size);
-    // TODO UNLOCK
     return status;
 }
 
@@ -83,31 +89,32 @@ int open(const char *file) {
     int file_descriptor = -1;
     unsigned i;
 
-    // TODO VERIFY POINTER??
+    if (is_user_vaddr(file)) {
+        // TODO filesys LOCK
 
-    // TODO filesys LOCK
+        opened_file = filesys_open(file, initial_size);
 
-    opened_file = filesys_open(file, initial_size);
+        if (opened_file != NULL) {
+            pd = thread_current()->process_details;
 
-    if (opened_file != NULL) {
-        pd = thread_current()->process_details;
-
-        if (pd->num_files_open < MAX_OPEN_FILES) {
-            /* Search for first available file descriptor */
-            for (i = 0; i < MAX_OPEN_FILES; i++) {
-                if (cur_thread->process_details->open_file_descriptors[i] == false) {
-                    file_descriptor = i;
-                    break;
+            if (pd->num_files_open < MAX_OPEN_FILES) {
+                /* Search for first available file descriptor */
+                for (i = 0; i < MAX_OPEN_FILES; i++) {
+                    if (cur_thread->process_details->open_file_descriptors[i] == false) {
+                        file_descriptor = i;
+                        break;
+                    }
                 }
-            }
 
-            pd->open_file_descriptors[file_descriptor] = true;
-            pd->files[num_files_open] = opened_file;
-            pds->num_files_open++;
+                pd->open_file_descriptors[file_descriptor] = true;
+                pd->files[num_files_open] = opened_file;
+                pds->num_files_open++;
+            }
         }
+
+        // TODO UNLOCK
     }
 
-    // TODO UNLOCK
     return file_descriptor;
 }
 
@@ -135,13 +142,13 @@ int read(int fd, void *buffer, unsigned size) {
     struct file * f;
     int bytes_read = -1;
 
-    // TODO VERIFY POINTER
-
-    // TODO LOCKS
-    if (file_is_open(fd)) {
-        bytes_read = file_read(get_file_struct(fd), buffer, size);
+    if (is_user_vaddr(buffer) && is_user_vaddr(buffer + size)) {
+        // TODO LOCKS
+        if (file_is_open(fd)) {
+            bytes_read = file_read(get_file_struct(fd), buffer, size);
+        }
+        // TODO UNLOCK
     }
-    // TODO UNLOCK
 
     return bytes_read;
 }
@@ -154,13 +161,13 @@ int write(int fd, const void *buffer, unsigned size) {
     struct file * f;
     int bytes_written = -1;
 
-    // TODO VERIFY POINTER
-
-    // TODO LOCKS
-    if (file_is_open(fd)) {
-        bytes_written = file_write(get_file_struct(fd), buffer, size);
+    if (is_user_vaddr(buffer) && is_user_vaddr(buffer + size)) {
+        // TODO LOCKS
+        if (file_is_open(fd)) {
+            bytes_written = file_write(get_file_struct(fd), buffer, size);
+        }
+        // TODO UNLOCK
     }
-    // TODO UNLOCK
 
     return bytes_written;
 }
