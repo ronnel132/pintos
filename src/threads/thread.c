@@ -507,8 +507,8 @@ void thread_exit(void) {
 #ifdef USERPROG
     /* No races here, interrupts disabled */
     /* If there's someone waiting for us, let them know that we're dying */
-    if (thread_current->waiter_sema->value == 0) {
-        sema_up(thread_current->waiter_sema);
+    if (thread_current()->waiter_sema->value == 0) {
+        sema_up(thread_current()->waiter_sema);
     }
     /* Else if no one is waiting for us, add us to the dead_list */
     else {
@@ -518,6 +518,7 @@ void thread_exit(void) {
 
         td->status = thread_current()->exit_status;
         td->waiter_sema = thread_current()->waiter_sema;
+        td->parent_id = thread_current()->process_details->parent_id;
         
         /* NOTE: td->elem will be alloced inside the struct */
         list_push_front(&dead_list, &td->elem)

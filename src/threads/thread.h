@@ -215,6 +215,9 @@ struct thread_dead {
     /* Thread ID. */
     tid_t tid;
 
+    /* Parent id */
+    tid_t parent_id;
+
     /* Exit status */
     int status;
 

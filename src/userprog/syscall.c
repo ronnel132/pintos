@@ -37,7 +37,6 @@ void halt (void) {
 void exit(int status) {
     thread_current()->exit_status = status;
     process_exit();
-    return;
 }
 
 /* Runs the executable whose name is given in cmd_line, passing any given 
@@ -53,18 +52,47 @@ pid_t exec(const char *cmd_line) {
 /* Waits for a child process pid and retrieves the child's exit status. */
 int wait(pid_t pid) {
     tid_t tid = (tid_t) pid;
-    int status;
+    int status = -2;
+    struct list_elem *e;
+    struct thread *iter;
+    struct thread_dead *dead;
 
     /* TODO: Maybe child isn't created at this point! */
+    /* TODO: Lock the ready_list somehow */
 
-    /* Check that it's a valid child */
-    /* Check that it's semaphore is 1 (not already waited, somehow) */
 
     /* If child is running, down its semaphore hence blocking yourself */
+    for (e = list_begin(&ready_list); e != list_end(&ready_list); 
+         e = list_next(e)) {
+        iter = list_entry(e, struct thread, elem);
+        if (iter->tid == tid) {
+            /* Check that it's our own child */
+            if (iter->process_details->parent_id != thread_current()->tid) {
+                return -1;
+            }
 
-    /* Otherwise, go find him in dead_list, get status, remove it from 
-     * dead_list as he's reaped.
-     */
+            /* No one should have waited on this guy previously... */
+            ASSERT(iter->waiter_sema->value == 1);
+
+            sema_down(iter->waiter_sema);
+            break;
+        } 
+    }
+
+    /* If we're here, the child should be already dead */
+    for (e = list_begin(&dead_list); e != list_end(&dead_list); 
+         e = list_next(e)) {
+        dead = list_entry(e, struct thread, elem);
+        if (dead->tid == tid) {
+            /* Check that it's our own child */
+            if (dead->parent_id != thread_current()->tid) {
+                return -1;
+            }
+            return dead->status;
+        } 
+    }
+
+    /* Shouldn't be here, so let's return -2 */
     return status;
 }
 
