@@ -41,10 +41,15 @@ typedef int tid_t;
 /*! Process struct used by the kernel to keep track of process specific
     information as opposed to thread specific information. */
 
+// TODO: It would probably be a good idea to add the thread id in which this
+// process is running on
 struct process {
+    // TODO: Shouldn't this be a pid_t?
     tid_t parent_id;
     int num_files_open;
     bool open_file_descriptors[MAX_OPEN_FILES];
+    // TODO: Eventually, we may wanna keep track of the children here so that
+    // we can verify parent-child relationships quickly
     File * files[MAX_OPEN_FILES];
 };
 
@@ -122,6 +127,8 @@ struct thread {
     fixedpt recent_cpu;         /*!< CPU usage recently. */
     struct list_elem allelem;           /*!< List element for all threads list. */
     /**@}*/
+
+    int exit_status;
   
     /* Process information */
     struct process * process_details;
@@ -140,6 +147,11 @@ struct thread {
     /**@{*/
     uint32_t *pagedir;                  /*!< Page directory. */
     /**@{*/
+
+    /* Semaphore used by waiter. Parent downs this semaphore when he wait()s
+     * for this child, and the child ups it when he exits
+     */
+    struct *semaphore = waiter_sema;
 #endif
 
     /*! Owned by thread.c. */
@@ -175,6 +187,12 @@ struct thread_mlfq_state {
 extern struct list pri_donation_list;
 
 
+/* Processes that are dead but haven't been reaped yet */
+#ifdef USERPROG
+extern struct list dead_list;
+#endif
+
+
 /*! A sleeping kernel thread.
     Stores the thread struct pointer and the time it
     should be unblocked.
@@ -189,6 +207,26 @@ struct thread_sleeping {
   /* List element for sleep list */
   struct list_elem elem;
 };
+
+
+#ifdef USERPROG
+/*! A waitee kernel thread, i.e. a thread for which its parent is waiting */
+struct thread_dead {
+    /* Thread ID. */
+    tid_t tid;
+
+    /* Exit status */
+    int status;
+
+    /* Semaphore used by waiter. Parent downs this semaphore when he wait()s
+     * for this child, and the child ups it when he exits
+     */
+    struct *semaphore = waiter_sema;
+
+    /* List element for dead list */
+    struct list_elem elem;
+};
+#endif
 
 /*! If false (default), use round-robin scheduler.
     If true, use multi-level feedback queue scheduler.

@@ -10,6 +10,8 @@
 
 static void syscall_handler(struct intr_frame *);
 
+extern struct list dead_list;
+
 void syscall_init(void) {
     intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
     // TODO: Register all system calls
@@ -31,6 +33,8 @@ void halt (void) {
 
 /* Terminates the current user program, returning status to the kernel. */
 void exit(int status) {
+    thread_current()->exit_status = status;
+    process_exit();
     return;
 }
 
@@ -44,7 +48,20 @@ pid_t exec(const char *cmd_line) {
 
 /* Waits for a child process pid and retrieves the child's exit status. */
 int wait(pid_t pid) {
-    return;
+    tid_t tid = (tid_t) pid;
+    int status;
+
+    /* TODO: Maybe child isn't created at this point! */
+
+    /* Check that it's a valid child */
+    /* Check that it's semaphore is 1 (not already waited, somehow) */
+
+    /* If child is running, down its semaphore hence blocking yourself */
+
+    /* Otherwise, go find him in dead_list, get status, remove it from 
+     * dead_list as he's reaped.
+     */
+    return status;
 }
 
 /* Creates a new file called file initially initial_size bytes in size. 

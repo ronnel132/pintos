@@ -33,6 +33,11 @@ static struct list sleep_list;
     when they are first scheduled and removed when they exit. */
 static struct list all_list;
 
+/* Processes that are dead but haven't been reaped yet */
+#ifdef USERPROG
+struct list dead_list;
+#endif
+
 /* Declare pri_donation_list struct from the header file definition */
 struct list pri_donation_list;
 
@@ -130,6 +135,10 @@ void thread_init(void) {
     list_init(&sleep_list);
     list_init(&all_list);
     list_init(&pri_donation_list);
+
+#ifdef USERPROG
+    list_init(&dead_list); 
+#endif
 
     /* Set up a thread structure for the running thread. */
     initial_thread = running_thread();
@@ -340,6 +349,9 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
     struct switch_threads_frame *sf;
     tid_t tid;
 
+    /* The semaphore that the waiter (parent) uses */
+    struct semaphore *waiter_sema;
+
     ASSERT(function != NULL);
 
     /* Allocate thread. */
@@ -367,8 +379,16 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
     sf->eip = switch_entry;
     sf->ebp = 0;
 
+
     /* Add to run queue. */
     thread_unblock(t);
+
+    /* Create semaphore and initialize to 1 (it's parent can now wait 
+     * for this thread
+     */
+    waiter_sema = palloc_get_page(PAL_ZERO);
+    sema_init(waiter_sema, 1);
+    t->waiter_sema = waiter_sema;
     
     /* If this thread's priority is higher than or equal than the 
      * running thread's priority, yield the processor
@@ -473,6 +493,7 @@ void thread_exit(void) {
     ASSERT(!intr_context());
 
 #ifdef USERPROG
+    struct thread_dead *td;
     process_exit();
 #endif
 
@@ -482,6 +503,26 @@ void thread_exit(void) {
     intr_disable();
     list_remove(&thread_current()->allelem);
     thread_current()->status = THREAD_DYING;
+
+#ifdef USERPROG
+    /* No races here, interrupts disabled */
+    /* If there's someone waiting for us, let them know that we're dying */
+    if (thread_current->waiter_sema->value == 0) {
+        sema_up(thread_current->waiter_sema);
+    }
+    /* Else if no one is waiting for us, add us to the dead_list */
+    else {
+        /* Initialize stuff */
+        thread_dead = palloc_get_page(PAL_ZERO);
+        td->tid = thread_current()->tid;
+
+        td->status = thread_current()->exit_status;
+        td->waiter_sema = thread_current()->waiter_sema;
+        
+        /* NOTE: td->elem will be alloced inside the struct */
+        list_push_front(&dead_list, &td->elem)
+    }
+#endif
     schedule();
     NOT_REACHED();
 }
