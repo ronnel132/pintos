@@ -36,7 +36,10 @@ void exit(int status) {
 /* Runs the executable whose name is given in cmd_line, passing any given 
  * arguments, and returns the new process's program id (pid).
  */
-pid_t exec(const char *cmd_line);
+pid_t exec(const char *cmd_line) {
+    // TODO VERIFY POINTER
+    return -1;
+}
 
 /* Waits for a child process pid and retrieves the child's exit status. */
 int wait(pid_t pid) {
@@ -48,6 +51,9 @@ int wait(pid_t pid) {
  */
 bool create(const char *file, unsigned initial_size) {
     bool status = false;
+
+    // TODO VERIFY POINTER
+
     // TODO LOCK
     status = filesys_create(file, initial_size);
     // TODO UNLOCK
@@ -56,8 +62,11 @@ bool create(const char *file, unsigned initial_size) {
 
 /* Deletes the file called file. Returns true if successful, false otherwise.
  */
-bool remove(const char (file) {
+bool remove(const char *file) {
     bool status = false;
+    
+    // TODO VERIFY POINTER
+
     // TODO LOCK
     status = filesys_remove(file, initial_size);
     // TODO UNLOCK
@@ -72,6 +81,8 @@ int open(const char *file) {
     struct process_details * pd;
     int file_descriptor = -1;
     unsigned i;
+
+    // TODO VERIFY POINTER??
 
     // TODO filesys LOCK
 
@@ -123,6 +134,8 @@ int read(int fd, void *buffer, unsigned size) {
     struct file * f;
     int bytes_read = -1;
 
+    // TODO VERIFY POINTER
+
     // TODO LOCKS
     if (file_is_open(fd)) {
         bytes_read = file_read(get_file_struct(fd), buffer, size);
@@ -139,6 +152,8 @@ int read(int fd, void *buffer, unsigned size) {
 int write(int fd, const void *buffer, unsigned size) {
     struct file * f;
     int bytes_written = -1;
+
+    // TODO VERIFY POINTER
 
     // TODO LOCKS
     if (file_is_open(fd)) {
