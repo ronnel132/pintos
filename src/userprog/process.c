@@ -261,6 +261,7 @@ bool load(int argc, const char **argvc, void (**eip) (void), void **esp) {
         printf("load: %s: open failed\n", argv[0]);
         goto done; 
     }
+    file_deny_write(file);
 
     /* Read and verify executable header. */
     if (file_read(file, &ehdr, sizeof ehdr) != sizeof ehdr ||
