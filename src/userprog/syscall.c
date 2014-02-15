@@ -137,7 +137,16 @@ int read(int fd, void *buffer, unsigned size) {
  * be written.
  */
 int write(int fd, const void *buffer, unsigned size) {
-    return false;
+    struct file * f;
+    int bytes_written = -1;
+
+    // TODO LOCKS
+    if (file_is_open(fd)) {
+        bytes_written = file_write(get_file_struct(fd), buffer, size);
+    }
+    // TODO UNLOCK
+
+    return bytes_written;
 }
 
 /* Changes the next byte to be read or written in open file fd to position,
