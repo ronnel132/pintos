@@ -9,8 +9,15 @@
 
 #include "filesys/filesys.h"
 #include "filesys/inode.h"
+#include "filesys/file.h"
 
 #include "userprog/process.h"
+
+
+#define file_is_open(fd) thread_current()->process_details->open_file_descriptors[fd]
+
+#define get_file_struct(fd) thread_current()->process_details->files[fd]
+
 
 static void syscall_handler(struct intr_frame *);
 
@@ -125,7 +132,7 @@ bool remove(const char *file) {
     
     if (is_user_vaddr(file)) {
         // TODO LOCK
-        status = filesys_remove(file, initial_size);
+        status = filesys_remove(file);
         // TODO UNLOCK
     }
 
@@ -137,14 +144,14 @@ bool remove(const char *file) {
  */
 int open(const char *file) {
     struct file * opened_file;
-    struct process_details * pd;
+    struct process * pd;
     int file_descriptor = -1;
     unsigned i;
 
     if (is_user_vaddr(file)) {
         // TODO filesys LOCK
 
-        opened_file = filesys_open(file, initial_size);
+        opened_file = filesys_open(file);
 
         if (opened_file != NULL) {
             pd = thread_current()->process_details;
@@ -152,15 +159,15 @@ int open(const char *file) {
             if (pd->num_files_open < MAX_OPEN_FILES) {
                 /* Search for first available file descriptor */
                 for (i = 0; i < MAX_OPEN_FILES; i++) {
-                    if (cur_thread->process_details->open_file_descriptors[i] == false) {
+                    if (pd->open_file_descriptors[i] == false) {
                         file_descriptor = i;
                         break;
                     }
                 }
 
                 pd->open_file_descriptors[file_descriptor] = true;
-                pd->files[num_files_open] = opened_file;
-                pds->num_files_open++;
+                pd->files[file_descriptor] = opened_file;
+                pd->num_files_open++;
             }
         }
 
@@ -174,15 +181,16 @@ int open(const char *file) {
 /* Returns the size, in bytes, of the file open as fd. */
 int filesize(int fd) {
     int size = -1;
+    struct process * pd = thread_current()->process_details;
 
     // TODO: LOCK NEEDED OR NOT??
     /* If file is indeed open, return length */
-    if (thread_current()->process_details->open_file_descriptors[fd]) {
+    if (pd->open_file_descriptors[fd]) {
         size = file_length(pd->files[fd]);
     }
     // TODO UNLOCK
 
-    return file_descriptor;
+    return size;
 }
 
 /* Reads size bytes from the file open as fd into buffer. Returns the number
@@ -191,7 +199,6 @@ int filesize(int fd) {
  * keyboard using input_getc().
  */
 int read(int fd, void *buffer, unsigned size) {
-    struct file * f;
     int bytes_read = -1;
 
     if (is_user_vaddr(buffer) && is_user_vaddr(buffer + size)) {
@@ -210,7 +217,6 @@ int read(int fd, void *buffer, unsigned size) {
  * be written.
  */
 int write(int fd, const void *buffer, unsigned size) {
-    struct file * f;
     int bytes_written = -1;
 
     if (is_user_vaddr(buffer) && is_user_vaddr(buffer + size)) {
@@ -243,7 +249,7 @@ unsigned tell(int fd) {
     // TODO is this check needed??
 
     if (file_is_open(fd)) {
-        pos = file_tell(get_file_struct(fd), position);
+        pos = file_tell(get_file_struct(fd));
     }
 
     return pos;
@@ -254,7 +260,7 @@ unsigned tell(int fd) {
  * each one.
  */
  void close(int fd) {
-    thread * cur_thread = thread_current();
+    struct thread * cur_thread = thread_current();
 
      if (file_is_open(fd)) {
         file_close(get_file_struct(fd));
@@ -262,13 +268,4 @@ unsigned tell(int fd) {
 
         cur_thread->process_details->num_files_open--;
     }
-}
-
-/* Returns true if file descriptor refers to an open file */
-bool file_is_open(int fd) {
-    return thread_current()->process_details->open_file_descriptors[fd];
-}
-
-struct file * get_file_struct(int fd) {
-    return thread_current()->process_details->files[fd];
 }
