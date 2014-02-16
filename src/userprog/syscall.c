@@ -43,10 +43,12 @@ void exit(int status) {
  * arguments, and returns the new process's program id (pid).
  */
 pid_t exec(const char *cmd_line) {
+    // TODO: What synchronization are they suggesting in the assignment?
+    // seems like this should work...
     if (is_user_vaddr(cmd_line)) {
-        // TODO
+        tid = process_execute(cmd_line);
     }
-    return -1;
+    return tid;
 }
 
 /* Waits for a child process pid and retrieves the child's exit status. */
@@ -57,8 +59,9 @@ int wait(pid_t pid) {
     struct thread *iter;
     struct thread_dead *dead;
 
-    /* TODO: Maybe child isn't created at this point! */
-    /* TODO: Lock the ready_list somehow */
+    /* TODO: Maybe child isn't created at this point! Use a semaphore or sth */
+
+    /* TODO: Lock the ready_list somehow (disable interrupts?) */
 
 
     /* If child is running, down its semaphore hence blocking yourself */
