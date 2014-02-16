@@ -54,7 +54,8 @@ tid_t process_execute(const char *raw_args) {
        argv is the process name). */ 
     tid = thread_create(thread_name, PRI_DEFAULT, start_process, raw_args_copy);
     if (tid == TID_ERROR)
-        palloc_free_page(fn_copy); 
+        palloc_free_page(raw_args_tok_copy); 
+        palloc_free_page(raw_args_copy); 
     return tid;
 }
 
