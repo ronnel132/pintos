@@ -30,7 +30,6 @@ char **tokenize_process_args(const char *raw_args, int *argc);
     cannot be created. */
 tid_t process_execute(const char *raw_args) {
     char *raw_args_tok_copy, *raw_args_copy, *thread_name, *delim, *saveptr;
-    char **argv;
     tid_t tid;
     
     /* create one copy for tokenizing, since strtok modifies the original 
@@ -500,7 +499,7 @@ static bool setup_stack(void **esp, int argc, char **argv) {
             *((int *) offset) = argc;
         
             /* Lastly, push the dummy return address, 0. */
-            offset -= sizeof((void (*) ()));
+            offset -= sizeof(int);
             *((int *) offset) = 0;
 
             *esp = offset;
