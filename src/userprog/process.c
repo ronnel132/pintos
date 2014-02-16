@@ -463,7 +463,7 @@ static bool setup_stack(void **esp, int argc, char **argv) {
     kpage = palloc_get_page(PAL_USER | PAL_ZERO);
     if (kpage != NULL) {
         success = install_page(((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
-        if (success)
+        if (success) {
             /* Set up the stack. */
             for (i = argc - 1; i >= 0; i--) {
                 /* Subtract from the offset the length of the string (plus 
@@ -506,6 +506,7 @@ static bool setup_stack(void **esp, int argc, char **argv) {
             *esp = offset;
             palloc_free_page(argv);
             palloc_free_page(argv_string_page);
+        }
         else
             palloc_free_page(kpage);
     }
