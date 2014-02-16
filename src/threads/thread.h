@@ -150,8 +150,13 @@ struct thread {
     /* Semaphore used by waiter. Parent downs this semaphore when he wait()s
      * for this child, and the child ups it when he exits
      */
+<<<<<<< HEAD
     struct semaphore *waiter_sema;
     /**@{*/
+=======
+    struct *semaphore waiter_sema;
+    /**@}*/
+>>>>>>> dd4de9b7ac2db9c32df2a4671cdb9ac3577e5c53
 #endif
 
     /*! Owned by thread.c. */

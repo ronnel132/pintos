@@ -1,6 +1,8 @@
 #ifndef USERPROG_SYSCALL_H
 #define USERPROG_SYSCALL_H
 
+#include "threads/thread.h"
+
 /* Installs the syscall handler into the interrupt vector table. */
 void syscall_init(void);
 
