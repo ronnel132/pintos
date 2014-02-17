@@ -127,6 +127,7 @@ int max_ready_priority() {
     It is not safe to call thread_current() until this function finishes. */
 void thread_init(void) {
     ASSERT(intr_get_level() == INTR_OFF);
+    struct semaphore *waiter_sema;
 
     lock_init(&tid_lock);
 
@@ -145,6 +146,24 @@ void thread_init(void) {
     init_thread(initial_thread, "main", PRI_DEFAULT);
     initial_thread->status = THREAD_RUNNING;
     initial_thread->tid = allocate_tid();
+#ifdef USERPROG
+    /* Create semaphore and initialize to 1 (it's parent can now wait 
+     * for this thread
+     */
+    waiter_sema = palloc_get_page(PAL_ZERO);
+    if (waiter_sema == NULL) {
+        return TID_ERROR;
+    }
+
+    sema_init(waiter_sema, 1);
+    initial_thread->waiter_sema = waiter_sema;
+
+    /* Set the exit status to -1; If exit() is called, this will be changed.
+     * Otherwise it means that exit() wasn't called, hence -1 should remain
+     * as the status, as per spec.
+     */
+    initial_thread->exit_status = -1;
+#endif
 }
 
 /*! Starts preemptive thread scheduling by enabling interrupts.
@@ -521,7 +540,7 @@ void thread_exit(void) {
        when it calls thread_schedule_tail(). */
     intr_disable();
     list_remove(&thread_current()->allelem);
-    printf("YOLO\n");
+    printf("here1\n");
 #ifdef USERPROG
 
     /* No races here, interrupts disabled */
@@ -543,6 +562,7 @@ void thread_exit(void) {
         list_push_front(&dead_list, &td->elem);
     }
 #endif
+    printf("here2\n");
     thread_current()->status = THREAD_DYING;
 
     schedule();
