@@ -18,8 +18,11 @@
 
 #define get_file_struct(fd) thread_current()->process_details->files[fd]
 
+/*! Lock used by filesystem syscalls. */
+static struct lock filesys_lock;
 
 static void syscall_handler(struct intr_frame *);
+
 
 extern struct list dead_list;
 extern struct list all_list;
