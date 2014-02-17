@@ -383,10 +383,10 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
     /* Add to run queue. */
     thread_unblock(t);
 
+#ifdef USERPROG
     /* Create semaphore and initialize to 1 (it's parent can now wait 
      * for this thread
      */
-#ifdef USERPROG
     waiter_sema = palloc_get_page(PAL_ZERO);
     if (waiter_sema == NULL) {
         return TID_ERROR;
@@ -394,13 +394,14 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
 
     sema_init(waiter_sema, 1);
     t->waiter_sema = waiter_sema;
-#endif
 
     /* Set the exit status to -1; If exit() is called, this will be changed.
      * Otherwise it means that exit() wasn't called, hence -1 should remain
      * as the status, as per spec.
      */
     t->exit_status = -1;
+#endif
+
     
     /* If this thread's priority is higher than or equal than the 
      * running thread's priority, yield the processor
