@@ -362,7 +362,6 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
     /* Initialize thread. */
     init_thread(t, name, priority);
     tid = t->tid = allocate_tid();
-
 #ifdef USERPROG
     t->process_details->parent_id = tid;
 #endif
@@ -386,7 +385,6 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
     /* Add to run queue. */
     thread_unblock(t);
 
-
 #ifdef USERPROG
     /* Create semaphore and initialize to 1 (it's parent can now wait 
      * for this thread
@@ -405,7 +403,6 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
      */
     t->exit_status = -1;
 #endif
-
     
     /* If this thread's priority is higher than or equal than the 
      * running thread's priority, yield the processor
