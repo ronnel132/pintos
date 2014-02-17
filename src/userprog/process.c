@@ -29,7 +29,7 @@ char **tokenize_process_args(const char *raw_args, int *argc);
     returns.  Returns the new process's thread id, or TID_ERROR if the thread
     cannot be created. */
 tid_t process_execute(const char *raw_args) {
-    char *raw_args_tok_copy, *raw_args_copy, *thread_name, *delim, *saveptr;
+    char *raw_args_tok_copy, *raw_args_copy, *thread_name, *saveptr;
     tid_t tid;
     
     /* create one copy for tokenizing, since strtok modifies the original 
@@ -45,9 +45,7 @@ tid_t process_execute(const char *raw_args) {
         return TID_ERROR;
     strlcpy(raw_args_copy, raw_args, PGSIZE);
 
-    *delim = ' ';
-
-    thread_name = strtok_r(raw_args_tok_copy, delim, &saveptr);
+    thread_name = strtok_r(raw_args_tok_copy, " ", &saveptr);
 
     /* Create a new thread to execute process argv[0] (the first char * in 
        argv is the process name). */ 
@@ -77,7 +75,7 @@ char **tokenize_process_args(const char *raw_args, int *argc) {
     /* Use strtok_r, the reentrant version of strtok, to tokenize the input 
        string. */
     for (i = 0, *argc = 0; ; i++, raw_args = NULL) {
-        token = strtok_r(raw_args, ' ', &saveptr);
+        token = strtok_r(raw_args, " ", &saveptr);
         if (token == NULL) 
             break;
         (*argc)++;
@@ -95,7 +93,7 @@ char **tokenize_process_args(const char *raw_args, int *argc) {
 /*! A thread function that loads a user process and starts it running. */
 static void start_process(void *raw_args_) {
     char *raw_args = (char *) raw_args_;
-    char **argv;
+    const char **argv;
     int argc;
     struct intr_frame if_;
     bool success;
@@ -334,7 +332,7 @@ bool load(int argc, const char **argv, void (**eip) (void), void **esp) {
     }
 
     /* Set up stack. */
-    if (!setup_stack(esp, argc, argv))
+    if (!setup_stack(esp, argc, (char **) argv))
         goto done;
 
     /* Start address. */
