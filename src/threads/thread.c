@@ -405,11 +405,8 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
     sema_init(waiter_sema, 1);
     t->waiter_sema = waiter_sema;
 
-    /* Set the exit status to -1; If exit() is called, this will be changed.
-     * Otherwise it means that exit() wasn't called, hence -1 should remain
-     * as the status, as per spec.
-     */
-    t->exit_status = -1;
+    /* Set the exit status to 0 */
+    t->exit_status = 0;
 #endif
     
     /* If this thread's priority is higher than or equal than the 
