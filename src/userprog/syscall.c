@@ -45,6 +45,7 @@ void halt (void) {
 
 /* Terminates the current user program, returning status to the kernel. */
 void exit(int status) {
+    printf("in exit()\n");
     thread_current()->exit_status = status;
     process_exit();
 }
@@ -69,6 +70,7 @@ int wait(pid_t pid) {
     struct list_elem *e;
     struct thread *iter;
     struct thread_dead *dead;
+    printf("in wait()\n");
 
     while (1);
 
@@ -150,6 +152,8 @@ int open(const char *file) {
     int file_descriptor = -1;
     unsigned i;
 
+    printf("in open()\n");
+
     if (is_user_vaddr(file)) {
         // TODO filesys LOCK
 
@@ -183,6 +187,7 @@ int open(const char *file) {
 /* Returns the size, in bytes, of the file open as fd. */
 int filesize(int fd) {
     int size = -1;
+    printf("in filesize()\n");
     struct process * pd = thread_current()->process_details;
 
     // TODO: LOCK NEEDED OR NOT??
@@ -262,6 +267,8 @@ unsigned tell(int fd) {
  * each one.
  */
  void close(int fd) {
+
+    printf("in close()\n");
     struct thread * cur_thread = thread_current();
 
      if (file_is_open(fd)) {
