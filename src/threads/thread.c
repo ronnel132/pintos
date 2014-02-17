@@ -512,6 +512,7 @@ void thread_exit(void) {
 
 #ifdef USERPROG
     struct thread_dead *td;
+    process_exit();
 #endif
     printf("at thread_exit()\n");
 
@@ -520,10 +521,8 @@ void thread_exit(void) {
        when it calls thread_schedule_tail(). */
     intr_disable();
     list_remove(&thread_current()->allelem);
-    thread_current()->status = THREAD_DYING;
-
+    printf("YOLO\n");
 #ifdef USERPROG
-    process_exit();
 
     /* No races here, interrupts disabled */
     /* If there's someone waiting for us, let them know that we're dying */
@@ -544,6 +543,8 @@ void thread_exit(void) {
         list_push_front(&dead_list, &td->elem);
     }
 #endif
+    thread_current()->status = THREAD_DYING;
+
     schedule();
     NOT_REACHED();
 }

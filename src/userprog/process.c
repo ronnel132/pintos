@@ -34,6 +34,7 @@ tid_t process_execute(const char *raw_args) {
     
     /* create one copy for tokenizing, since strtok modifies the original 
        string. */
+    printf("in process_execute()\n");
     raw_args_tok_copy = palloc_get_page(0);
     if (raw_args_tok_copy == NULL)
         return TID_ERROR;
@@ -53,6 +54,7 @@ tid_t process_execute(const char *raw_args) {
     if (tid == TID_ERROR)
         palloc_free_page(raw_args_tok_copy); 
         palloc_free_page(raw_args_copy); 
+    printf("in process_execute(); assigned tid:%d\n", tid);
     return tid;
 }
 
