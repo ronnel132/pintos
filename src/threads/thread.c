@@ -518,14 +518,13 @@ void thread_exit(void) {
     struct thread_dead *td;
     process_exit();
 #endif
-    printf("at thread_exit()\n");
+//     printf("at thread_exit()\n");
 
     /* Remove thread from all threads list, set our status to dying,
        and schedule another process.  That process will destroy us
        when it calls thread_schedule_tail(). */
     intr_disable();
     list_remove(&thread_current()->allelem);
-    printf("here1\n");
 #ifdef USERPROG
 
     /*
@@ -557,9 +556,9 @@ void thread_exit(void) {
             /* NOTE: td->elem will be alloced inside the struct */
             list_push_front(&dead_list, &td->elem);
         }
+        printf("%s exit(%d)\n", thread_current()->name, thread_current()->exit_status);
     }
 #endif
-    printf("here2\n");
     thread_current()->status = THREAD_DYING;
 
     schedule();
