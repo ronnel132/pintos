@@ -132,6 +132,8 @@ void thread_init(void) {
 
     list_init(&ready_list);
 
+    printf("initing thread\n");
+
     list_init(&sleep_list);
     list_init(&all_list);
     list_init(&pri_donation_list);
@@ -157,6 +159,7 @@ void thread_start(void) {
 
     /* Start preemptive thread scheduling. */
     intr_enable();
+    printf("starting thread\n");
 
     /* Wait for the idle thread to initialize idle_thread. */
     sema_down(&idle_started);
@@ -362,7 +365,10 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
     /* Initialize thread. */
     init_thread(t, name, priority);
     tid = t->tid = allocate_tid();
+
+#ifdef USERPROG
     t->process_details->parent_id = tid;
+#endif
 
     /* Stack frame for kernel_thread(). */
     kf = alloc_frame(t, sizeof *kf);
@@ -382,6 +388,7 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
 
     /* Add to run queue. */
     thread_unblock(t);
+
 
 #ifdef USERPROG
     /* Create semaphore and initialize to 1 (it's parent can now wait 
