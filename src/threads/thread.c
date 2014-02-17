@@ -132,8 +132,6 @@ void thread_init(void) {
 
     list_init(&ready_list);
 
-    printf("initing thread\n");
-
     list_init(&sleep_list);
     list_init(&all_list);
     list_init(&pri_donation_list);
@@ -159,7 +157,6 @@ void thread_start(void) {
 
     /* Start preemptive thread scheduling. */
     intr_enable();
-    printf("starting thread\n");
 
     /* Wait for the idle thread to initialize idle_thread. */
     sema_down(&idle_started);
