@@ -27,10 +27,9 @@ static void syscall_handler(struct intr_frame *);
 extern struct list dead_list;
 extern struct list all_list;
 
+/* Installs the syscall_handler into the interrupt vector table. */
 void syscall_init(void) {
     intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
-    // TODO: Register all system calls
-    // EDIT: You sure? Seems like we don't have to do anything here...
 }
 
 static void syscall_handler(struct intr_frame *f UNUSED) {
