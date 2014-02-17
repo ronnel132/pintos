@@ -514,11 +514,10 @@ tid_t thread_tid(void) {
 void thread_exit(void) {
     ASSERT(!intr_context());
 
+//     printf("at thread_exit()\n");
 #ifdef USERPROG
     struct thread_dead *td;
-    process_exit();
 #endif
-//     printf("at thread_exit()\n");
 
     /* Remove thread from all threads list, set our status to dying,
        and schedule another process.  That process will destroy us
@@ -558,6 +557,7 @@ void thread_exit(void) {
         }
         printf("%s exit(%d)\n", thread_current()->name, thread_current()->exit_status);
     }
+    process_exit();
 #endif
     thread_current()->status = THREAD_DYING;
 
