@@ -70,6 +70,8 @@ int wait(pid_t pid) {
     struct thread *iter;
     struct thread_dead *dead;
 
+    while (1);
+
     /* TODO: Maybe child isn't created at this point! Use a semaphore or sth */
 
     /* TODO: Lock the ready_list somehow (disable interrupts?) */
