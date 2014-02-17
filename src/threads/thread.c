@@ -363,6 +363,10 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
     init_thread(t, name, priority);
     tid = t->tid = allocate_tid();
 #ifdef USERPROG
+    /* Add process details */
+    t->process_details = palloc_get_page(PAL_ZERO);
+    memset(t->process_details, 0, sizeof (struct process));
+    t->process_details->num_files_open = 0;
     t->process_details->parent_id = tid;
 #endif
 
@@ -822,12 +826,6 @@ static void init_thread(struct thread *t, const char *name, int priority) {
 
     t->magic = THREAD_MAGIC;
 
-#ifdef USERPROG
-    /* Add process details */
-    t->process_details = palloc_get_page(PAL_ZERO);
-    memset(t->process_details, 0, sizeof (struct process));
-    t->process_details->num_files_open = 0;
-#endif
 
     old_level = intr_disable();
     list_push_back(&all_list, &t->allelem);
