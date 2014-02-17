@@ -555,7 +555,7 @@ void thread_exit(void) {
             /* NOTE: td->elem will be alloced inside the struct */
             list_push_front(&dead_list, &td->elem);
         }
-        printf("%s exit(%d)\n", thread_current()->name, thread_current()->exit_status);
+        printf("%s: exit(%d)\n", thread_current()->name, thread_current()->exit_status);
     }
     process_exit();
 #endif
