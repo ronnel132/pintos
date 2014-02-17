@@ -809,7 +809,7 @@ static void init_thread(struct thread *t, const char *name, int priority) {
 #ifdef USERPROG
     /* Add process details */
     t->process_details = palloc_get_page(PAL_ZERO);
-    memset(t->process_details->files, 0, sizeof(struct file *) * MAX_OPEN_FILES);
+    memset(t->process_details, 0, sizeof (struct process));
     t->process_details->num_files_open = 0;
 #endif
 	
