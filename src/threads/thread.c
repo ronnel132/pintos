@@ -153,33 +153,11 @@ void thread_start(void) {
     /* Create the idle thread. */
     struct semaphore idle_started;
     struct semaphore *waiter_sema;
-#ifdef USERPROG
-    /* Create semaphore and initialize to 1 (it's parent can now wait 
-     * for this thread
-     */
-    waiter_sema = palloc_get_page(PAL_ZERO);
-    if (waiter_sema == NULL) {
-        /* Sucks to suck... */
-    }
-
-    sema_init(waiter_sema, 1);
-    thread_current()->waiter_sema = waiter_sema;
-
-    /* Set the exit status to -1; If exit() is called, this will be changed.
-     * Otherwise it means that exit() wasn't called, hence -1 should remain
-     * as the status, as per spec.
-     */
-    thread_current()->exit_status = -1;
-
-    /* Add process details */
-    thread_current()->process_details = palloc_get_page(PAL_ZERO);
-    memset(thread_current()->process_details, 0, sizeof (struct process));
-    thread_current()->process_details->num_files_open = 0;
-    /* Set ppid 0 for the very first thread */
-    thread_current()->process_details->parent_id = 0;
-#endif
     sema_init(&idle_started, 0);
     thread_create("idle", PRI_MIN, idle, &idle_started);
+#ifdef USERPROG
+    thread_current()->process_details = NULL;
+#endif
 
     /* Start preemptive thread scheduling. */
     intr_enable();
@@ -550,26 +528,35 @@ void thread_exit(void) {
     printf("here1\n");
 #ifdef USERPROG
 
-    /* No races here, interrupts disabled */
-    /* If there's someone waiting for us, let them know that we're dying */
-    if (thread_current()->waiter_sema->value == 0) {
-        sema_up(thread_current()->waiter_sema);
-    }
-    /* Else if no one is waiting for us, add us to the dead_list */
-    else {
-        /* Initialize stuff */
-        td = palloc_get_page(PAL_ZERO);
-        if (td == NULL) {
-            /* ... */
+    /*
+     * Note that this makes sense only when we're talking about
+     * kernel threads that correspond to user processes
+     */
+    if (thread_current()->process_details != NULL) {
+        /* No races here, interrupts disabled */
+        /* If there's someone waiting for us, let them know that we're dying */
+        if (thread_current()->waiter_sema->value == 0) {
+            sema_up(thread_current()->waiter_sema);
         }
-        td->tid = thread_current()->tid;
+        /* Else if no one is waiting for us, add us to the dead_list 
+         * Note that this makes sense only when we're talking about
+         * kernel threads that correspond to user processes
+         */
+        else {
+            /* Initialize stuff */
+            td = palloc_get_page(PAL_ZERO);
+            if (td == NULL) {
+                /* ... */
+            }
+            td->tid = thread_current()->tid;
 
-        td->status = thread_current()->exit_status;
-        td->waiter_sema = thread_current()->waiter_sema;
-        td->parent_id = thread_current()->process_details->parent_id;
-        
-        /* NOTE: td->elem will be alloced inside the struct */
-        list_push_front(&dead_list, &td->elem);
+            td->status = thread_current()->exit_status;
+            td->waiter_sema = thread_current()->waiter_sema;
+            td->parent_id = thread_current()->process_details->parent_id;
+            
+            /* NOTE: td->elem will be alloced inside the struct */
+            list_push_front(&dead_list, &td->elem);
+        }
     }
 #endif
     printf("here2\n");
