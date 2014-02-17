@@ -18,16 +18,18 @@
 
 #define get_file_struct(fd) thread_current()->process_details->files[fd]
 
+/*! Lock used by filesystem syscalls. */
+static struct lock filesys_lock;
 
 static void syscall_handler(struct intr_frame *);
+
 
 extern struct list dead_list;
 extern struct list all_list;
 
+/* Installs the syscall_handler into the interrupt vector table. */
 void syscall_init(void) {
     intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
-    // TODO: Register all system calls
-    // EDIT: You sure? Seems like we don't have to do anything here...
 }
 
 static void syscall_handler(struct intr_frame *f UNUSED) {
@@ -122,9 +124,9 @@ bool create(const char *file, unsigned initial_size) {
     bool status = false;
 
     if (is_user_vaddr(file)) {
-        // TODO LOCK
+        lock_acquire(&filesys_lock);
         status = filesys_create(file, initial_size);
-        // TODO UNLOCK
+        lock_release(&filesys_lock);
     }
 
     return status;
@@ -136,9 +138,9 @@ bool remove(const char *file) {
     bool status = false;
     
     if (is_user_vaddr(file)) {
-        // TODO LOCK
+        lock_acquire(&filesys_lock);
         status = filesys_remove(file);
-        // TODO UNLOCK
+        lock_release(&filesys_lock);
     }
 
     return status;
@@ -156,7 +158,7 @@ int open(const char *file) {
     printf("in open()\n");
 
     if (is_user_vaddr(file)) {
-        // TODO filesys LOCK
+        lock_acquire(&filesys_lock);
 
         opened_file = filesys_open(file);
 
@@ -178,7 +180,7 @@ int open(const char *file) {
             }
         }
 
-        // TODO UNLOCK
+        lock_release(&filesys_lock);
     }
 
     return file_descriptor;
@@ -191,12 +193,12 @@ int filesize(int fd) {
     printf("in filesize()\n");
     struct process * pd = thread_current()->process_details;
 
-    // TODO: LOCK NEEDED OR NOT??
+    lock_acquire(&filesys_lock);
     /* If file is indeed open, return length */
     if (pd->open_file_descriptors[fd]) {
         size = file_length(pd->files[fd]);
     }
-    // TODO UNLOCK
+    lock_release(&filesys_lock);
 
     return size;
 }
@@ -210,11 +212,11 @@ int read(int fd, void *buffer, unsigned size) {
     int bytes_read = -1;
 
     if (is_user_vaddr(buffer) && is_user_vaddr(buffer + size)) {
-        // TODO LOCKS
+        lock_acquire(&filesys_lock);
         if (file_is_open(fd)) {
             bytes_read = file_read(get_file_struct(fd), buffer, size);
         }
-        // TODO UNLOCK
+        lock_release(&filesys_lock);
     }
 
     return bytes_read;
@@ -228,11 +230,11 @@ int write(int fd, const void *buffer, unsigned size) {
     int bytes_written = -1;
 
     if (is_user_vaddr(buffer) && is_user_vaddr(buffer + size)) {
-        // TODO LOCKS
+        lock_acquire(&filesys_lock);
         if (file_is_open(fd)) {
             bytes_written = file_write(get_file_struct(fd), buffer, size);
         }
-        // TODO UNLOCK
+        lock_release(&filesys_lock);
     }
 
     return bytes_written;
@@ -243,9 +245,11 @@ int write(int fd, const void *buffer, unsigned size) {
  * is the file's start.)
  */
 void seek(int fd, unsigned position) {
+    lock_acquire(&filesys_lock);
     if (file_is_open(fd)) {
         file_seek(get_file_struct(fd), position);
     }
+    lock_release(&filesys_lock);
 }
 
 /* Returns the position of the next byte to be read or written in open file
@@ -254,11 +258,11 @@ void seek(int fd, unsigned position) {
 unsigned tell(int fd) {
     unsigned pos = 0;
 
-    // TODO is this check needed??
-
+    lock_acquire(&filesys_lock);
     if (file_is_open(fd)) {
         pos = file_tell(get_file_struct(fd));
     }
+    lock_release(&filesys_lock);
 
     return pos;
 }
@@ -272,10 +276,12 @@ unsigned tell(int fd) {
     printf("in close()\n");
     struct thread * cur_thread = thread_current();
 
-     if (file_is_open(fd)) {
+    lock_acquire(&filesys_lock);
+    if (file_is_open(fd)) {
         file_close(get_file_struct(fd));
         thread_current()->process_details->files[fd] = NULL;
 
         cur_thread->process_details->num_files_open--;
     }
+    lock_release(&filesys_lock);
 }
