@@ -492,7 +492,7 @@ static bool setup_stack(void **esp, int argc, char **argv) {
             offset -= sizeof(char **);
             /* Typecast to (char ***) because the offset pointer at this
                particular location will point to a (char **). */
-            *((char ***) offset) = offset + sizeof(uint8_t);
+            *((char ***) offset) = offset + sizeof(char *);
             
             /* Push argc. */
             offset -= sizeof(int);
