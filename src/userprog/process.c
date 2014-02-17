@@ -29,6 +29,8 @@ tid_t process_execute(const char *file_name) {
     char *fn_copy;
     tid_t tid;
 
+    printf("in process_execute()\n");
+
     /* Make a copy of FILE_NAME.
        Otherwise there's a race between the caller and load(). */
     fn_copy = palloc_get_page(0);
@@ -40,6 +42,7 @@ tid_t process_execute(const char *file_name) {
     tid = thread_create(file_name, PRI_DEFAULT, start_process, fn_copy);
     if (tid == TID_ERROR)
         palloc_free_page(fn_copy); 
+    printf("in process_execute(); assigned tid:%d\n", tid);
     return tid;
 }
 
