@@ -512,8 +512,8 @@ void thread_exit(void) {
 
 #ifdef USERPROG
     struct thread_dead *td;
-    process_exit();
 #endif
+    printf("at thread_exit()\n");
 
     /* Remove thread from all threads list, set our status to dying,
        and schedule another process.  That process will destroy us
@@ -523,6 +523,8 @@ void thread_exit(void) {
     thread_current()->status = THREAD_DYING;
 
 #ifdef USERPROG
+    process_exit();
+
     /* No races here, interrupts disabled */
     /* If there's someone waiting for us, let them know that we're dying */
     if (thread_current()->waiter_sema->value == 0) {
