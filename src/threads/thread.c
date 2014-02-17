@@ -127,7 +127,6 @@ int max_ready_priority() {
     It is not safe to call thread_current() until this function finishes. */
 void thread_init(void) {
     ASSERT(intr_get_level() == INTR_OFF);
-    struct semaphore *waiter_sema;
 
     lock_init(&tid_lock);
 
@@ -146,24 +145,6 @@ void thread_init(void) {
     init_thread(initial_thread, "main", PRI_DEFAULT);
     initial_thread->status = THREAD_RUNNING;
     initial_thread->tid = allocate_tid();
-#ifdef USERPROG
-    /* Create semaphore and initialize to 1 (it's parent can now wait 
-     * for this thread
-     */
-    waiter_sema = palloc_get_page(PAL_ZERO);
-    if (waiter_sema == NULL) {
-        return TID_ERROR;
-    }
-
-    sema_init(waiter_sema, 1);
-    initial_thread->waiter_sema = waiter_sema;
-
-    /* Set the exit status to -1; If exit() is called, this will be changed.
-     * Otherwise it means that exit() wasn't called, hence -1 should remain
-     * as the status, as per spec.
-     */
-    initial_thread->exit_status = -1;
-#endif
 }
 
 /*! Starts preemptive thread scheduling by enabling interrupts.
@@ -171,6 +152,32 @@ void thread_init(void) {
 void thread_start(void) {
     /* Create the idle thread. */
     struct semaphore idle_started;
+    struct semaphore *waiter_sema;
+#ifdef USERPROG
+    /* Create semaphore and initialize to 1 (it's parent can now wait 
+     * for this thread
+     */
+    waiter_sema = palloc_get_page(PAL_ZERO);
+    if (waiter_sema == NULL) {
+        /* Sucks to suck... */
+    }
+
+    sema_init(waiter_sema, 1);
+    thread_current()->waiter_sema = waiter_sema;
+
+    /* Set the exit status to -1; If exit() is called, this will be changed.
+     * Otherwise it means that exit() wasn't called, hence -1 should remain
+     * as the status, as per spec.
+     */
+    thread_current()->exit_status = -1;
+
+    /* Add process details */
+    thread_current()->process_details = palloc_get_page(PAL_ZERO);
+    memset(thread_current()->process_details, 0, sizeof (struct process));
+    thread_current()->process_details->num_files_open = 0;
+    /* Set ppid 0 for the very first thread */
+    thread_current()->process_details->parent_id = 0;
+#endif
     sema_init(&idle_started, 0);
     thread_create("idle", PRI_MIN, idle, &idle_started);
 
@@ -552,6 +559,9 @@ void thread_exit(void) {
     else {
         /* Initialize stuff */
         td = palloc_get_page(PAL_ZERO);
+        if (td == NULL) {
+            /* ... */
+        }
         td->tid = thread_current()->tid;
 
         td->status = thread_current()->exit_status;
