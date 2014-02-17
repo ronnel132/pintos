@@ -129,10 +129,6 @@ struct thread {
     struct list_elem allelem;           /*!< List element for all threads list. */
     /**@}*/
 
-    int exit_status;
-  
-    /* Process information */
-    struct process * process_details;
 
     /* The thread this thread donates to. NULL if this thread doesn't donate
        to any thread. */
@@ -144,6 +140,11 @@ struct thread {
     /**@}*/
 
 #ifdef USERPROG
+    int exit_status;
+  
+    /* Process information */
+    struct process * process_details;
+
     /*! Owned by userprog/process.c. */
     /**@{*/
     uint32_t *pagedir;                  /*!< Page directory. */

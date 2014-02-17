@@ -806,12 +806,6 @@ static void init_thread(struct thread *t, const char *name, int priority) {
     t->priority = priority;
     t->donation_priority = -1;
 
-#ifdef USERPROG
-    /* Add process details */
-    t->process_details = palloc_get_page(PAL_ZERO);
-    memset(t->process_details, 0, sizeof (struct process));
-    t->process_details->num_files_open = 0;
-#endif
 	
     if (thread_mlfqs) {
         /* If we're in the first thread, set recent_cpu to 0, otherwise set to
@@ -827,6 +821,13 @@ static void init_thread(struct thread *t, const char *name, int priority) {
     }
 
     t->magic = THREAD_MAGIC;
+
+#ifdef USERPROG
+    /* Add process details */
+    t->process_details = palloc_get_page(PAL_ZERO);
+    memset(t->process_details, 0, sizeof (struct process));
+    t->process_details->num_files_open = 0;
+#endif
 
     old_level = intr_disable();
     list_push_back(&all_list, &t->allelem);
