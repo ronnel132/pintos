@@ -252,6 +252,7 @@ int wait(pid_t pid) {
         return status;
     }
 
+    old_level = intr_disable();
     /* If we're here, the child should be already dead */
     for (e = list_begin(&dead_list); e != list_end(&dead_list); 
          e = list_next(e)) {
@@ -271,6 +272,7 @@ int wait(pid_t pid) {
             break;
         } 
     }
+    intr_set_level(old_level);
 
     return status;
 }
