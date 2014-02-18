@@ -341,10 +341,8 @@ int read(int fd, void *buffer, unsigned size) {
 int write(int fd, const void *buffer, unsigned size) {
     int bytes_written = -1;
 
-    // TODO: Use STDOUT_FILENO
-    // TODO: Use putbuf instead of printf
-    if (fd == 1) {
-        printf("%s", (char *)buffer);
+    if (fd == STDOUT_FILENO) {
+        putbuf((const char *) buffer, (size_t) size);
     }
     if (is_user_vaddr(buffer) && is_user_vaddr(buffer + size)) {
         lock_acquire(&filesys_lock);
