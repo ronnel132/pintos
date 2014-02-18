@@ -58,7 +58,7 @@ void syscall_init(void) {
 static void syscall_handler(struct intr_frame *f UNUSED) {
     /* Check validity of syscall_nr */
     if (!valid_user_pointer(f->esp)) {
-        exit(-1);
+        exit(EXIT_BAD_PTR);
     }
 
     int syscall_nr = *((int *)f->esp);
@@ -78,49 +78,49 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
 
         case SYS_EXIT:
             if ((!valid_user_pointer(arg1))) {
-                exit(-1);
+                exit(EXIT_BAD_PTR);
             }
             exit(*((int *)arg1));
             break;
 
         case SYS_EXEC:
             if ((!valid_user_pointer(arg1))) {
-                exit(-1);
+                exit(EXIT_BAD_PTR);
             }
             f->eax = exec(*((const char **)arg1));
             break;
 
         case SYS_WAIT:
             if ((!valid_user_pointer(arg1))) {
-                exit(-1);
+                exit(EXIT_BAD_PTR);
             }
             f->eax = wait(*((pid_t *)arg1));
             break;
 
         case SYS_CREATE:
             if ((!valid_user_pointer(arg1)) || (!valid_user_pointer(arg2))) {
-                exit(-1);
+                exit(EXIT_BAD_PTR);
             }
             f->eax = create(*((const char **)arg1), *((unsigned *)arg2)); 
             break;
 
         case SYS_REMOVE:
             if ((!valid_user_pointer(arg1))) {
-                exit(-1);
+                exit(EXIT_BAD_PTR);
             }
             f->eax = remove(*((const char **)arg1));
             break; 
 
         case SYS_OPEN:
             if ((!valid_user_pointer(arg1))) {
-                exit(-1);
+                exit(EXIT_BAD_PTR);
             }
             f->eax = open(*((const char **)arg1));
             break;
 
         case SYS_FILESIZE:
             if ((!valid_user_pointer(arg1))) {
-                exit(-1);
+                exit(EXIT_BAD_PTR);
             }
             f->eax = filesize(*((const char **)arg1));
             break;
@@ -128,7 +128,7 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
         case SYS_READ:
             if ((!valid_user_pointer(arg1)) || (!valid_user_pointer(arg2)) ||
                   (!valid_user_pointer(arg3)) || (!valid_user_pointer(arg4))) {
-                exit(-1);
+                exit(EXIT_BAD_PTR);
             }
             f->eax = read(*((int *)arg1), *((void **)arg2), *((unsigned *)arg3));
             break;
@@ -139,21 +139,21 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
 
         case SYS_SEEK:
             if ((!valid_user_pointer(arg1)) || (!valid_user_pointer(arg2))) {
-                exit(-1);
+                exit(EXIT_BAD_PTR);
             }
             seek(*((int *)arg1), *((unsigned *)arg2)); 
             break;
 
         case SYS_TELL:
             if ((!valid_user_pointer(arg1))) {
-                exit(-1);
+                exit(EXIT_BAD_PTR);
             }
             f->eax = tell(*((int *)arg1));
             break;
 
         case SYS_CLOSE:
             if ((!valid_user_pointer(arg1))) {
-                exit(-1);
+                exit(EXIT_BAD_PTR);
             }
             close(*((int *)arg1));
             break;
@@ -260,7 +260,7 @@ bool create(const char *file, unsigned initial_size) {
         status = filesys_create(file, initial_size);
         lock_release(&filesys_lock);
     } else {
-        exit(-1);
+        exit(EXIT_BAD_PTR);
     }
 
     return status;
@@ -276,7 +276,7 @@ bool remove(const char *file) {
         status = filesys_remove(file);
         lock_release(&filesys_lock);
     } else {
-        exit(-1);
+        exit(EXIT_BAD_PTR);
     }
 
     return status;
@@ -318,7 +318,7 @@ int open(const char *file) {
 
         lock_release(&filesys_lock);
     } else {
-        exit(-1);
+        exit(EXIT_BAD_PTR);
     }
 
     return file_descriptor;
@@ -355,7 +355,7 @@ int read(int fd, void *buffer, unsigned size) {
         }
         lock_release(&filesys_lock);
     } else {
-        exit(-1);
+        exit(EXIT_BAD_PTR);
     }
 
     return bytes_read;
@@ -380,7 +380,7 @@ int write(int fd, const void *buffer, unsigned size) {
             lock_release(&filesys_lock);
         }
     } else {
-        exit(-1);
+        exit(EXIT_BAD_PTR);
     }
 
     return bytes_written;

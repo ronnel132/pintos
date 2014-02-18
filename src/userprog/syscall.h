@@ -6,6 +6,7 @@
 /*! Typical return values from main() and arguments to exit(). */
 #define EXIT_SUCCESS 0          /*!< Successful execution. */
 #define EXIT_FAILURE 1          /*!< Unsuccessful execution. */
+#define EXIT_BAD_PTR -1         /*!< Bad pointer access during execution. */
 
 
 /* Installs the syscall handler into the interrupt vector table. */
