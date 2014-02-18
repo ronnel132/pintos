@@ -379,8 +379,13 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
 #ifdef USERPROG
     /* Add process details */
     t->process_details = palloc_get_page(PAL_ZERO);
+
     memset(t->process_details, 0, sizeof (struct process));
-    t->process_details->num_files_open = 0;
+
+    t->process_details->open_file_descriptors[STDIN_FILENO] = true;
+    t->process_details->open_file_descriptors[STDOUT_FILENO] = true;
+    t->process_details->num_files_open = 2;
+    
     t->process_details->parent_id = thread_current()->tid;
 #endif
 
