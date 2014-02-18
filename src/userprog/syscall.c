@@ -14,7 +14,7 @@
 #include "userprog/process.h"
 
 
-int file_is_open(fd) {
+bool file_is_open(fd) {
     return thread_current()->process_details->open_file_descriptors[fd];
 }
 
