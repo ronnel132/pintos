@@ -18,6 +18,15 @@
 #include "userprog/process.h"
 
 
+/*! Lock used by filesystem syscalls. */
+extern struct lock filesys_lock;
+
+static void syscall_handler(struct intr_frame *);
+
+
+extern struct list dead_list;
+extern struct list all_list;
+
 /* Validates a user-provided pointer. Checks that it's in the required
  * range, and that it correpsonds to a page directory entry
  */
@@ -57,15 +66,6 @@ int get_file_struct(int fd) {
 
     return f;
 }
-
-/*! Lock used by filesystem syscalls. */
-extern struct lock filesys_lock;
-
-static void syscall_handler(struct intr_frame *);
-
-
-extern struct list dead_list;
-extern struct list all_list;
 
 /* Installs the syscall_handler into the interrupt vector table. */
 void syscall_init(void) {
@@ -203,6 +203,10 @@ pid_t exec(const char *cmd_line) {
     // seems like this should work...
     if (valid_user_pointer(cmd_line)) {
         tid = process_execute(cmd_line);
+        sema_down(thread_current()->child_loaded_sema);
+        if (thread_current()->child_loaded_error == 1) {
+            tid = -1;
+        }
     }
     // TODO: exiting?
     return tid;

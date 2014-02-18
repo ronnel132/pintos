@@ -22,6 +22,7 @@
 static thread_func start_process NO_RETURN;
 static bool load(int argc, const char **argv, void (**eip)(void), void **esp);
 char **tokenize_process_args(const char *raw_args, int *argc);
+extern struct list all_list;
 
 // struct list starting_list;
 
@@ -100,6 +101,8 @@ static void start_process(void *raw_args_) {
     int argc;
     struct intr_frame if_;
     bool success;
+    struct list_elem *e;
+    struct thread *iter;
 
     /* Initialize interrupt frame and load executable. */
     memset(&if_, 0, sizeof(if_));
@@ -113,7 +116,36 @@ static void start_process(void *raw_args_) {
     /* If load failed, quit. */
     if (!success) {
         palloc_free_page(argv);
+
+        /* Loop through all threads to find this guy's parent */
+        for (e = list_begin(&all_list); e != list_end(&all_list); 
+             e = list_next(e)) {
+            iter = list_entry(e, struct thread, allelem);
+            if (iter->tid == thread_current()->process_details->parent_id) {
+                /* Tell the parent that there was an error */
+                iter->child_loaded_error = 1;
+
+                /* Signal the parent that there's an update */
+                sema_up(iter->child_loaded_sema);
+                break;
+            } 
+        }
         exit(-1);
+    }
+
+
+    /* Loop through all threads to find this guy's parent */
+    for (e = list_begin(&all_list); e != list_end(&all_list); 
+         e = list_next(e)) {
+        iter = list_entry(e, struct thread, allelem);
+        if (iter->tid == thread_current()->process_details->parent_id) {
+            /* Tell the parent that there was NO error */
+            iter->child_loaded_error = 0;
+
+            /* Signal the parent that there's an update */
+            sema_up(iter->child_loaded_sema);
+            break;
+        } 
     }
 
     /* Start the user process by simulating a return from an

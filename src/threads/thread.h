@@ -154,6 +154,12 @@ struct thread {
      */
     struct semaphore *waiter_sema;
     /**@}*/
+
+    /* A semaphore to synch whether a child has been loaded */
+    struct semaphore *child_loaded_sema;
+
+    /* This will be 1 if there's a child load error, otherwise undefined */
+    int child_loaded_error;
 #endif
 
     /*! Owned by thread.c. */

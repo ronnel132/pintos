@@ -167,6 +167,9 @@ void thread_start(void) {
     thread_create("idle", PRI_MIN, idle, &idle_started);
 #ifdef USERPROG
     thread_current()->process_details = NULL;
+    thread_current()->child_loaded_sema = palloc_get_page(PAL_ZERO);
+    sema_init(thread_current()->child_loaded_sema, 0);
+    thread_current()->child_loaded_error = 0;
 #endif
 
     /* Start preemptive thread scheduling. */
@@ -379,6 +382,9 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
 #ifdef USERPROG
     /* Add process details */
     t->process_details = palloc_get_page(PAL_ZERO);
+    if (t->process_details == NULL) {
+        return TID_ERROR;
+    }
 
     memset(t->process_details, 0, sizeof (struct process));
 
@@ -387,6 +393,17 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
     t->process_details->num_files_open = 2;
     
     t->process_details->parent_id = thread_current()->tid;
+
+    t->child_loaded_sema = palloc_get_page(PAL_ZERO);
+    if (t->child_loaded_sema == NULL) {
+        return TID_ERROR;
+    }
+
+    sema_init(t->child_loaded_sema, 0);
+
+    t->child_loaded_error = 0;
+
+    
 #endif
 
     /* Stack frame for kernel_thread(). */
@@ -574,6 +591,9 @@ void thread_exit(void) {
         // TODO: Free waiter semaphore at some point
         process_exit();
 //         printf("post process_exit\n");
+
+        /* Free loaded sema */
+        palloc_free_page(thread_current()->child_loaded_sema);
     }
 #endif
     thread_current()->status = THREAD_DYING;
