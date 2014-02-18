@@ -110,9 +110,10 @@ static void start_process(void *raw_args_) {
     success = load(argc, argv, &if_.eip, &if_.esp);
 
     /* If load failed, quit. */
-    if (!success) 
+    if (!success) {
         palloc_free_page(argv);
         thread_exit();
+    }
 
     /* Start the user process by simulating a return from an
        interrupt, implemented by intr_exit (in
