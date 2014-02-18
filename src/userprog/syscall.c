@@ -6,6 +6,8 @@
 #include "devices/shutdown.h"
 
 #include "threads/vaddr.h"
+#include "threads/pte.h"
+#include "userprog/pagedir.h"
 
 #include "filesys/filesys.h"
 #include "filesys/inode.h"
@@ -13,13 +15,25 @@
 
 #include "userprog/process.h"
 
+
+/* Validates a user-provided pointer. Checks that it's in the required
+ * range, and that it correpsonds to a page directory entry
+ */
 bool valid_user_pointer(const void *ptr) {
-    if (is_user_vaddr(ptr)) {
+    uint32_t *pd, *pde;
+
+    pd = active_pd();
+    pde = pd + pd_no(ptr);
+
+
+    if (is_user_vaddr(ptr) && (*pde != 0)) {
         return true;
     }
 
     return false;
 }
+
+/* Checks if a file is open */
 bool file_is_open(int fd) {
     bool is_open = false;
 
@@ -30,6 +44,7 @@ bool file_is_open(int fd) {
     return is_open;
 }
 
+/* Gets the file struct from a file descriptor */
 int get_file_struct(int fd) {
     struct file *f = NULL;
 
