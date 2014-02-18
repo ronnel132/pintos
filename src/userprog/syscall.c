@@ -141,7 +141,7 @@ int wait(pid_t pid) {
     /* If child is running, down its semaphore hence blocking yourself */
     for (e = list_begin(&all_list); e != list_end(&all_list); 
          e = list_next(e)) {
-        iter = list_entry(e, struct thread, elem);
+        iter = list_entry(e, struct thread, allelem);
         if (iter->tid == tid) {
             /* Check that it's our own child */
             if (iter->process_details->parent_id != thread_current()->tid) {
