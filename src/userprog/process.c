@@ -134,11 +134,7 @@ static void start_process(void *raw_args_) {
     This function will be implemented in problem 2-2.  For now, it does
     nothing. */
 int process_wait(tid_t child_tid UNUSED) {
-    for(;;) {
-        thread_yield();
-    }
-//     wait((pid_t) child_tid);
-    return -1;
+    return wait((pid_t) child_tid);
 }
 
 /*! Free the current process's resources. */
