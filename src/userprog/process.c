@@ -23,6 +23,7 @@ static thread_func start_process NO_RETURN;
 static bool load(int argc, const char **argv, void (**eip)(void), void **esp);
 char **tokenize_process_args(const char *raw_args, int *argc);
 
+// struct list starting_list;
 
 /*! Starts a new thread running a user program loaded from FILENAME.  The new
     thread may be scheduled (and may even exit) before process_execute()

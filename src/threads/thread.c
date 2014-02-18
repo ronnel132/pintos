@@ -33,6 +33,9 @@ static struct list sleep_list;
     when they are first scheduled and removed when they exit. */
 struct list all_list;
 
+/* List of processes being created */
+// extern struct list starting_list;
+
 
 /*! Lock used by filesystem syscalls. */
 struct lock filesys_lock;
@@ -140,6 +143,8 @@ void thread_init(void) {
     list_init(&sleep_list);
     list_init(&all_list);
     list_init(&pri_donation_list);
+
+//     list_init(&starting_list);
 
 #ifdef USERPROG
     list_init(&dead_list); 
@@ -407,7 +412,7 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
         return TID_ERROR;
     }
 
-    sema_init(waiter_sema, 1);
+    sema_init(waiter_sema, 0);
     t->waiter_sema = waiter_sema;
 
     /* Set the exit status to 0 */
@@ -535,7 +540,7 @@ void thread_exit(void) {
     if (thread_current()->process_details != NULL) {
         /* No races here, interrupts disabled */
         /* If there's someone waiting for us, let them know that we're dying */
-        if (thread_current()->waiter_sema->value == 0) {
+        if (list_size(&thread_current()->waiter_sema->waiters) != 0) {
             sema_up(thread_current()->waiter_sema);
         }
         /* Else if no one is waiting for us, add us to the dead_list 
@@ -556,6 +561,7 @@ void thread_exit(void) {
             
             /* NOTE: td->elem will be alloced inside the struct */
             list_push_front(&dead_list, &td->elem);
+            sema_up(thread_current()->waiter_sema);
         }
         printf("%s: exit(%d)\n", thread_current()->name, thread_current()->exit_status);
 
