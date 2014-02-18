@@ -566,6 +566,7 @@ void thread_exit(void) {
         }
 
 //         printf("pre process_exit\n");
+        // TODO: Free waiter semaphore at some point
         process_exit();
 //         printf("post process_exit\n");
     }
