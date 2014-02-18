@@ -14,12 +14,24 @@
 #include "userprog/process.h"
 
 
-bool file_is_open(fd) {
-    return thread_current()->process_details->open_file_descriptors[fd];
+bool file_is_open(int fd) {
+    bool is_open = false;
+
+    if (fd >= 0 && fd < MAX_OPEN_FILES) {
+        is_open = thread_current()->process_details->open_file_descriptors[fd];
+    }
+
+    return is_open;
 }
 
-int get_file_struct(fd) {
-    return thread_current()->process_details->files[fd];
+int get_file_struct(int fd) {
+    struct file *f = NULL;
+
+    if (fd >= 0 && fd < MAX_OPEN_FILES) {
+        f = thread_current()->process_details->files[fd];
+    }
+
+    return f;
 }
 
 /*! Lock used by filesystem syscalls. */
