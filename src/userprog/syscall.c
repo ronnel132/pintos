@@ -14,9 +14,13 @@
 #include "userprog/process.h"
 
 
-#define file_is_open(fd) thread_current()->process_details->open_file_descriptors[fd]
+int file_is_open(fd) {
+    return thread_current()->process_details->open_file_descriptors[fd];
+}
 
-#define get_file_struct(fd) thread_current()->process_details->files[fd]
+int get_file_struct(fd) {
+    return thread_current()->process_details->files[fd];
+}
 
 /*! Lock used by filesystem syscalls. */
 extern struct lock filesys_lock;
@@ -280,7 +284,8 @@ int write(int fd, const void *buffer, unsigned size) {
 
     if (is_user_vaddr(buffer) && is_user_vaddr(buffer + size)) {
         lock_acquire(&filesys_lock);
-        if (file_is_open(fd)) {
+        if (!file_is_open(fd)) {
+            printf("Trying to write...\n");
             bytes_written = file_write(get_file_struct(fd), buffer, size);
         }
         lock_release(&filesys_lock);
