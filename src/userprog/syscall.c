@@ -13,7 +13,13 @@
 
 #include "userprog/process.h"
 
+bool valid_user_pointer(const void *ptr) {
+    if (is_user_vaddr(ptr)) {
+        return true;
+    }
 
+    return false;
+}
 bool file_is_open(int fd) {
     bool is_open = false;
 
@@ -50,7 +56,7 @@ void syscall_init(void) {
 
 static void syscall_handler(struct intr_frame *f UNUSED) {
     /* Check validity of syscall_nr */
-    if (!is_user_vaddr(f->esp)) {
+    if (!valid_user_pointer(f->esp)) {
         exit(-1);
     }
 
@@ -70,57 +76,57 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             break;
 
         case SYS_EXIT:
-            if ((!is_user_vaddr(arg1))) {
+            if ((!valid_user_pointer(arg1))) {
                 exit(-1);
             }
             exit(*((int *)arg1));
             break;
 
         case SYS_EXEC:
-            if ((!is_user_vaddr(arg1))) {
+            if ((!valid_user_pointer(arg1))) {
                 exit(-1);
             }
             f->eax = exec(*((const char **)arg1));
             break;
 
         case SYS_WAIT:
-            if ((!is_user_vaddr(arg1))) {
+            if ((!valid_user_pointer(arg1))) {
                 exit(-1);
             }
             f->eax = wait(*((pid_t *)arg1));
             break;
 
         case SYS_CREATE:
-            if ((!is_user_vaddr(arg1)) || (!is_user_vaddr(arg2))) {
+            if ((!valid_user_pointer(arg1)) || (!valid_user_pointer(arg2))) {
                 exit(-1);
             }
             f->eax = create(*((const char **)arg1), *((unsigned *)arg2)); 
             break;
 
         case SYS_REMOVE:
-            if ((!is_user_vaddr(arg1))) {
+            if ((!valid_user_pointer(arg1))) {
                 exit(-1);
             }
             f->eax = remove(*((const char **)arg1));
             break; 
 
         case SYS_OPEN:
-            if ((!is_user_vaddr(arg1))) {
+            if ((!valid_user_pointer(arg1))) {
                 exit(-1);
             }
             f->eax = open(*((const char **)arg1));
             break;
 
         case SYS_FILESIZE:
-            if ((!is_user_vaddr(arg1))) {
+            if ((!valid_user_pointer(arg1))) {
                 exit(-1);
             }
             f->eax = filesize(*((const char **)arg1));
             break;
 
         case SYS_READ:
-            if ((!is_user_vaddr(arg1)) || (!is_user_vaddr(arg2)) ||
-                  (!is_user_vaddr(arg3)) || (!is_user_vaddr(arg4))) {
+            if ((!valid_user_pointer(arg1)) || (!valid_user_pointer(arg2)) ||
+                  (!valid_user_pointer(arg3)) || (!valid_user_pointer(arg4))) {
                 exit(-1);
             }
             f->eax = read(*((int *)arg1), *((void **)arg2), *((unsigned *)arg3));
@@ -131,21 +137,21 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             break;
 
         case SYS_SEEK:
-            if ((!is_user_vaddr(arg1)) || (!is_user_vaddr(arg2))) {
+            if ((!valid_user_pointer(arg1)) || (!valid_user_pointer(arg2))) {
                 exit(-1);
             }
             seek(*((int *)arg1), *((unsigned *)arg2)); 
             break;
 
         case SYS_TELL:
-            if ((!is_user_vaddr(arg1))) {
+            if ((!valid_user_pointer(arg1))) {
                 exit(-1);
             }
             f->eax = tell(*((int *)arg1));
             break;
 
         case SYS_CLOSE:
-            if ((!is_user_vaddr(arg1))) {
+            if ((!valid_user_pointer(arg1))) {
                 exit(-1);
             }
             close(*((int *)arg1));
@@ -177,7 +183,7 @@ pid_t exec(const char *cmd_line) {
     tid_t tid = -1;
     // TODO: What synchronization are they suggesting in the assignment?
     // seems like this should work...
-    if (is_user_vaddr(cmd_line)) {
+    if (valid_user_pointer(cmd_line)) {
         tid = process_execute(cmd_line);
     }
     return tid;
@@ -247,7 +253,7 @@ int wait(pid_t pid) {
 bool create(const char *file, unsigned initial_size) {
     bool status = false;
 
-    if (is_user_vaddr(file)) {
+    if (valid_user_pointer(file)) {
         lock_acquire(&filesys_lock);
         status = filesys_create(file, initial_size);
         lock_release(&filesys_lock);
@@ -261,7 +267,7 @@ bool create(const char *file, unsigned initial_size) {
 bool remove(const char *file) {
     bool status = false;
     
-    if (is_user_vaddr(file)) {
+    if (valid_user_pointer(file)) {
         lock_acquire(&filesys_lock);
         status = filesys_remove(file);
         lock_release(&filesys_lock);
@@ -281,7 +287,7 @@ int open(const char *file) {
 
 //     printf("in open()\n");
 
-    if (is_user_vaddr(file)) {
+    if (valid_user_pointer(file)) {
         lock_acquire(&filesys_lock);
 
         opened_file = filesys_open(file);
@@ -335,7 +341,7 @@ int filesize(int fd) {
 int read(int fd, void *buffer, unsigned size) {
     int bytes_read = -1;
 
-    if (is_user_vaddr(buffer) && is_user_vaddr(buffer + size)) {
+    if (valid_user_pointer(buffer) && valid_user_pointer(buffer + size)) {
         lock_acquire(&filesys_lock);
         if (file_is_open(fd)) {
             bytes_read = file_read(get_file_struct(fd), buffer, size);
@@ -356,7 +362,7 @@ int write(int fd, const void *buffer, unsigned size) {
     if (fd == STDOUT_FILENO) {
         putbuf((const char *) buffer, (size_t) size);
     }
-    if (is_user_vaddr(buffer) && is_user_vaddr(buffer + size)) {
+    if (valid_user_pointer(buffer) && valid_user_pointer(buffer + size)) {
         lock_acquire(&filesys_lock);
         if (file_is_open(fd)) {
 //             printf("Trying to write...\n");
