@@ -37,11 +37,18 @@ void syscall_init(void) {
 }
 
 static void syscall_handler(struct intr_frame *f UNUSED) {
+    /* Check validity of syscall_nr */
+    if (!is_user_vaddr(f->esp)) {
+        exit(-1);
+    }
+
     int syscall_nr = *((int *)f->esp);
+
     void *arg1 = (void *) ((int *)(f->esp + 4));
     void *arg2 = (void *) ((int *)(f->esp + 8));
     void *arg3 = (void *) ((int *)(f->esp + 12));
     void *arg4 = (void *) ((int *)(f->esp + 16));
+
 
 //     printf("system call!\n");
 
@@ -49,40 +56,86 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
         case SYS_HALT:
             halt();
             break;
+
         case SYS_EXIT:
+            if ((!is_user_vaddr(arg1))) {
+                exit(-1);
+            }
             exit(*((int *)arg1));
             break;
+
         case SYS_EXEC:
+            if ((!is_user_vaddr(arg1))) {
+                exit(-1);
+            }
             f->eax = exec(*((const char **)arg1));
             break;
+
         case SYS_WAIT:
+            if ((!is_user_vaddr(arg1))) {
+                exit(-1);
+            }
             f->eax = wait(*((pid_t *)arg1));
             break;
+
         case SYS_CREATE:
+            if ((!is_user_vaddr(arg1)) || (!is_user_vaddr(arg2))) {
+                exit(-1);
+            }
             f->eax = create(*((const char **)arg1), *((unsigned *)arg2)); 
             break;
+
         case SYS_REMOVE:
+            if ((!is_user_vaddr(arg1))) {
+                exit(-1);
+            }
             f->eax = remove(*((const char **)arg1));
             break; 
+
         case SYS_OPEN:
+            if ((!is_user_vaddr(arg1))) {
+                exit(-1);
+            }
             f->eax = open(*((const char **)arg1));
             break;
+
         case SYS_FILESIZE:
+            if ((!is_user_vaddr(arg1))) {
+                exit(-1);
+            }
             f->eax = filesize(*((const char **)arg1));
             break;
+
         case SYS_READ:
+            if ((!is_user_vaddr(arg1)) || (!is_user_vaddr(arg2)) ||
+                  (!is_user_vaddr(arg3)) || (!is_user_vaddr(arg4))) {
+                exit(-1);
+            }
             f->eax = read(*((int *)arg1), *((void **)arg2), *((unsigned *)arg3));
             break;
+
         case SYS_WRITE:
             f->eax = write(*((int *)arg1), *((void **)arg2), *((unsigned *)arg3));
             break;
+
         case SYS_SEEK:
+            if ((!is_user_vaddr(arg1)) || (!is_user_vaddr(arg2))) {
+                exit(-1);
+            }
             seek(*((int *)arg1), *((unsigned *)arg2)); 
             break;
+
         case SYS_TELL:
+            if ((!is_user_vaddr(arg1))) {
+                exit(-1);
+            }
             f->eax = tell(*((int *)arg1));
             break;
+
         case SYS_CLOSE:
+            if ((!is_user_vaddr(arg1))) {
+                exit(-1);
+            }
             close(*((int *)arg1));
             break;
     }
