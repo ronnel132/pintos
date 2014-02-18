@@ -121,11 +121,12 @@ pid_t exec(const char *cmd_line) {
 /* Waits for a child process pid and retrieves the child's exit status. */
 int wait(pid_t pid) {
     tid_t tid = (tid_t) pid;
+    enum intr_level old_level;
     int status = -2;
     struct list_elem *e;
-    struct thread *iter;
+    struct thread *iter, *waitee;
     struct thread_dead *dead;
-    printf("in wait()\n");
+//     printf("in wait()\n");
 
 //     for(;;);
 
@@ -135,6 +136,8 @@ int wait(pid_t pid) {
     /* TODO: Lock the ready_list somehow (disable interrupts?) */
 
 
+    /* Disable interrupts while accessing global state. */
+    old_level = intr_disable();
     /* If child is running, down its semaphore hence blocking yourself */
     for (e = list_begin(&all_list); e != list_end(&all_list); 
          e = list_next(e)) {
@@ -148,12 +151,12 @@ int wait(pid_t pid) {
             /* No one should have waited on this guy previously... */
             ASSERT(iter->waiter_sema->value == 1);
 
-            printf("sema downing\n");
-            sema_down(iter->waiter_sema);
-            printf("woke up!\n");
+            waitee = iter;
             break;
         } 
     }
+    intr_set_level(old_level);
+    sema_down(iter->waiter_sema);
 
     /* If we're here, the child should be already dead */
     for (e = list_begin(&dead_list); e != list_end(&dead_list); 
@@ -164,7 +167,6 @@ int wait(pid_t pid) {
             if (dead->parent_id != thread_current()->tid) {
                 return -1;
             }
-            printf("was already dead\n");
             return dead->status;
         } 
     }
