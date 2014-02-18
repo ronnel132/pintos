@@ -113,7 +113,7 @@ static void start_process(void *raw_args_) {
     /* If load failed, quit. */
     if (!success) {
         palloc_free_page(argv);
-        thread_exit();
+        exit(-1);
     }
 
     /* Start the user process by simulating a return from an

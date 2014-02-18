@@ -210,7 +210,7 @@ pid_t exec(const char *cmd_line) {
 int wait(pid_t pid) {
     tid_t tid = (tid_t) pid;
     enum intr_level old_level;
-    int status = -2;
+    int status = -1;
     struct list_elem *e;
     struct thread *iter;
     struct thread *waitee = NULL;
@@ -244,6 +244,9 @@ int wait(pid_t pid) {
     intr_set_level(old_level);
     if (waitee != NULL) {
         sema_down(iter->waiter_sema);
+
+        /* Free waiter_sema */
+        palloc_free_page(iter->waiter_sema);
         return status;
     }
 
@@ -256,11 +259,17 @@ int wait(pid_t pid) {
             if (dead->parent_id != thread_current()->tid) {
                 return -1;
             }
-            return dead->status;
+            status =  dead->status;
+            list_remove(&dead->elem);
+            /* Free waiter_sema */
+            palloc_free_page(dead->waiter_sema);
+
+            /* Free thread_dead struct */
+            palloc_free_page(dead);
+            break;
         } 
     }
 
-    /* Shouldn't be here, so let's return -2 */
     return status;
 }
 
