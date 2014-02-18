@@ -128,7 +128,6 @@ int wait(pid_t pid) {
 //     printf("in wait()\n");
 
 //     for(;;);
-else
 
 
     /* TODO: Maybe child isn't created at this point! Use a semaphore or sth */
