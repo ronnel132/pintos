@@ -122,6 +122,9 @@ int wait(pid_t pid) {
     struct thread_dead *dead;
     printf("in wait()\n");
 
+    for(;;);
+
+
 
     /* TODO: Maybe child isn't created at this point! Use a semaphore or sth */
 
