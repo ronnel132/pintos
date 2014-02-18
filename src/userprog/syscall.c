@@ -55,8 +55,7 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             wait(*(pid_t *)arg1);
             break;
         case SYS_CREATE:
-            create(*(const char **)arg1, 
-                (unsigned) *(unsigned *)arg2); 
+            create(*(const char **)arg1, *(unsigned *)arg2); 
             break;
         case SYS_REMOVE:
             remove(*(const char **)arg1);
