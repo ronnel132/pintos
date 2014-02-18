@@ -20,6 +20,7 @@ bool valid_user_pointer(const void *ptr) {
 
     return false;
 }
+
 bool file_is_open(int fd) {
     bool is_open = false;
 
@@ -186,6 +187,7 @@ pid_t exec(const char *cmd_line) {
     if (valid_user_pointer(cmd_line)) {
         tid = process_execute(cmd_line);
     }
+    // TODO: exiting?
     return tid;
 }
 
@@ -257,6 +259,8 @@ bool create(const char *file, unsigned initial_size) {
         lock_acquire(&filesys_lock);
         status = filesys_create(file, initial_size);
         lock_release(&filesys_lock);
+    } else {
+        exit(-1);
     }
 
     return status;
@@ -271,6 +275,8 @@ bool remove(const char *file) {
         lock_acquire(&filesys_lock);
         status = filesys_remove(file);
         lock_release(&filesys_lock);
+    } else {
+        exit(-1);
     }
 
     return status;
@@ -311,6 +317,8 @@ int open(const char *file) {
         }
 
         lock_release(&filesys_lock);
+    } else {
+        exit(-1);
     }
 
     return file_descriptor;
@@ -321,12 +329,11 @@ int open(const char *file) {
 int filesize(int fd) {
     int size = -1;
 //     printf("in filesize()\n");
-    struct process * pd = thread_current()->process_details;
 
     lock_acquire(&filesys_lock);
     /* If file is indeed open, return length */
-    if (pd->open_file_descriptors[fd]) {
-        size = file_length(pd->files[fd]);
+    if (file_is_open(fd)) {
+        size = file_length(get_file_struct(fd));
     }
     lock_release(&filesys_lock);
 
@@ -347,6 +354,8 @@ int read(int fd, void *buffer, unsigned size) {
             bytes_read = file_read(get_file_struct(fd), buffer, size);
         }
         lock_release(&filesys_lock);
+    } else {
+        exit(-1);
     }
 
     return bytes_read;
@@ -359,16 +368,19 @@ int read(int fd, void *buffer, unsigned size) {
 int write(int fd, const void *buffer, unsigned size) {
     int bytes_written = -1;
 
-    if (fd == STDOUT_FILENO) {
-        putbuf((const char *) buffer, (size_t) size);
-    }
     if (valid_user_pointer(buffer) && valid_user_pointer(buffer + size)) {
-        lock_acquire(&filesys_lock);
-        if (file_is_open(fd)) {
-//             printf("Trying to write...\n");
-            bytes_written = file_write(get_file_struct(fd), buffer, size);
+        if (fd == STDOUT_FILENO) {
+            putbuf((const char *) buffer, (size_t) size);
+        } else {
+            lock_acquire(&filesys_lock);
+            if (file_is_open(fd)) {
+//              printf("Trying to write...\n");
+                bytes_written = file_write(get_file_struct(fd), buffer, size);
+            }
+            lock_release(&filesys_lock);
         }
-        lock_release(&filesys_lock);
+    } else {
+        exit(-1);
     }
 
     return bytes_written;
