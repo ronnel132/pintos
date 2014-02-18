@@ -33,6 +33,10 @@ static struct list sleep_list;
     when they are first scheduled and removed when they exit. */
 struct list all_list;
 
+
+/*! Lock used by filesystem syscalls. */
+struct lock filesys_lock;
+
 /* Processes that are dead but haven't been reaped yet */
 #ifdef USERPROG
 struct list dead_list;
@@ -129,6 +133,7 @@ void thread_init(void) {
     ASSERT(intr_get_level() == INTR_OFF);
 
     lock_init(&tid_lock);
+    lock_init(&filesys_lock);
 
     list_init(&ready_list);
 

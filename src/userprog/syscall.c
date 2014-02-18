@@ -19,7 +19,7 @@
 #define get_file_struct(fd) thread_current()->process_details->files[fd]
 
 /*! Lock used by filesystem syscalls. */
-static struct lock filesys_lock;
+extern struct lock filesys_lock;
 
 static void syscall_handler(struct intr_frame *);
 
@@ -82,6 +82,7 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             close(*((int *)arg1));
             break;
     }
+    printf("system call END \n");
 }
 
 
