@@ -3,6 +3,11 @@
 
 #include "threads/thread.h"
 
+/*! Typical return values from main() and arguments to exit(). */
+#define EXIT_SUCCESS 0          /*!< Successful execution. */
+#define EXIT_FAILURE 1          /*!< Unsuccessful execution. */
+
+
 /* Installs the syscall handler into the interrupt vector table. */
 void syscall_init(void);
 
