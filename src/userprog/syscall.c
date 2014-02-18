@@ -214,7 +214,7 @@ int open(const char *file) {
     int file_descriptor = -1;
     unsigned i;
 
-    printf("in open()\n");
+//     printf("in open()\n");
 
     if (is_user_vaddr(file)) {
         lock_acquire(&filesys_lock);
@@ -249,7 +249,7 @@ int open(const char *file) {
 /* Returns the size, in bytes, of the file open as fd. */
 int filesize(int fd) {
     int size = -1;
-    printf("in filesize()\n");
+//     printf("in filesize()\n");
     struct process * pd = thread_current()->process_details;
 
     lock_acquire(&filesys_lock);
@@ -336,7 +336,7 @@ unsigned tell(int fd) {
  */
  void close(int fd) {
 
-    printf("in close()\n");
+//     printf("in close()\n");
     struct thread * cur_thread = thread_current();
 
     lock_acquire(&filesys_lock);
