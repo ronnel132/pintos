@@ -342,6 +342,7 @@ int write(int fd, const void *buffer, unsigned size) {
     int bytes_written = -1;
 
     // TODO: Use STDOUT_FILENO
+    // TODO: Use putbuf instead of printf
     if (fd == 1) {
         printf("%s", (char *)buffer);
     }
