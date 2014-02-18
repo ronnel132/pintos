@@ -538,6 +538,7 @@ void thread_exit(void) {
      * kernel threads that correspond to user processes
      */
     if (thread_current()->process_details != NULL) {
+        printf("%s: exit(%d)\n", thread_current()->name, thread_current()->exit_status);
         /* No races here, interrupts disabled */
         /* If there's someone waiting for us, let them know that we're dying */
         if (list_size(&thread_current()->waiter_sema->waiters) != 0) {
@@ -563,7 +564,6 @@ void thread_exit(void) {
             list_push_front(&dead_list, &td->elem);
             sema_up(thread_current()->waiter_sema);
         }
-        printf("%s: exit(%d)\n", thread_current()->name, thread_current()->exit_status);
 
 //         printf("pre process_exit\n");
         process_exit();
