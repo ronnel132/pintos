@@ -458,9 +458,9 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
 static bool setup_stack(void **esp, int argc, char **argv) {
     uint8_t *kpage;
     /* Offset used for setting up the process stack. */
-    //void *offset = PHYS_BASE;
+    void *offset = PHYS_BASE;
     /* Keep track of the page of strings in argv, so we may free it later. */
-    //char *argv_string_page = argv[0];
+    char *argv_string_page = argv[0];
     bool success = false;
     int i;
 
@@ -469,47 +469,47 @@ static bool setup_stack(void **esp, int argc, char **argv) {
         success = install_page(((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
         if (success) {
             /* Set up the stack. */
-            //for (i = argc - 1; i >= 0; i--) {
+            for (i = argc - 1; i >= 0; i--) {
                 /* Subtract from the offset the length of the string (plus 
                    the null byte), so we can write to this location. */
-            //    offset -= strlen(argv[i]) + 1; 
-            //    strlcpy(offset, argv[i], strlen(argv[i]) + 1);
-            //    /* We set argv[i] to the current offset so that we can quickly
-            //       access the memory locations of strings we pushed onto the
-            //       virtual memory stack, in the for loop below. */
-            //    argv[i] = (char *) offset;
-            //}
+                offset -= strlen(argv[i]) + 1; 
+                strlcpy(offset, argv[i], strlen(argv[i]) + 1);
+                /* We set argv[i] to the current offset so that we can quickly
+                   access the memory locations of strings we pushed onto the
+                   virtual memory stack, in the for loop below. */
+                argv[i] = (char *) offset;
+            }
 
             /* Push the word-align 0. */
-            //offset -= sizeof(uint8_t);
+            offset -= sizeof(uint8_t);
             /* Set one byte to 0. */
-            //memset(offset, 0, sizeof(uint8_t)); 
+            memset(offset, 0, sizeof(uint8_t)); 
 
             /* Set up pointers to args on the stack. */
-            //for (i = argc; i >= 0; i--) {
-            //    offset -= sizeof(char *);     
+            for (i = argc; i >= 0; i--) {
+                offset -= sizeof(char *);     
                 /* Typecast to a (char **) because argv[i] is a pointer to a 
                    char * pointer. */
-            //    *((char **) offset) = argv[i];
-            //}
+                *((char **) offset) = argv[i];
+            }
 
             /* Next push the pointer to the argv array. */
-            //offset -= sizeof(char **);
+            offset -= sizeof(char **);
             /* Typecast to (char ***) because the offset pointer at this
                particular location will point to a (char **). */
-            //*((char ***) offset) = offset + sizeof(char *);
+            *((char ***) offset) = offset + sizeof(char *);
             
             /* Push argc. */
-            //offset -= sizeof(int);
-            //*((int *) offset) = argc;
+            offset -= sizeof(int);
+            *((int *) offset) = argc;
         
             /* Lastly, push the dummy return address, 0. */
-            //offset -= sizeof(int);
-            //*((int *) offset) = 0;
+            offset -= sizeof(int);
+            *((int *) offset) = 0;
 
             *esp = PHYS_BASE - 12;
-            //palloc_free_page(argv);
-            //palloc_free_page(argv_string_page);
+            palloc_free_page(argv);
+            palloc_free_page(argv_string_page);
         }
         else
             palloc_free_page(kpage);
