@@ -99,7 +99,7 @@ void halt (void) {
 
 /* Terminates the current user program, returning status to the kernel. */
 void exit(int status) {
-    printf("in exit()\n");
+//     printf("in exit()\n");
     thread_current()->exit_status = status;
 //     process_exit();
     thread_exit();
@@ -125,9 +125,10 @@ int wait(pid_t pid) {
     struct list_elem *e;
     struct thread *iter;
     struct thread_dead *dead;
-    printf("in wait()\n");
+//     printf("in wait()\n");
 
-    for(;;);
+//     for(;;);
+else
 
 
     /* TODO: Maybe child isn't created at this point! Use a semaphore or sth */
