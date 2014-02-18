@@ -341,6 +341,7 @@ int read(int fd, void *buffer, unsigned size) {
 int write(int fd, const void *buffer, unsigned size) {
     int bytes_written = -1;
 
+    // TODO: Use STDOUT_FILENO
     if (fd == 1) {
         printf("%s", (char *)buffer);
     }
