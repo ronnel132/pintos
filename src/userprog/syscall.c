@@ -33,9 +33,17 @@ void syscall_init(void) {
 }
 
 static void syscall_handler(struct intr_frame *f UNUSED) {
-    // TODO call appropriate function below
+    int syscall_nr;
     printf("system call!\n");
-    thread_exit();
+    
+    /* Get syscall number */
+    syscall_nr = *((int *)f->esp);
+
+    switch(syscall_nr) {
+        case SYS_HALT:
+            halt();
+            break;
+    }
 }
 
 
