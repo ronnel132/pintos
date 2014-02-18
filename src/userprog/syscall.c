@@ -125,7 +125,7 @@ int wait(pid_t pid) {
     struct list_elem *e;
     struct thread *iter;
     struct thread_dead *dead;
-//     printf("in wait()\n");
+    printf("in wait()\n");
 
 //     for(;;);
 
@@ -148,7 +148,9 @@ int wait(pid_t pid) {
             /* No one should have waited on this guy previously... */
             ASSERT(iter->waiter_sema->value == 1);
 
+            printf("sema downing\n");
             sema_down(iter->waiter_sema);
+            printf("woke up!\n");
             break;
         } 
     }
@@ -162,6 +164,7 @@ int wait(pid_t pid) {
             if (dead->parent_id != thread_current()->tid) {
                 return -1;
             }
+            printf("was already dead\n");
             return dead->status;
         } 
     }
