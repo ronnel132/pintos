@@ -43,7 +43,7 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
     void *arg3 = (void *) ((int *)(f->esp + 12));
     void *arg4 = (void *) ((int *)(f->esp + 16));
 
-    printf("system call!\n");
+//     printf("system call!\n");
 
     switch(syscall_nr) {
         case SYS_HALT:
@@ -86,7 +86,7 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             close(*((int *)arg1));
             break;
     }
-    printf("system call END \n");
+//     printf("system call END \n");
 }
 
 
