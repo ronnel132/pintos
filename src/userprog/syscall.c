@@ -124,7 +124,8 @@ int wait(pid_t pid) {
     enum intr_level old_level;
     int status = -2;
     struct list_elem *e;
-    struct thread *iter, *waitee;
+    struct thread *iter;
+    struct thread *waitee = NULL;
     struct thread_dead *dead;
 //     printf("in wait()\n");
 
@@ -147,13 +148,16 @@ int wait(pid_t pid) {
             if (iter->process_details->parent_id != thread_current()->tid) {
                 return -1;
             }
-
+            status = iter->exit_status;
             waitee = iter;
             break;
         } 
     }
     intr_set_level(old_level);
-    sema_down(iter->waiter_sema);
+    if (waitee != NULL) {
+        sema_down(iter->waiter_sema);
+        return status;
+    }
 
     /* If we're here, the child should be already dead */
     for (e = list_begin(&dead_list); e != list_end(&dead_list); 
