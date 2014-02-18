@@ -13,6 +13,8 @@
 #include "filesys/inode.h"
 #include "filesys/file.h"
 
+#include "devices/input.h"
+
 #include "userprog/process.h"
 
 
@@ -373,11 +375,20 @@ int read(int fd, void *buffer, unsigned size) {
     int bytes_read = -1;
 
     if (valid_user_pointer(buffer) && valid_user_pointer(buffer + size)) {
-        lock_acquire(&filesys_lock);
-        if (file_is_open(fd)) {
-            bytes_read = file_read(get_file_struct(fd), buffer, size);
+        if (fd == STDIN_FILENO) {
+            /* Read from stdin to buffer */
+            while (size > 0) {
+                *((uint8_t *) buffer) = input_getc();
+                buffer = (void *) (((uint8_t *) buffer) + 1);
+                size--;
+            }
+        } else if (fd != STDOUT_FILENO) {
+            lock_acquire(&filesys_lock);
+            if (file_is_open(fd)) {
+                bytes_read = file_read(get_file_struct(fd), buffer, size);
+            }
+            lock_release(&filesys_lock);
         }
-        lock_release(&filesys_lock);
     } else {
         exit(EXIT_BAD_PTR);
     }
@@ -395,10 +406,9 @@ int write(int fd, const void *buffer, unsigned size) {
     if (valid_user_pointer(buffer) && valid_user_pointer(buffer + size)) {
         if (fd == STDOUT_FILENO) {
             putbuf((const char *) buffer, (size_t) size);
-        } else {
+        } else if (fd != STDIN_FILENO) {
             lock_acquire(&filesys_lock);
             if (file_is_open(fd)) {
-//              printf("Trying to write...\n");
                 bytes_written = file_write(get_file_struct(fd), buffer, size);
             }
             lock_release(&filesys_lock);
