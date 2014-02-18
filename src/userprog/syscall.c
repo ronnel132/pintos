@@ -282,9 +282,12 @@ int read(int fd, void *buffer, unsigned size) {
 int write(int fd, const void *buffer, unsigned size) {
     int bytes_written = -1;
 
+    if (fd == 1) {
+        printf("%s", (char *)buffer);
+    }
     if (is_user_vaddr(buffer) && is_user_vaddr(buffer + size)) {
         lock_acquire(&filesys_lock);
-        if (!file_is_open(fd)) {
+        if (file_is_open(fd)) {
             printf("Trying to write...\n");
             bytes_written = file_write(get_file_struct(fd), buffer, size);
         }
