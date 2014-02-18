@@ -49,34 +49,34 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             exit(*((int *)arg1));
             break;
         case SYS_EXEC:
-            exec(*((const char **)arg1));
+            f->eax = exec(*((const char **)arg1));
             break;
         case SYS_WAIT:
-            wait(*((pid_t *)arg1));
+            f->eax = wait(*((pid_t *)arg1));
             break;
         case SYS_CREATE:
-            create(*((const char **)arg1), *((unsigned *)arg2)); 
+            f->eax = create(*((const char **)arg1), *((unsigned *)arg2)); 
             break;
         case SYS_REMOVE:
-            remove(*((const char **)arg1));
+            f->eax = remove(*((const char **)arg1));
             break; 
         case SYS_OPEN:
-            open(*((const char **)arg1));
+            f->eax = open(*((const char **)arg1));
             break;
         case SYS_FILESIZE:
-            filesize(*((const char **)arg1));
+            f->eax = filesize(*((const char **)arg1));
             break;
         case SYS_READ:
-            read(*((int *)arg1), *((void **)arg2), *((unsigned *)arg3));
+            f->eax = read(*((int *)arg1), *((void **)arg2), *((unsigned *)arg3));
             break;
         case SYS_WRITE:
-            write(*((int *)arg1), *((void **)arg2), *((unsigned *)arg3));
+            f->eax = write(*((int *)arg1), *((void **)arg2), *((unsigned *)arg3));
             break;
         case SYS_SEEK:
             seek(*((int *)arg1), *((unsigned *)arg2)); 
             break;
         case SYS_TELL:
-            tell(*((int *)arg1));
+            f->eax = tell(*((int *)arg1));
             break;
         case SYS_CLOSE:
             close(*((int *)arg1));
