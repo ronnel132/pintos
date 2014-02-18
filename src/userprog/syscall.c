@@ -97,7 +97,8 @@ void halt (void) {
 void exit(int status) {
     printf("in exit()\n");
     thread_current()->exit_status = status;
-    process_exit();
+//     process_exit();
+    thread_exit();
 }
 
 /* Runs the executable whose name is given in cmd_line, passing any given 
@@ -123,7 +124,6 @@ int wait(pid_t pid) {
     printf("in wait()\n");
 
     for(;;);
-
 
 
     /* TODO: Maybe child isn't created at this point! Use a semaphore or sth */

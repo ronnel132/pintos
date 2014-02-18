@@ -141,6 +141,7 @@ int process_wait(tid_t child_tid UNUSED) {
 void process_exit(void) {
     struct thread *cur = thread_current();
     uint32_t *pd;
+    printf("at process_exit()\n");
 
     /* Destroy the current process's page directory and switch back
        to the kernel-only page directory. */
@@ -157,6 +158,7 @@ void process_exit(void) {
         pagedir_activate(NULL);
         pagedir_destroy(pd);
     }
+    printf("at process_exit() END\n");
 }
 
 /*! Sets up the CPU for running user code in the current thread.

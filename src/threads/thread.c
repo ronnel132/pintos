@@ -516,7 +516,7 @@ tid_t thread_tid(void) {
 void thread_exit(void) {
     ASSERT(!intr_context());
 
-//     printf("at thread_exit()\n");
+    printf("at thread_exit()\n");
 #ifdef USERPROG
     struct thread_dead *td;
 #endif
@@ -558,8 +558,11 @@ void thread_exit(void) {
             list_push_front(&dead_list, &td->elem);
         }
         printf("%s: exit(%d)\n", thread_current()->name, thread_current()->exit_status);
+
+        printf("pre process_exit\n");
+        process_exit();
+        printf("post process_exit\n");
     }
-    process_exit();
 #endif
     thread_current()->status = THREAD_DYING;
 
