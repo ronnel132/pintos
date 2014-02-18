@@ -33,15 +33,54 @@ void syscall_init(void) {
 }
 
 static void syscall_handler(struct intr_frame *f UNUSED) {
-    int syscall_nr;
+    int syscall_nr = *((int *)f->esp);
+    void *arg1 = (void *) ((int *)(f->esp + 4));
+    void *arg2 = (void *) ((int *)(f->esp + 8));
+    void *arg3 = (void *) ((int *)(f->esp + 12));
+    void *arg4 = (void *) ((int *)(f->esp + 16));
+
     printf("system call!\n");
-    
-    /* Get syscall number */
-    syscall_nr = *((int *)f->esp);
 
     switch(syscall_nr) {
         case SYS_HALT:
             halt();
+            break;
+        case SYS_EXIT:
+            exit(*(int *)arg1);
+            break;
+        case SYS_EXEC:
+            exec(*(const char **)arg1);
+            break;
+        case SYS_WAIT:
+            wait(*(pid_t *)arg1);
+            break;
+        case SYS_CREATE:
+            create(*(const char **)arg1, 
+                (unsigned) *(unsigned *)arg2); 
+            break;
+        case SYS_REMOVE:
+            remove(*(const char **)arg1);
+            break; 
+        case SYS_OPEN:
+            open(*(const char **)arg1);
+            break;
+        case SYS_FILESIZE:
+            filesize(*(const char **)arg1);
+            break;
+        case SYS_READ:
+            read(*(int *)arg1, *(void **)arg2, *(unsigned *)arg3);
+            break;
+        case SYS_WRITE:
+            write(*(int *)arg1, *(void **)arg2, *(unsigned *)arg3);
+            break;
+        case SYS_SEEK:
+            seek(*(int *)arg1, *(unsigned *)arg2); 
+            break;
+        case SYS_TELL:
+            tell(*(int *)arg1);
+            break;
+        case SYS_CLOSE:
+            close(*(int *)arg1);
             break;
     }
 }
