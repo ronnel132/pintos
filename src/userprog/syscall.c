@@ -148,9 +148,6 @@ int wait(pid_t pid) {
                 return -1;
             }
 
-            /* No one should have waited on this guy previously... */
-            ASSERT(iter->waiter_sema->value == 1);
-
             waitee = iter;
             break;
         } 
