@@ -582,8 +582,8 @@ void thread_exit(void) {
                 
                 /* NOTE: td->elem will be alloced inside the struct */
                 list_push_front(&dead_list, &td->elem);
-                palloc_free_page(thread_current()->waiter_sema);
             }
+            palloc_free_page(thread_current()->waiter_sema);
         }
 
         process_exit();
