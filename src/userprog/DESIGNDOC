@@ -236,7 +236,6 @@ This code essentially checks that the address provided by users is in the
 valid range, and that it corresponds to an allocated page. If not, we do
 an exit(-1), hence calling thread_exit(), releasing all that thread's
 resources.
-// TODO: Review this
 
 
 ---- SYNCHRONIZATION ----

@@ -243,6 +243,7 @@ int wait(pid_t pid) {
     struct list_elem *e;
     struct thread *iter;
     struct thread *waitee = NULL;
+    struct semaphore *waitee_sema = NULL;
     struct thread_dead *dead;
 
 
@@ -258,6 +259,7 @@ int wait(pid_t pid) {
                 return -1;
             }
             waitee = iter;
+            waitee_sema = waitee->waiter_sema;
             break;
         } 
     }
@@ -268,7 +270,7 @@ int wait(pid_t pid) {
         status = waitee->exit_status;
 
         /* Free waiter_sema */
-        palloc_free_page(waitee->waiter_sema);
+        palloc_free_page(waitee_sema);
         return status;
     }
 

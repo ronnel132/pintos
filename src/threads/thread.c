@@ -545,6 +545,7 @@ void thread_exit(void) {
 
 #ifdef USERPROG
     struct thread_dead *td;
+    struct thread *parent;
 #endif
 
     /* Remove thread from all threads list, set our status to dying,
@@ -565,7 +566,9 @@ void thread_exit(void) {
         /* No races here, interrupts disabled */
         /* If there's someone waiting for us, let them know that we're dying */
         if (list_size(&thread_current()->waiter_sema->waiters) != 0) {
+            parent = list_begin(&thread_current()->waiter_sema->waiters);
             sema_up(thread_current()->waiter_sema);
+            parent->child_exit_status = thread_current()->exit_status;
         }
         /* Else if no one is waiting for us, add us to the dead_list 
          * Note that this makes sense only when we're talking about
