@@ -176,6 +176,8 @@ void process_exit(void) {
     uint32_t *pd;
 //     printf("at process_exit()\n");
 
+    file_close(cur->process_details->exec_file);
+
     /* Destroy the current process's page directory and switch back
        to the kernel-only page directory. */
     pd = cur->pagedir;
@@ -300,6 +302,7 @@ bool load(int argc, const char **argv, void (**eip) (void), void **esp) {
         goto done; 
     }
     file_deny_write(file);
+    t->process_details->exec_file = file;
 
     /* Read and verify executable header. */
     if (file_read(file, &ehdr, sizeof ehdr) != sizeof ehdr ||
@@ -380,7 +383,6 @@ bool load(int argc, const char **argv, void (**eip) (void), void **esp) {
 
 done:
     /* We arrive here whether the load is successful or not. */
-    file_close(file);
     return success;
 }
 

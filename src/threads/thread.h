@@ -44,6 +44,7 @@ typedef int pid_t;
 
 struct process {
     tid_t parent_id;
+    struct file * exec_file;
     int num_files_open;
     bool open_file_descriptors[MAX_OPEN_FILES];
     struct file * files[MAX_OPEN_FILES];
