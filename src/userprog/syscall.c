@@ -273,8 +273,8 @@ int wait(pid_t pid) {
     intr_set_level(old_level);
 
     if (waitee != NULL) {
-        sema_down(waitee->waiter_sema);
-        status = waitee->exit_status;
+        sema_down(waitee_sema);
+        status = thread_current()->child_exit_status;
 
         /* Free waiter_sema */
         palloc_free_page(waitee_sema);
