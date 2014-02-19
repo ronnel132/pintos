@@ -42,15 +42,10 @@ typedef int pid_t;
 /*! Process struct used by the kernel to keep track of process specific
     information as opposed to thread specific information. */
 
-// TODO: It would probably be a good idea to add the thread id in which this
-// process is running on
 struct process {
-    // TODO: Shouldn't this be a pid_t?
     tid_t parent_id;
     int num_files_open;
     bool open_file_descriptors[MAX_OPEN_FILES];
-    // TODO: Eventually, we may wanna keep track of the children here so that
-    // we can verify parent-child relationships quickly
     struct file * files[MAX_OPEN_FILES];
 };
 
