@@ -1,0 +1,344 @@
+                     +--------------------------+
+       	       	     |          CS 124          |
+                     | PROJECT 4: USER PROGRAMS |
+                     |     DESIGN DOCUMENT      |
+                     +--------------------------+
+
+---- GROUP ----
+
+>> Fill in the names and email addresses of your group members.
+
+Aleksander Bello <abello@caltech.edu>
+Ronnel Boettcher <ronnel@caltech.edu>
+Archan Luhar     <archan@caltech.edu>
+
+>> Specify how many late tokens you are using on this assignment:  0
+
+>> What is the Git repository and commit hash for your submission?
+
+   Repository URL:  /cs/courses/cs124/teams/pintos-bbl
+   commit ...
+
+
+---- PRELIMINARIES ----
+
+>> If you have any preliminary comments on your submission, notes for the
+>> TAs, or extra credit, please give them here.
+
+>> Please cite any offline or online sources you consulted while
+>> preparing your submission, other than the Pintos documentation, course
+>> text, lecture notes, and course instructors.
+
+
+                           ARGUMENT PASSING
+                           ================
+
+---- DATA STRUCTURES ----
+
+>> A1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+---- ALGORITHMS ----
+
+>> A2: Briefly describe how you implemented argument parsing.  How do
+>> you arrange for the elements of argv[] to be in the right order?
+>> How do you avoid overflowing the stack page?
+
+When process_execute receives the input cmdline string, the first thing we do
+is check if the length of that string is less than or equal to the PGSIZE. If
+it is, we return TID_ERROR (-1). Then, we immediately make a copy of the 
+cmdline input, so we can be sure the caller does not free the string. In 
+process execute we also make an additional copy, and using strtok_r, we use 
+this second copy to create a string with the file name of the process, which
+is passed to thread_create() as the thread name. The function thread_create()
+will then execute start_process(), with its argument being the copied cmdline 
+string. In start_process(), we tokenize the string using a function called
+tokenize_process_args(). This function takes the input string, and creates an
+argv array, and also sets the value of argc, an int pointer passed in by 
+start_process().
+
+In tokenize_process_args(), we first palloc two memory regions. The first for
+storing the tokenized strings themselves, in a contiguous memory region 
+starting at the beginning of this string page. The second is for the argv 
+array itself -- so it stores pointers to strings in the string page. After
+pallocing the pages, we then tokenize the input string with strtok_r. We use 
+the space delimiter " ", so each token will be a string stripped of all the 
+whitespaces. These are stored in the string page with strlcpy, and we keep
+track of an offset in the string page so we know where to write the next 
+string. After writing the current token to the string page we increment argc,
+then we set argv for the current index to the string we just wrote into the 
+string page. After we do this, we set the last value in the argv array to be 
+NULL, and then return argv. 
+
+With start_process() now having access to an argv and argc, we check that 
+everything can fit onto the stack. We do so by adding up all the bytes taken
+up by the arguments on the stack, the word-align, the return address, argc,
+as well as well as the argv pointer and all the argv[i] pointers. In addition,
+we add argc bytes to take into account the null terminating characters at the
+end of each string.
+
+We then pass this information to the load function, which then passes it to 
+the setup_stack() function. Here, we keep track of an offset pointer, 
+initially set to PHYS_BASE, and we use this pointer to first write all the 
+strings onto the stack. After we strlcpy'ing a string in argv onto the stack, 
+we then set the value of argv[i] at the current index to be a pointer to this 
+new offset, so that argv now points to strings on the stack, so that we can 
+use it when we are writing the actual argv array onto the stack, and it won't 
+point to strings in the original string page. Then, we write the word-align 0 
+onto the stack, then all the pointers to the strings in argv onto the stack, 
+then the pointer to argv itself (which is just the memory address of the 
+previous byte we wrote to). Then, we write argc, and lastly, the dummy 
+return address. We then set *esp to the current offset, and free the old
+string page and the argv array. The stack is now set up.
+
+
+---- RATIONALE ----
+
+>> A3: Why does Pintos implement strtok_r() but not strtok()?
+In the man page for strtok and strtok_r, it says strtok() function uses 
+a static buffer while parsing, so it's not thread safe. Thus, two threads
+could be writing to the same locations in the static buffer at once. In 
+strtok_r, the saveptr allows the user to keep track of its own progress
+in parsing the string, so this makes it thread safe.  
+
+>> A4: In Pintos, the kernel separates commands into a executable name
+>> and arguments.  In Unix-like systems, the shell does this
+>> separation.  Identify at least two advantages of the Unix approach.
+
+An advantage of the unix-like systems' approach is that you spend less time
+in the kernel, since the kernel doesn't have to spend time tokenizing the 
+commands. 
+
+                             SYSTEM CALLS
+                             ============
+
+---- DATA STRUCTURES ----
+
+>> B1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+thread.h: Defined a process struct was created to store process level
+information as opposed to thread level information.
+struct process {
+    tid_t parent_id;
+    struct file * exec_file;
+    int num_files_open;
+    bool open_file_descriptors[MAX_OPEN_FILES];
+    struct file * files[MAX_OPEN_FILES];
+};
+
+thread.h: Added a process struct, process_details, to the thread struct:
+struct thread {
+  ...
+  struct process * process_details;
+  ...
+};
+
+thread.c: Global lock used by filesystem syscalls.
+struct lock filesys_lock;
+
+A dead_list: keeps track of processes (semaphore, tid, parent_id, exit_status)
+of a process that has exited, however not yet been waited on (reaped) by his
+parent. 
+
+>> B2: Describe how file descriptors are associated with open files.
+>> Are file descriptors unique within the entire OS or just within a
+>> single process?
+
+File descriptors are an index into an array of struct file pointers located in
+the process_details struct of a thread. They are unique within a single
+process. A separate array keeps track of which file descriptors are in use.
+
+
+---- ALGORITHMS ----
+
+>> B3: Describe your code for reading and writing user data from the
+>> kernel.
+
+Reading and writing user data from the kernel happens in several system call
+functions. The following functions interact with user data: exec, create,
+remove, open, read, and write.
+
+Each is passed some pointer by the user program. The functions first verify
+that the pointers (as well as the pointers + some size argument) are in
+required range, and that they correpsond to a page directory entry.
+
+Then, the syscall functions proceed with their functionality. The exec
+function reads the program execution arguments string through process
+functions. create creates a file in the filesystem with the name given to
+it by a pointer to a string. Similarly remove deletes the file. Read reads
+a file and writes it into a buffer pointer given to it by the user. Write
+reads a buffer in the user space and writes given number of bytes to a file.
+
+
+>> B4: Suppose a system call causes a full page (4,096 bytes) of data
+>> to be copied from user space into the kernel.  What is the least
+>> and the greatest possible number of inspections of the page table
+>> (e.g. calls to pagedir_get_page()) that might result?  What about
+>> for a system call that only copies 2 bytes of data?  Is there room
+>> for improvement in these numbers, and how much?
+The write system call is the only system call for which a large amount of
+user space data can get copied into the kernel. In this case, we only end
+up iterating through that data once. 
+
+>> B5: Briefly describe your implementation of the "wait" system call
+>> and how it interacts with process termination.
+
+When a parent process waits for a child, we first have made sure that the 
+child is created. This is done in the exec (when exec returns, the child
+has actually been created, so it doesn't concern main).
+
+Then, the parent checks in the all_list (if the child is ready/blocked it will
+be there). Note that interrupts are disabled while looping that list, as it's a
+shared data structure. If it finds it there, it just tried to down the
+thread's wait semaphore (initialized to 0). Thus, the parent will
+clearly block itself. When the child exits, if its parent is
+waiting for it, it does a sema_up (hence lets the parent run and
+reap it).
+
+If the child exits and no one has waited for it yet, it is added to a 
+dead_list. Then, if the parent decides to wait, it can just look
+in the dead list (if it can't find it in all_list), and reap it.
+
+Long story short, each thread has a wait semaphore attached to it, initialzied
+to 0, that it can sema_up to signal a waiter (if there is one). If not, just
+add yourself to dead_list for later reaping.
+
+Note that we also make sure that the tid argument actually is a child
+of the caller, free appropriate pages etc, but I'll not go into boring
+details.
+
+
+
+
+>> B6: Any access to user program memory at a user-specified address
+>> can fail due to a bad pointer value.  Such accesses must cause the
+>> process to be terminated.  System calls are fraught with such
+>> accesses, e.g. a "write" system call requires reading the system
+>> call number from the user stack, then each of the call's three
+>> arguments, then an arbitrary amount of user memory, and any of
+>> these can fail at any point.  This poses a design and
+>> error-handling problem: how do you best avoid obscuring the primary
+>> function of code in a morass of error-handling?  Furthermore, when
+>> an error is detected, how do you ensure that all temporarily
+>> allocated resources (locks, buffers, etc.) are freed?  In a few
+>> paragraphs, describe the strategy or strategies you adopted for
+>> managing these issues.  Give an example.
+
+We created a wrapper function that validates the pointers given to the syscall
+by the user. This avoids a lot of repeated code.
+
+This code essentially checks that the address provided by users is in the
+valid range, and that it corresponds to an allocated page. If not, we do
+an exit(-1), hence calling thread_exit(), releasing all that thread's
+resources.
+
+
+---- SYNCHRONIZATION ----
+
+>> B7: The "exec" system call returns -1 if loading the new executable
+>> fails, so it cannot return before the new executable has completed
+>> loading.  How does your code ensure this?  How is the load
+>> success/failure status passed back to the thread that calls "exec"?
+
+Exec calls process_execute(), which does parsing and calls
+thread_create(). Thread create then sets up the thread to start at
+the desired function, with the desired arguments (the function will then
+load the executable). Thus, unfortunately, when we have created a new
+thread (hence when we have a new tid returned), the function hasn't
+started yet, hence the file isn't actually loaded! So we need some
+synchronization...
+
+The way we do it is that each parent (hence thread) has a special 
+load_semaphore and loaded_error field. The semaphore is initialized
+to 0. Then, in the function (start_process), after the loading is done,
+we signal the parent to wake up (it's waiting at the laod_sema), and we
+also update the loaded_error field, to indicate any errors.
+
+That way, the parent can actually know whether the process
+was stared successfully (go with given tid) or had a loading
+error (return -1).
+
+
+
+>> B8: Consider parent process P with child process C.  How do you
+>> ensure proper synchronization and avoid race conditions when P
+>> calls wait(C) before C exits?  After C exits?  How do you ensure
+>> that all resources are freed in each case?  How about when P
+>> terminates without waiting, before C exits?  After C exits?  Are
+>> there any special cases?
+
+// TODO: BELLO
+If P calls wait(C) before C exits, P will wait on C's waiter semaphore
+(initialized to 0), until C exits and sema_up-s this semaphore.
+
+If P calls wait(C) after C exits, it won't find it in the all_list, but
+it will find it in dead_list, where all the information needed for the
+reaping is needed.
+
+When a thread exits, it's struct is always destroyed in schedule() (this was
+in pintos before we changed anything). The semaphore is freed by parent after
+reaping, or by the child itself if it's being inserted in the dead list.
+The dead_list entry is freed after the parent reaps the child. If it never
+does, that is never freed. But in a real OS that could be a desired
+behaviour (init will inherit those children and reap them), so we may
+still wanna keep that information around. It doesn't matter whether
+P terminates before or after C exits, the behaviour will be the same.
+
+There arent' any special cases, though this system could be extended to
+implement more sophisticated stuff. That is, however, beyond the spec.
+
+---- RATIONALE ----
+
+>> B9: Why did you choose to implement access to user memory from the
+>> kernel in the way that you did?
+
+We chose to verify user pointers to be in the users virtual memory space
+in addition to verifying that the pointers are in a page currently allocated.
+This was the easiest way to implement protection of the kernel from bad
+pointers given to it through syscalls by user programs.
+
+
+>> B10: What advantages or disadvantages can you see to your design
+>> for file descriptors?
+
+One advantage to keeping an array of size MAX_OPEN_FILES is that there is
+easy/fast lookup of file structs corresponding to a file descriptor. There
+is no additional allocation required when opening files.
+
+It is however a disadvantage that the process struct is so big even for
+processes that don't open files. It takes up an unnecssary amount of space
+most of the time.
+
+
+>> B11: The default tid_t to pid_t mapping is the identity mapping.
+>> If you changed it, what advantages are there to your approach?
+
+We did not change it.
+
+
+                           SURVEY QUESTIONS
+                           ================
+
+Answering these questions is optional, but it will help us improve the
+course in future quarters.  Feel free to tell us anything you
+want--these questions are just to spur your thoughts.  You may also
+choose to respond anonymously in the feedback survey on the course
+website.
+
+>> In your opinion, was this assignment, or any one of the three problems
+>> in it, too easy or too hard?  Did it take too long or too little time?
+
+>> Did you find that working on a particular part of the assignment gave
+>> you greater insight into some aspect of OS design?
+
+>> Is there some particular fact or hint we should give students in
+>> future quarters to help them solve the problems?  Conversely, did you
+>> find any of our guidance to be misleading?
+
+>> Do you have any suggestions for the TAs to more effectively assist
+>> students, either for future quarters or the remaining projects?
+
+>> Any other comments?

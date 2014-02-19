@@ -36,7 +36,7 @@ void * memmove(void *dst_, const void *src_, size_t size) {
             *--dst = *--src;
     }
 
-    return dst;
+    return dst_;
 }
 
 /*! Find the first differing byte in the two blocks of SIZE bytes

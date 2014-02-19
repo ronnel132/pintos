@@ -7,6 +7,7 @@
 #include <string.h>
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
+#include "userprog/syscall.h"
 #include "userprog/tss.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
@@ -18,51 +19,161 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 
+
 static thread_func start_process NO_RETURN;
-static bool load(const char *cmdline, void (**eip)(void), void **esp);
+static bool load(int argc, const char **argv, void (**eip)(void), void **esp);
+char **tokenize_process_args(const char *raw_args, int *argc);
+extern struct list all_list;
+
+// struct list starting_list;
 
 /*! Starts a new thread running a user program loaded from FILENAME.  The new
     thread may be scheduled (and may even exit) before process_execute()
     returns.  Returns the new process's thread id, or TID_ERROR if the thread
     cannot be created. */
-tid_t process_execute(const char *file_name) {
-    char *fn_copy;
+tid_t process_execute(const char *raw_args) {
+    char *raw_args_tok_copy, *raw_args_copy, *thread_name, *saveptr;
     tid_t tid;
 
-    printf("in process_execute()\n");
-
-    /* Make a copy of FILE_NAME.
-       Otherwise there's a race between the caller and load(). */
-    fn_copy = palloc_get_page(0);
-    if (fn_copy == NULL)
+    /* Check if the cmdline input exceeds 4kB, the page size. */
+    if (strlen(raw_args) > PGSIZE) {
         return TID_ERROR;
-    strlcpy(fn_copy, file_name, PGSIZE);
+    }
 
-    /* Create a new thread to execute FILE_NAME. */
-    tid = thread_create(file_name, PRI_DEFAULT, start_process, fn_copy);
-    if (tid == TID_ERROR)
-        palloc_free_page(fn_copy); 
-    printf("in process_execute(); assigned tid:%d\n", tid);
+    /* create one copy for tokenizing, since strtok modifies the original 
+       string. */
+    raw_args_tok_copy = palloc_get_page(0);
+    if (raw_args_tok_copy == NULL)
+        return TID_ERROR;
+    strlcpy(raw_args_tok_copy, raw_args, PGSIZE);
+
+    /* create the copy for passing to start_process. */
+    raw_args_copy = palloc_get_page(0);
+    if (raw_args_copy == NULL)
+        return TID_ERROR;
+    strlcpy(raw_args_copy, raw_args, PGSIZE);
+
+    /* Tokenize once to get argv[0], the thread name. */
+    thread_name = strtok_r(raw_args_tok_copy, " ", &saveptr);
+
+    /* Create a new thread to execute process argv[0] (the first char * in 
+       argv is the process name). */ 
+    tid = thread_create(thread_name, PRI_DEFAULT, start_process, raw_args_copy);
+    if (tid == TID_ERROR) {
+        palloc_free_page(raw_args_tok_copy); 
+        palloc_free_page(raw_args_copy); 
+    }
     return tid;
 }
 
+/* Create a new argv array by tokenizing raw_args (the raw command line 
+   input). We store the strings in the argv array in their own page, where
+   the strings in argv are stored in contiguously at the start of the 
+   "string_page" we create below. argv is stored in its own page. */
+char **tokenize_process_args(const char *raw_args, int *argc) {
+    char *token, *saveptr;
+    char **argv = (char **) palloc_get_page(0);
+    /* String page for storing the physical strings in argv. */
+    char *string_page = (char *) palloc_get_page(0);
+    /* Offset within the string page. */
+    void *offset = (void *) string_page;
+    int i;
+
+    if (argv == NULL || string_page == NULL)
+        return NULL;
+
+    /* Use strtok_r, the reentrant version of strtok, to tokenize the input 
+       string. */
+    for (i = 0, *argc = 0; ; i++, raw_args = NULL) {
+        token = strtok_r(raw_args, " ", &saveptr);
+        if (token == NULL) 
+            break;
+        (*argc)++;
+        
+        strlcpy(offset, token, strlen(token) + 1); 
+        /* Set argv[i] to the current offset, now pointing to the location 
+           in memory corresponding to the string we just wrote. */
+        argv[i] = offset;
+        /* Increase offset by the size of the string written, including its 
+           null terminating character. */
+        offset += strlen(token) + 1;
+    }
+    /* Set the last value of the tokenized array to be NULL. */
+    argv[i] = NULL;
+    
+    return argv;
+}
+
 /*! A thread function that loads a user process and starts it running. */
-static void start_process(void *file_name_) {
-    char *file_name = file_name_;
+static void start_process(void *raw_args_) {
+    char *raw_args = (char *) raw_args_;
+    const char **argv;
+    int argc, stack_constants, raw_args_size;
     struct intr_frame if_;
     bool success;
+    struct list_elem *e;
+    struct thread *iter;
 
     /* Initialize interrupt frame and load executable. */
     memset(&if_, 0, sizeof(if_));
     if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
     if_.cs = SEL_UCSEG;
     if_.eflags = FLAG_IF | FLAG_MBS;
-    success = load(file_name, &if_.eip, &if_.esp);
+    
+    raw_args_size = strlen(raw_args);
+    /* Tokenize the input, also get argc. */
+    argv = tokenize_process_args(raw_args, &argc); 
+
+    /* The stack_constants are the return address (4 bytes), the argc
+       (4 bytes), the argv ptr (4 bytes), & the word-align (1 byte). */ 
+    stack_constants = 4 + 4 + 4 + 1; 
+    
+    /* Check if we have enough space on the stack: The arg strings themselves,
+       the space for the stack constants, the argc pointers, and argc bytes 
+       for the null terminating characters that will be added at the end of 
+       each argv string. */
+    if ((raw_args_size + argc + stack_constants + 
+         argc * sizeof(char *)) > PGSIZE) {
+        success = false;
+    }
+    else {
+        success = load(argc, argv, &if_.eip, &if_.esp);
+    }
 
     /* If load failed, quit. */
-    palloc_free_page(file_name);
-    if (!success) 
-        thread_exit();
+    if (!success) {
+        palloc_free_page(argv);
+
+        /* Loop through all threads to find this guy's parent */
+        for (e = list_begin(&all_list); e != list_end(&all_list); 
+             e = list_next(e)) {
+            iter = list_entry(e, struct thread, allelem);
+            if (iter->tid == thread_current()->process_details->parent_id) {
+                /* Tell the parent that there was an error */
+                iter->child_loaded_error = 1;
+
+                /* Signal the parent that there's an update */
+                sema_up(iter->child_loaded_sema);
+                break;
+            } 
+        }
+        exit(-1);
+    }
+
+
+    /* Loop through all threads to find this guy's parent */
+    for (e = list_begin(&all_list); e != list_end(&all_list); 
+         e = list_next(e)) {
+        iter = list_entry(e, struct thread, allelem);
+        if (iter->tid == thread_current()->process_details->parent_id) {
+            /* Tell the parent that there was NO error */
+            iter->child_loaded_error = 0;
+
+            /* Signal the parent that there's an update */
+            sema_up(iter->child_loaded_sema);
+            break;
+        } 
+    }
 
     /* Start the user process by simulating a return from an
        interrupt, implemented by intr_exit (in
@@ -83,7 +194,7 @@ static void start_process(void *file_name_) {
     This function will be implemented in problem 2-2.  For now, it does
     nothing. */
 int process_wait(tid_t child_tid UNUSED) {
-    return -1;
+    return wait((pid_t) child_tid);
 }
 
 /*! Free the current process's resources. */
@@ -184,7 +295,7 @@ struct Elf32_Phdr {
 #define PF_R 4          /*!< Readable. */
 /*! @} */
 
-static bool setup_stack(void **esp);
+static bool setup_stack(void **esp, int argc, char **argv);
 static bool validate_segment(const struct Elf32_Phdr *, struct file *);
 static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
                          uint32_t read_bytes, uint32_t zero_bytes,
@@ -193,7 +304,7 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
 /*! Loads an ELF executable from FILE_NAME into the current thread.  Stores the
     executable's entry point into *EIP and its initial stack pointer into *ESP.
     Returns true if successful, false otherwise. */
-bool load(const char *file_name, void (**eip) (void), void **esp) {
+bool load(int argc, const char **argv, void (**eip) (void), void **esp) {
     struct thread *t = thread_current();
     struct Elf32_Ehdr ehdr;
     struct file *file = NULL;
@@ -206,20 +317,23 @@ bool load(const char *file_name, void (**eip) (void), void **esp) {
     if (t->pagedir == NULL) 
         goto done;
     process_activate();
-
-    /* Open executable file. */
-    file = filesys_open(file_name);
+    
+    lock_acquire(&filesys_lock);
+    /* Open executable file, named argv[0]. */
+    file = filesys_open(argv[0]);
     if (file == NULL) {
-        printf("load: %s: open failed\n", file_name);
+        printf("load: %s: open failed\n", argv[0]);
         goto done; 
     }
+    file_deny_write(file);
+    t->process_details->exec_file = file;
 
     /* Read and verify executable header. */
     if (file_read(file, &ehdr, sizeof ehdr) != sizeof ehdr ||
         memcmp(ehdr.e_ident, "\177ELF\1\1\1", 7) || ehdr.e_type != 2 ||
         ehdr.e_machine != 3 || ehdr.e_version != 1 ||
         ehdr.e_phentsize != sizeof(struct Elf32_Phdr) || ehdr.e_phnum > 1024) {
-        printf("load: %s: error loading executable\n", file_name);
+        printf("load: %s: error loading executable\n", argv[0]);
         goto done; 
     }
 
@@ -281,9 +395,10 @@ bool load(const char *file_name, void (**eip) (void), void **esp) {
             break;
         }
     }
+    lock_release(&filesys_lock);
 
     /* Set up stack. */
-    if (!setup_stack(esp))
+    if (!setup_stack(esp, argc, (char **) argv))
         goto done;
 
     /* Start address. */
@@ -293,10 +408,9 @@ bool load(const char *file_name, void (**eip) (void), void **esp) {
 
 done:
     /* We arrive here whether the load is successful or not. */
-    file_close(file);
     return success;
 }
-
+
 /* load() helpers. */
 
 static bool install_page(void *upage, void *kpage, bool writable);
@@ -399,15 +513,66 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
 
 /*! Create a minimal stack by mapping a zeroed page at the top of
     user virtual memory. */
-static bool setup_stack(void **esp) {
+static bool setup_stack(void **esp, int argc, char **argv) {
     uint8_t *kpage;
+    /* Offset used for setting up the process stack. */
+    void *offset = PHYS_BASE;
+    /* Keep track of the page of strings in argv, so we may free it later. */
+    char *argv_string_page = argv[0];
     bool success = false;
+    int i;
 
     kpage = palloc_get_page(PAL_USER | PAL_ZERO);
     if (kpage != NULL) {
         success = install_page(((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
-        if (success)
-            *esp = PHYS_BASE;
+        if (success) {
+            /* Set up the stack. */
+            /* Copy the argv strings in reverse order onto the stack. */
+            for (i = argc - 1; i >= 0; i--) {
+                /* Subtract from the offset the length of the string (plus 
+                   the null byte), so we can write to this location. */
+                offset -= strlen(argv[i]) + 1; 
+                /* Copy the current argument onto the stack, up to and 
+                   including its null terminating character. */
+                strlcpy(offset, argv[i], strlen(argv[i]) + 1);
+                /* We set argv[i] to the current offset so that we can quickly
+                   access the memory locations of strings we pushed onto the
+                   virtual memory stack, in the for loop below. */
+                argv[i] = (char *) offset;
+            }
+
+            /* Push the word-align 0. */
+            offset -= sizeof(uint8_t);
+            /* Set one byte to 0. */
+            memset(offset, 0, sizeof(uint8_t)); 
+
+            /* Set up pointers to args on the stack. */
+            for (i = argc; i >= 0; i--) {
+                offset -= sizeof(char *);     
+                /* Typecast to a (char **) because argv[i] is a pointer to a 
+                   char * pointer. */
+                *((char **) offset) = argv[i];
+            }
+
+            /* Next push the pointer to the argv array. */
+            offset -= sizeof(char **);
+            /* Typecast to (char ***) because the offset pointer at this
+               particular location will point to a (char **). */
+            *((char ***) offset) = offset + sizeof(char *);
+            
+            /* Push argc. */
+            offset -= sizeof(int);
+            *((int *) offset) = argc;
+        
+            /* Lastly, push the dummy return address, 0. */
+            offset -= sizeof(int);
+            *((int *) offset) = 0;
+
+            *esp = offset;
+            /* Free argv and the original string page. */
+            palloc_free_page(argv);
+            palloc_free_page(argv_string_page);
+        }
         else
             palloc_free_page(kpage);
     }

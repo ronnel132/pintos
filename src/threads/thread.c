@@ -12,6 +12,7 @@
 #include "threads/vaddr.h"
 #include "threads/synch.h"
 #ifdef USERPROG
+#include "filesys/file.h"
 #include "userprog/process.h"
 #endif
 
@@ -31,7 +32,19 @@ static struct list sleep_list;
 
 /*! List of all processes.  Processes are added to this list
     when they are first scheduled and removed when they exit. */
-static struct list all_list;
+struct list all_list;
+
+/* List of processes being created */
+// extern struct list starting_list;
+
+
+/*! Lock used by filesystem syscalls. */
+struct lock filesys_lock;
+
+/* Processes that are dead but haven't been reaped yet */
+#ifdef USERPROG
+struct list dead_list;
+#endif
 
 /* Declare pri_donation_list struct from the header file definition */
 struct list pri_donation_list;
@@ -62,7 +75,7 @@ static fixedpt load_avg = 0;
 
 static void recalculate_priority(struct thread *t);
 static void recalculate_recent_cpu(struct thread *t);
-static void recalculate_load_avg();
+static void recalculate_load_avg(void);
 
 /* Scheduling. */
 #define TIME_SLICE 4            /*!< # of timer ticks to give each thread. */
@@ -124,12 +137,19 @@ void thread_init(void) {
     ASSERT(intr_get_level() == INTR_OFF);
 
     lock_init(&tid_lock);
+    lock_init(&filesys_lock);
 
     list_init(&ready_list);
 
     list_init(&sleep_list);
     list_init(&all_list);
     list_init(&pri_donation_list);
+
+//     list_init(&starting_list);
+
+#ifdef USERPROG
+    list_init(&dead_list); 
+#endif
 
     /* Set up a thread structure for the running thread. */
     initial_thread = running_thread();
@@ -145,6 +165,12 @@ void thread_start(void) {
     struct semaphore idle_started;
     sema_init(&idle_started, 0);
     thread_create("idle", PRI_MIN, idle, &idle_started);
+#ifdef USERPROG
+    thread_current()->process_details = NULL;
+    thread_current()->child_loaded_sema = palloc_get_page(PAL_ZERO);
+    sema_init(thread_current()->child_loaded_sema, 0);
+    thread_current()->child_loaded_error = 0;
+#endif
 
     /* Start preemptive thread scheduling. */
     intr_enable();
@@ -212,7 +238,6 @@ static void recalculate_load_avg() {
         && thread_get_priority() <= PRI_MAX);
     ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
     fixedpt ready;
-    static int i = 0;
     if (strcmp(thread_current()->name, "idle") == 0) {
         ready = int_to_fixedpt(list_size(&ready_list));
     } else {
@@ -340,6 +365,9 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
     struct switch_threads_frame *sf;
     tid_t tid;
 
+    /* The semaphore that the waiter (parent) uses */
+    struct semaphore *waiter_sema;
+
     ASSERT(function != NULL);
 
     /* Allocate thread. */
@@ -350,6 +378,32 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
     /* Initialize thread. */
     init_thread(t, name, priority);
     tid = t->tid = allocate_tid();
+#ifdef USERPROG
+    /* Add process details */
+    t->process_details = palloc_get_page(PAL_ZERO);
+    if (t->process_details == NULL) {
+        return TID_ERROR;
+    }
+
+    memset(t->process_details, 0, sizeof (struct process));
+
+    t->process_details->open_file_descriptors[STDIN_FILENO] = true;
+    t->process_details->open_file_descriptors[STDOUT_FILENO] = true;
+    t->process_details->num_files_open = 2;
+    
+    t->process_details->parent_id = thread_current()->tid;
+
+    t->child_loaded_sema = palloc_get_page(PAL_ZERO);
+    if (t->child_loaded_sema == NULL) {
+        return TID_ERROR;
+    }
+
+    sema_init(t->child_loaded_sema, 0);
+
+    t->child_loaded_error = 0;
+
+    
+#endif
 
     /* Stack frame for kernel_thread(). */
     kf = alloc_frame(t, sizeof *kf);
@@ -366,8 +420,25 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
     sf->eip = switch_entry;
     sf->ebp = 0;
 
+
     /* Add to run queue. */
     thread_unblock(t);
+
+#ifdef USERPROG
+    /* Create semaphore and initialize to 1 (it's parent can now wait 
+     * for this thread
+     */
+    waiter_sema = palloc_get_page(PAL_ZERO);
+    if (waiter_sema == NULL) {
+        return TID_ERROR;
+    }
+
+    sema_init(waiter_sema, 0);
+    t->waiter_sema = waiter_sema;
+
+    /* Set the exit status to 0 */
+    t->exit_status = 0;
+#endif
     
     /* If this thread's priority is higher than or equal than the 
      * running thread's priority, yield the processor
@@ -472,7 +543,8 @@ void thread_exit(void) {
     ASSERT(!intr_context());
 
 #ifdef USERPROG
-    process_exit();
+    struct thread_dead *td;
+    struct thread *parent;
 #endif
 
     /* Remove thread from all threads list, set our status to dying,
@@ -480,7 +552,50 @@ void thread_exit(void) {
        when it calls thread_schedule_tail(). */
     intr_disable();
     list_remove(&thread_current()->allelem);
+#ifdef USERPROG
+
+    /*
+     * Note that this makes sense only when we're talking about
+     * kernel threads that correspond to user processes
+     */
+    if (thread_current()->process_details != NULL) {
+        file_close(thread_current()->process_details->exec_file);
+        
+        printf("%s: exit(%d)\n", thread_current()->name, thread_current()->exit_status);
+        /* No races here, interrupts disabled */
+        /* If there's someone waiting for us, let them know that we're dying */
+        if (list_size(&thread_current()->waiter_sema->waiters) != 0) {
+            parent = list_begin(&thread_current()->waiter_sema->waiters);
+            sema_up(thread_current()->waiter_sema);
+            parent->child_exit_status = thread_current()->exit_status;
+        }
+        /* Else if no one is waiting for us, add us to the dead_list 
+         * Note that this makes sense only when we're talking about
+         * kernel threads that correspond to user processes
+         */
+        else {
+            /* Initialize stuff */
+            td = palloc_get_page(PAL_ZERO);
+            if (td != NULL) {
+                td->tid = thread_current()->tid;
+
+                td->status = thread_current()->exit_status;
+                td->parent_id = thread_current()->process_details->parent_id;
+                
+                /* NOTE: td->elem will be alloced inside the struct */
+                list_push_front(&dead_list, &td->elem);
+            }
+            palloc_free_page(thread_current()->waiter_sema);
+        }
+
+        process_exit();
+
+        /* Free loaded sema */
+        palloc_free_page(thread_current()->child_loaded_sema);
+    }
+#endif
     thread_current()->status = THREAD_DYING;
+
     schedule();
     NOT_REACHED();
 }
@@ -492,7 +607,7 @@ void thread_yield(void) {
     struct thread *cur_ready;
     struct list_elem *cur_ready_elem;
     enum intr_level old_level;
-    int i = 0;
+    unsigned i = 0;
 
     ASSERT(!intr_context());
 
@@ -748,6 +863,7 @@ static void init_thread(struct thread *t, const char *name, int priority) {
     t->stack = (uint8_t *) t + PGSIZE;
     t->priority = priority;
     t->donation_priority = -1;
+
 	
     if (thread_mlfqs) {
         /* If we're in the first thread, set recent_cpu to 0, otherwise set to
@@ -763,6 +879,7 @@ static void init_thread(struct thread *t, const char *name, int priority) {
     }
 
     t->magic = THREAD_MAGIC;
+
 
     old_level = intr_disable();
     list_push_back(&all_list, &t->allelem);

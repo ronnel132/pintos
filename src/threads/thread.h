@@ -24,6 +24,7 @@ enum thread_status {
 /*! Thread identifier type.
     You can redefine this to whatever type you like. */
 typedef int tid_t;
+typedef int pid_t;
 #define TID_ERROR ((tid_t) -1)          /*!< Error value for tid_t. */
 
 /* Thread priorities. */
@@ -33,6 +34,21 @@ typedef int tid_t;
 
 #define NICE_MIN -20
 #define NICE_MAX 20
+
+/*! A process can have a max of 128 open files */
+#define MAX_OPEN_FILES 128
+
+
+/*! Process struct used by the kernel to keep track of process specific
+    information as opposed to thread specific information. */
+
+struct process {
+    tid_t parent_id;
+    struct file * exec_file;
+    int num_files_open;
+    bool open_file_descriptors[MAX_OPEN_FILES];
+    struct file * files[MAX_OPEN_FILES];
+};
 
 /*! A kernel thread or user process.
 
@@ -94,6 +110,7 @@ typedef int tid_t;
    ready state is on the run queue, whereas only a thread in the
    blocked state is on a semaphore wait list.
 */
+
 struct thread {
     /*! Owned by thread.c. */
     /**@{*/
@@ -103,14 +120,15 @@ struct thread {
     uint8_t *stack;                     /*!< Saved stack pointer. */
     int priority;                       /*!< Priority. */
     int donation_priority;              /*!< Donation priority (-1 if N/A). */
-  int niceness;           /*!< Between -20 and 20. */
-  fixedpt recent_cpu;         /*!< CPU usage recently. */
+    int niceness;           /*!< Between -20 and 20. */
+    fixedpt recent_cpu;         /*!< CPU usage recently. */
     struct list_elem allelem;           /*!< List element for all threads list. */
     /**@}*/
-  
-  /* The thread this thread donates to. NULL if this thread doesn't donate
-     to any thread. */
-  struct thread *donee;
+
+
+    /* The thread this thread donates to. NULL if this thread doesn't donate
+       to any thread. */
+    struct thread *donee;
 
     /*! Shared between thread.c and synch.c. */
     /**@{*/
@@ -118,10 +136,29 @@ struct thread {
     /**@}*/
 
 #ifdef USERPROG
+    int exit_status;
+  
+    /* Process information */
+    struct process * process_details;
+
     /*! Owned by userprog/process.c. */
     /**@{*/
     uint32_t *pagedir;                  /*!< Page directory. */
-    /**@{*/
+
+    /* Semaphore used by waiter. Parent downs this semaphore when he wait()s
+     * for this child, and the child ups it when he exits
+     */
+    struct semaphore *waiter_sema;
+    /**@}*/
+
+    /* A semaphore to synch whether a child has been loaded */
+    struct semaphore *child_loaded_sema;
+
+    /* This will be 1 if there's a child load error, otherwise undefined */
+    int child_loaded_error;
+
+    /* Will store child exit status */
+    int child_exit_status;
 #endif
 
     /*! Owned by thread.c. */
@@ -157,6 +194,12 @@ struct thread_mlfq_state {
 extern struct list pri_donation_list;
 
 
+/* Processes that are dead but haven't been reaped yet */
+#ifdef USERPROG
+extern struct list dead_list;
+#endif
+
+
 /*! A sleeping kernel thread.
     Stores the thread struct pointer and the time it
     should be unblocked.
@@ -171,6 +214,31 @@ struct thread_sleeping {
   /* List element for sleep list */
   struct list_elem elem;
 };
+
+
+#ifdef USERPROG
+/*! A waitee kernel thread, i.e. a thread for which its parent is waiting */
+struct thread_dead {
+    /* Thread ID. */
+    tid_t tid;
+
+    /* Parent id */
+    tid_t parent_id;
+
+    /* Exit status */
+    int status;
+
+    /* Semaphore used by waiter. Parent downs this semaphore when he wait()s
+     * for this child, and the child ups it when he exits
+     */
+    struct semaphore *waiter_sema;
+
+    /* List element for dead list */
+    struct list_elem elem;
+};
+#endif
+
+
 
 /*! If false (default), use round-robin scheduler.
     If true, use multi-level feedback queue scheduler.
