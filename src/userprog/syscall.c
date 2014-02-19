@@ -57,7 +57,7 @@ bool file_is_open(int fd) {
 }
 
 /* Gets the file struct from a file descriptor */
-int get_file_struct(int fd) {
+struct file * get_file_struct(int fd) {
     struct file *f = NULL;
 
     if (fd >= 0 && fd < MAX_OPEN_FILES) {
