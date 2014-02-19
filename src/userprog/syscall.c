@@ -93,8 +93,10 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
     void *arg4 = (void *) ((int *)(f->esp + 16));
 
 
-//     printf("system call!\n");
-
+    /* Figure out which system call was invoked. Also note that we check the
+     * passed pointers for correctness. There probably is a more elegant way to
+     * write this; sorry about that
+     */
     switch(syscall_nr) {
         case SYS_HALT:
             halt();
@@ -184,7 +186,6 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
         default:
             exit(-1);
     }
-//     printf("system call END \n");
 }
 
 
@@ -197,9 +198,7 @@ void halt (void) {
 
 /* Terminates the current user program, returning status to the kernel. */
 void exit(int status) {
-//     printf("in exit()\n");
     thread_current()->exit_status = status;
-//     process_exit();
     thread_exit();
 }
 
@@ -208,8 +207,6 @@ void exit(int status) {
  */
 pid_t exec(const char *cmd_line) {
     tid_t tid = -1;
-    // TODO: What synchronization are they suggesting in the assignment?
-    // seems like this should work...
     if (valid_user_pointer(cmd_line)) {
         tid = process_execute(cmd_line);
         sema_down(thread_current()->child_loaded_sema);
@@ -217,7 +214,6 @@ pid_t exec(const char *cmd_line) {
             tid = -1;
         }
     }
-    // TODO: exiting?
     return tid;
 }
 
@@ -230,14 +226,6 @@ int wait(pid_t pid) {
     struct thread *iter;
     struct thread *waitee = NULL;
     struct thread_dead *dead;
-//     printf("in wait()\n");
-
-//     for(;;);
-
-
-    /* TODO: Maybe child isn't created at this point! Use a semaphore or sth */
-
-    /* TODO: Lock the ready_list somehow (disable interrupts?) */
 
 
     /* Disable interrupts while accessing global state. */
@@ -330,7 +318,6 @@ int open(const char *file) {
     int file_descriptor = -1;
     unsigned i;
 
-//     printf("in open()\n");
 
     if (valid_user_pointer(file)) {
         lock_acquire(&filesys_lock);
@@ -367,7 +354,6 @@ int open(const char *file) {
 /* Returns the size, in bytes, of the file open as fd. */
 int filesize(int fd) {
     int size = -1;
-//     printf("in filesize()\n");
 
     lock_acquire(&filesys_lock);
     /* If file is indeed open, return length */
@@ -466,7 +452,6 @@ unsigned tell(int fd) {
  */
  void close(int fd) {
 
-//     printf("in close()\n");
     struct thread * cur_thread = thread_current();
 
     lock_acquire(&filesys_lock);
