@@ -174,6 +174,8 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             }
             close(*((int *)arg1));
             break;
+        default:
+            exit(-1);
     }
 //     printf("system call END \n");
 }
