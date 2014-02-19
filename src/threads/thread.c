@@ -12,6 +12,7 @@
 #include "threads/vaddr.h"
 #include "threads/synch.h"
 #ifdef USERPROG
+#include "filesys/file.h"
 #include "userprog/process.h"
 #endif
 
@@ -162,7 +163,6 @@ void thread_init(void) {
 void thread_start(void) {
     /* Create the idle thread. */
     struct semaphore idle_started;
-    struct semaphore *waiter_sema;
     sema_init(&idle_started, 0);
     thread_create("idle", PRI_MIN, idle, &idle_started);
 #ifdef USERPROG
@@ -238,7 +238,6 @@ static void recalculate_load_avg() {
         && thread_get_priority() <= PRI_MAX);
     ASSERT (thread_get_nice() >= NICE_MIN && thread_get_nice() <= NICE_MAX);
     fixedpt ready;
-    static int i = 0;
     if (strcmp(thread_current()->name, "idle") == 0) {
         ready = int_to_fixedpt(list_size(&ready_list));
     } else {
@@ -608,7 +607,7 @@ void thread_yield(void) {
     struct thread *cur_ready;
     struct list_elem *cur_ready_elem;
     enum intr_level old_level;
-    int i = 0;
+    unsigned i = 0;
 
     ASSERT(!intr_context());
 

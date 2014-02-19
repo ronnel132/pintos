@@ -181,9 +181,9 @@ reads a buffer in the user space and writes given number of bytes to a file.
 >> (e.g. calls to pagedir_get_page()) that might result?  What about
 >> for a system call that only copies 2 bytes of data?  Is there room
 >> for improvement in these numbers, and how much?
-
-// TODO: WHOEVER KNOWS WHAT THIS IS ABOUT
-
+The write system call is the only system call for which a large amount of
+user space data can get copied into the kernel. In this case, we only end
+up iterating through that data once. 
 
 >> B5: Briefly describe your implementation of the "wait" system call
 >> and how it interacts with process termination.
