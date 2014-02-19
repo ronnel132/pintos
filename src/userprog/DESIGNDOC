@@ -17,7 +17,7 @@ Archan Luhar     <archan@caltech.edu>
 >> What is the Git repository and commit hash for your submission?
 
    Repository URL:  /cs/courses/cs124/teams/pintos-bbl
-   commit ...
+   commit 871b11259d1c96c16e92bd60e9b40a148982f13e
 
 
 ---- PRELIMINARIES ----
@@ -270,7 +270,6 @@ error (return -1).
 >> terminates without waiting, before C exits?  After C exits?  Are
 >> there any special cases?
 
-// TODO: BELLO
 If P calls wait(C) before C exits, P will wait on C's waiter semaphore
 (initialized to 0), until C exits and sema_up-s this semaphore.
 
