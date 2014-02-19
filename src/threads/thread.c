@@ -560,6 +560,8 @@ void thread_exit(void) {
      * kernel threads that correspond to user processes
      */
     if (thread_current()->process_details != NULL) {
+        file_close(thread_current()->process_details->exec_file);
+        
         printf("%s: exit(%d)\n", thread_current()->name, thread_current()->exit_status);
         /* No races here, interrupts disabled */
         /* If there's someone waiting for us, let them know that we're dying */

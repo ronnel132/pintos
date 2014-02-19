@@ -176,8 +176,6 @@ void process_exit(void) {
     uint32_t *pd;
 //     printf("at process_exit()\n");
 
-    file_close(cur->process_details->exec_file);
-
     /* Destroy the current process's page directory and switch back
        to the kernel-only page directory. */
     pd = cur->pagedir;
@@ -385,7 +383,7 @@ done:
     /* We arrive here whether the load is successful or not. */
     return success;
 }
-
+
 /* load() helpers. */
 
 static bool install_page(void *upage, void *kpage, bool writable);
