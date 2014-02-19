@@ -295,11 +295,17 @@ int wait(pid_t pid) {
 bool create(const char *file, unsigned initial_size) {
     bool status = false;
 
+    /* Validate user pointer and then create file. */
     if (valid_user_pointer(file)) {
+        /* Lock the file system while creating the file */
         lock_acquire(&filesys_lock);
+
         status = filesys_create(file, initial_size);
+
+        /* Release the file system lock. */
         lock_release(&filesys_lock);
     } else {
+        /* If user pointer is invalid, exit. */
         exit(EXIT_BAD_PTR);
     }
 
@@ -311,6 +317,7 @@ bool create(const char *file, unsigned initial_size) {
 bool remove(const char *file) {
     bool status = false;
     
+    /* Validate user pointer and then remove file. */
     if (valid_user_pointer(file)) {
         lock_acquire(&filesys_lock);
         status = filesys_remove(file);
@@ -331,24 +338,37 @@ int open(const char *file) {
     int file_descriptor = -1;
     unsigned i;
 
-
+    /* Validate user pointer and then open file. */
     if (valid_user_pointer(file)) {
         lock_acquire(&filesys_lock);
 
+        /* Open the file and get the file struct from the filesystem. */
         opened_file = filesys_open(file);
 
+        /* If file actually exists */
         if (opened_file != NULL) {
+            /* Get pointer to the process_details */
             pd = thread_current()->process_details;
 
+            /* If there are available file descriptors */
             if (pd->num_files_open < MAX_OPEN_FILES) {
                 /* Search for first available file descriptor */
                 for (i = 0; i < MAX_OPEN_FILES; i++) {
+                    /* The file descriptor is the index into the
+                     * open_file_descriptors array.
+                     */
                     if (pd->open_file_descriptors[i] == false) {
                         file_descriptor = i;
                         break;
                     }
                 }
 
+                /* Update the current process_details file details.
+                 * Set the file descriptor index to true, is open.
+                 * Set the file struct at the file descriptor index to the
+                 * one returned by the filesystem.
+                 * Increment the variable number of files that are open.
+                 */
                 pd->open_file_descriptors[file_descriptor] = true;
                 pd->files[file_descriptor] = opened_file;
                 pd->num_files_open++;
@@ -386,15 +406,28 @@ int filesize(int fd) {
 int read(int fd, void *buffer, unsigned size) {
     int bytes_read = -1;
 
+    /* If the ENTIRE buffer is valid pointer range */
     if (valid_user_pointer(buffer) && valid_user_pointer(buffer + size)) {
         if (fd == STDIN_FILENO) {
-            /* Read from stdin to buffer */
+            /* If file descriptor is the stdin descriptor, read from stdin to
+             * the buffer.
+             */
             while (size > 0) {
+                /* Get uint8_t character from the console and set it where
+                 * the buffer points.
+                 */
                 *((uint8_t *) buffer) = input_getc();
+
+                /* Increment the buffer pointer */
                 buffer = (void *) (((uint8_t *) buffer) + 1);
+
+                /* Decrement the size for the while loop condition */
                 size--;
             }
         } else if (fd != STDOUT_FILENO) {
+            /* If the file descriptor is not stdout, read the file using
+             * the filesystem.
+             */
             lock_acquire(&filesys_lock);
             if (file_is_open(fd)) {
                 bytes_read = file_read(get_file_struct(fd), buffer, size);
@@ -415,10 +448,15 @@ int read(int fd, void *buffer, unsigned size) {
 int write(int fd, const void *buffer, unsigned size) {
     int bytes_written = -1;
 
+    /* If the ENTIRE buffer is valid pointer range */
     if (valid_user_pointer(buffer) && valid_user_pointer(buffer + size)) {
         if (fd == STDOUT_FILENO) {
+            /* If writing to stdout putbuf to output size bytes from buffer
+             * to console.
+             */
             putbuf((const char *) buffer, (size_t) size);
         } else if (fd != STDIN_FILENO) {
+            /* If file is not stdin, write to file in the filesystem */
             lock_acquire(&filesys_lock);
             if (file_is_open(fd)) {
                 bytes_written = file_write(get_file_struct(fd), buffer, size);
@@ -469,10 +507,20 @@ void close(int fd) {
 
     lock_acquire(&filesys_lock);
     if (file_is_open(fd)) {
+        /* If file is opened by this process */
+
+        /* Close the file using the filesystem. */
         file_close(get_file_struct(fd));
+
+        /* Update the process_details struct.
+         * Set the file pointer at the file descriptor index in the files
+         * array to NULL.
+         * Specify that the filedescriptor is now available.
+         */
         thread_current()->process_details->files[fd] = NULL;
         thread_current()->process_details->open_file_descriptors[fd] = false;
 
+        /* Decrement the variable of number of files that are open */
         cur_thread->process_details->num_files_open--;
     }
     lock_release(&filesys_lock);
