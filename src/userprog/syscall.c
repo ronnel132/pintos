@@ -242,17 +242,17 @@ int wait(pid_t pid) {
             if (iter->process_details->parent_id != thread_current()->tid) {
                 return -1;
             }
-            status = iter->exit_status;
             waitee = iter;
             break;
         } 
     }
     intr_set_level(old_level);
     if (waitee != NULL) {
-        sema_down(iter->waiter_sema);
+        sema_down(waitee->waiter_sema);
+        status = waitee->exit_status;
 
         /* Free waiter_sema */
-        palloc_free_page(iter->waiter_sema);
+        palloc_free_page(waitee->waiter_sema);
         return status;
     }
 
