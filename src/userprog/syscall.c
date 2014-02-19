@@ -277,8 +277,6 @@ int wait(pid_t pid) {
             }
             status =  dead->status;
             list_remove(&dead->elem);
-            /* Free waiter_sema */
-            palloc_free_page(dead->waiter_sema);
 
             /* Free thread_dead struct */
             palloc_free_page(dead);

@@ -581,12 +581,11 @@ void thread_exit(void) {
             td->tid = thread_current()->tid;
 
             td->status = thread_current()->exit_status;
-            td->waiter_sema = thread_current()->waiter_sema;
             td->parent_id = thread_current()->process_details->parent_id;
             
             /* NOTE: td->elem will be alloced inside the struct */
             list_push_front(&dead_list, &td->elem);
-            sema_up(thread_current()->waiter_sema);
+            palloc_free_page(thread_current()->waiter_sema);
         }
 
 //         printf("pre process_exit\n");

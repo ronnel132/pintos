@@ -271,7 +271,14 @@ reaping is needed.
 When a thread exits, it's struct is always destroyed in schedule() (this was
 in pintos before we changed anything). The semaphore is freed by parent after
 reaping, or by the child itself if it's being inserted in the dead list.
+The dead_list entry is freed after the parent reaps the child. If it never
+does, that is never freed. But in a real OS that could be a desired
+behaviour (init will inherit those children and reap them), so we may
+still wanna keep that information around. It doesn't matter whether
+P terminates before or after C exits, the behaviour will be the same.
 
+There arent' any special cases, though this system could be extended to
+implement more sophisticated stuff. That is, however, beyond the spec.
 
 ---- RATIONALE ----
 
