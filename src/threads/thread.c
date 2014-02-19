@@ -574,7 +574,7 @@ void thread_exit(void) {
             /* Initialize stuff */
             td = palloc_get_page(PAL_ZERO);
             if (td == NULL) {
-                /* ... */
+                ASSERT(0);
             }
             td->tid = thread_current()->tid;
 
@@ -588,7 +588,6 @@ void thread_exit(void) {
         }
 
 //         printf("pre process_exit\n");
-        // TODO: Free waiter semaphore at some point
         process_exit();
 //         printf("post process_exit\n");
 
