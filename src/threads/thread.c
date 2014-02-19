@@ -543,7 +543,6 @@ tid_t thread_tid(void) {
 void thread_exit(void) {
     ASSERT(!intr_context());
 
-//     printf("at thread_exit()\n");
 #ifdef USERPROG
     struct thread_dead *td;
 #endif
@@ -575,22 +574,19 @@ void thread_exit(void) {
         else {
             /* Initialize stuff */
             td = palloc_get_page(PAL_ZERO);
-            if (td == NULL) {
-                ASSERT(0);
-            }
-            td->tid = thread_current()->tid;
+            if (td != NULL) {
+                td->tid = thread_current()->tid;
 
-            td->status = thread_current()->exit_status;
-            td->parent_id = thread_current()->process_details->parent_id;
-            
-            /* NOTE: td->elem will be alloced inside the struct */
-            list_push_front(&dead_list, &td->elem);
-            palloc_free_page(thread_current()->waiter_sema);
+                td->status = thread_current()->exit_status;
+                td->parent_id = thread_current()->process_details->parent_id;
+                
+                /* NOTE: td->elem will be alloced inside the struct */
+                list_push_front(&dead_list, &td->elem);
+                palloc_free_page(thread_current()->waiter_sema);
+            }
         }
 
-//         printf("pre process_exit\n");
         process_exit();
-//         printf("post process_exit\n");
 
         /* Free loaded sema */
         palloc_free_page(thread_current()->child_loaded_sema);
