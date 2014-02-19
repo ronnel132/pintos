@@ -544,7 +544,6 @@ void thread_exit(void) {
 
 #ifdef USERPROG
     struct thread_dead *td;
-    struct thread *parent;
 #endif
 
     /* Remove thread from all threads list, set our status to dying,
@@ -563,30 +562,25 @@ void thread_exit(void) {
         
         printf("%s: exit(%d)\n", thread_current()->name, thread_current()->exit_status);
         /* No races here, interrupts disabled */
-        /* If there's someone waiting for us, let them know that we're dying */
-        if (list_size(&thread_current()->waiter_sema->waiters) != 0) {
-            parent = list_begin(&thread_current()->waiter_sema->waiters);
-            sema_up(thread_current()->waiter_sema);
-            parent->child_exit_status = thread_current()->exit_status;
-        }
-        /* Else if no one is waiting for us, add us to the dead_list 
+        /* Add us to the dead_list 
          * Note that this makes sense only when we're talking about
          * kernel threads that correspond to user processes
          */
-        else {
-            /* Initialize stuff */
-            td = palloc_get_page(PAL_ZERO);
-            if (td != NULL) {
-                td->tid = thread_current()->tid;
+        /* Initialize stuff */
+        td = palloc_get_page(PAL_ZERO);
+        if (td != NULL) {
+            td->tid = thread_current()->tid;
 
-                td->status = thread_current()->exit_status;
-                td->parent_id = thread_current()->process_details->parent_id;
-                
-                /* NOTE: td->elem will be alloced inside the struct */
-                list_push_front(&dead_list, &td->elem);
-            }
-            palloc_free_page(thread_current()->waiter_sema);
+            td->status = thread_current()->exit_status;
+            td->parent_id = thread_current()->process_details->parent_id;
+            
+            /* NOTE: td->elem will be alloced inside the struct */
+            list_push_front(&dead_list, &td->elem);
         }
+
+        /* If there's someone waiting for us, let them know that we're dying */
+        
+        sema_up(thread_current()->waiter_sema);
 
         process_exit();
 

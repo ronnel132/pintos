@@ -273,12 +273,7 @@ int wait(pid_t pid) {
     intr_set_level(old_level);
 
     if (waitee != NULL) {
-        sema_down(waitee->waiter_sema);
-        status = waitee->exit_status;
-
-        /* Free waiter_sema */
-        palloc_free_page(waitee_sema);
-        return status;
+        sema_down(waitee_sema);
     }
 
     old_level = intr_disable();
@@ -296,6 +291,9 @@ int wait(pid_t pid) {
 
             /* Free thread_dead struct */
             palloc_free_page(dead);
+
+            /* Free semaphor */
+            palloc_free_page(waitee_sema);
             break;
         } 
     }

@@ -156,9 +156,6 @@ struct thread {
 
     /* This will be 1 if there's a child load error, otherwise undefined */
     int child_loaded_error;
-
-    /* Will store child exit status */
-    int child_exit_status;
 #endif
 
     /*! Owned by thread.c. */
