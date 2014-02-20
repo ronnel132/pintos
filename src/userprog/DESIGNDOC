@@ -141,6 +141,14 @@ process. A separate array keeps track of which file descriptors are in use.
 >> B10: What advantages or disadvantages can you see to your design
 >> for file descriptors?
 
+One advantage to keeping an array of size MAX_OPEN_FILES is that there is
+easy/fast lookup of file structs corresponding to a file descriptor. There
+is no additional allocation required when opening files.
+
+It is however a disadvantage that the process struct is so big even for
+processes that don't open files. It takes up an unnecssary amount of space
+most of the time.
+
 >> B11: The default tid_t to pid_t mapping is the identity mapping.
 >> If you changed it, what advantages are there to your approach?
 
