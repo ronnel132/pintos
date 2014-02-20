@@ -60,9 +60,35 @@ Archan Luhar     <archan@caltech.edu>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+thread.h: Defined a process struct was created to store process level
+information as opposed to thread level information.
+struct process {
+    tid_t parent_id;
+    struct file * exec_file;
+    int num_files_open;
+    bool open_file_descriptors[MAX_OPEN_FILES];
+    struct file * files[MAX_OPEN_FILES];
+};
+
+thread.h: Added a process struct, process_details, to the thread struct:
+struct thread {
+  ...
+  struct process * process_details;
+  ...
+};
+
+thread.c: Global lock used by filesystem syscalls.
+struct lock filesys_lock;
+
+
 >> B2: Describe how file descriptors are associated with open files.
 >> Are file descriptors unique within the entire OS or just within a
 >> single process?
+
+File descriptors are an index into an array of struct file pointers located in
+the process_details struct of a thread. They are unique within a single
+process. A separate array keeps track of which file descriptors are in use.
+
 
 ---- ALGORITHMS ----
 
