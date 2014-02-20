@@ -52,6 +52,7 @@ tid_t process_execute(const char *raw_args) {
         return TID_ERROR;
     strlcpy(raw_args_copy, raw_args, PGSIZE);
 
+    /* Tokenize once to get argv[0], the thread name. */
     thread_name = strtok_r(raw_args_tok_copy, " ", &saveptr);
 
     /* Create a new thread to execute process argv[0] (the first char * in 
@@ -60,7 +61,6 @@ tid_t process_execute(const char *raw_args) {
     if (tid == TID_ERROR)
         palloc_free_page(raw_args_tok_copy); 
         palloc_free_page(raw_args_copy); 
-//     printf("in process_execute(); assigned tid:%d\n", tid);
     return tid;
 }
 
@@ -89,7 +89,11 @@ char **tokenize_process_args(const char *raw_args, int *argc) {
         (*argc)++;
         
         strlcpy(offset, token, strlen(token) + 1); 
+        /* Set argv[i] to the current offset, now pointing to the location 
+           in memory corresponding to the string we just wrote. */
         argv[i] = offset;
+        /* Increase offset by the size of the string written, including its 
+           null terminating character. */
         offset += strlen(token) + 1;
     }
     /* Set the last value of the tokenized array to be NULL. */
@@ -114,6 +118,7 @@ static void start_process(void *raw_args_) {
     if_.cs = SEL_UCSEG;
     if_.eflags = FLAG_IF | FLAG_MBS;
     
+    /* Tokenize the input, also get argc. */
     argv = tokenize_process_args(raw_args, &argc); 
     success = load(argc, argv, &if_.eip, &if_.esp);
 
@@ -178,7 +183,6 @@ int process_wait(tid_t child_tid UNUSED) {
 void process_exit(void) {
     struct thread *cur = thread_current();
     uint32_t *pd;
-//     printf("at process_exit()\n");
 
     /* Destroy the current process's page directory and switch back
        to the kernel-only page directory. */
@@ -195,7 +199,6 @@ void process_exit(void) {
         pagedir_activate(NULL);
         pagedir_destroy(pd);
     }
-//     printf("at process_exit() END\n");
 }
 
 /*! Sets up the CPU for running user code in the current thread.
@@ -504,10 +507,13 @@ static bool setup_stack(void **esp, int argc, char **argv) {
         success = install_page(((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
         if (success) {
             /* Set up the stack. */
+            /* Copy the argv strings in reverse order onto the stack. */
             for (i = argc - 1; i >= 0; i--) {
                 /* Subtract from the offset the length of the string (plus 
                    the null byte), so we can write to this location. */
                 offset -= strlen(argv[i]) + 1; 
+                /* Copy the current argument onto the stack, up to and 
+                   including its null terminating character. */
                 strlcpy(offset, argv[i], strlen(argv[i]) + 1);
                 /* We set argv[i] to the current offset so that we can quickly
                    access the memory locations of strings we pushed onto the
@@ -543,6 +549,7 @@ static bool setup_stack(void **esp, int argc, char **argv) {
             *((int *) offset) = 0;
 
             *esp = offset;
+            /* Free argv and the original string page. */
             palloc_free_page(argv);
             palloc_free_page(argv_string_page);
         }
