@@ -3,6 +3,7 @@
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/palloc.h"
 #include "devices/shutdown.h"
 
 #include "threads/vaddr.h"
