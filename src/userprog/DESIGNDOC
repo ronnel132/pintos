@@ -36,12 +36,14 @@ Archan Luhar     <archan@caltech.edu>
 >> A1: Copy here the declaration of each new or changed `struct' or
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
+We didn't declare any new global or static variables, nor any new structs.
 
 ---- ALGORITHMS ----
 
 >> A2: Briefly describe how you implemented argument parsing.  How do
 >> you arrange for the elements of argv[] to be in the right order?
 >> How do you avoid overflowing the stack page?
+
 
 ---- RATIONALE ----
 

@@ -33,10 +33,14 @@ extern struct list all_list;
 tid_t process_execute(const char *raw_args) {
     char *raw_args_tok_copy, *raw_args_copy, *thread_name, *saveptr;
     tid_t tid;
-    
+
+    /* Check if the cmdline input exceeds 4kB, the page size. */
+    if (strlen(raw_args) > PGSIZE) {
+        return TID_ERROR;
+    }
+
     /* create one copy for tokenizing, since strtok modifies the original 
        string. */
-//     printf("in process_execute()\n");
     raw_args_tok_copy = palloc_get_page(0);
     if (raw_args_tok_copy == NULL)
         return TID_ERROR;
