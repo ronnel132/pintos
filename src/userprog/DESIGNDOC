@@ -41,8 +41,6 @@ Archan Luhar     <archan@caltech.edu>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
-We didn't declare any new global or static variables, nor any new structs.
-
 ---- ALGORITHMS ----
 
 >> A2: Briefly describe how you implemented argument parsing.  How do
@@ -137,6 +135,9 @@ struct thread {
 thread.c: Global lock used by filesystem syscalls.
 struct lock filesys_lock;
 
+A dead_list: keeps track of processes (semaphore, tid, parent_id, exit_status)
+of a process that has exited, however not yet been waited on (reaped) by his
+parent. 
 
 >> B2: Describe how file descriptors are associated with open files.
 >> Are file descriptors unique within the entire OS or just within a
