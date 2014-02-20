@@ -468,6 +468,7 @@ unsigned tell(int fd) {
     if (file_is_open(fd)) {
         file_close(get_file_struct(fd));
         thread_current()->process_details->files[fd] = NULL;
+        thread_current()->process_details->open_file_descriptors[fd] = false;
 
         cur_thread->process_details->num_files_open--;
     }
