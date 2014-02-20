@@ -36,7 +36,7 @@ bool valid_user_pointer(const void *ptr) {
     pd = active_pd();
     pde = pd + pd_no(ptr);
 
-
+    /* See lookup_page() for more info */
     if (is_user_vaddr(ptr) && (*pde != 0)) {
         return true;
     }
@@ -85,6 +85,7 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
         exit(EXIT_BAD_PTR);
     }
 
+    /* Extract syscall numbers and arguments */
     int syscall_nr = *((int *)f->esp);
 
     void *arg1 = (void *) ((int *)(f->esp + 4));
@@ -191,6 +192,7 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             close(*((int *)arg1));
             break;
         default:
+            /* Yeah, we're not that nice */
             exit(-1);
     }
 }
@@ -216,7 +218,10 @@ pid_t exec(const char *cmd_line) {
     tid_t tid = -1;
     if (valid_user_pointer(cmd_line)) {
         tid = process_execute(cmd_line);
+
+        /* Wait for process to actually load */
         sema_down(thread_current()->child_loaded_sema);
+
         if (thread_current()->child_loaded_error == 1) {
             tid = -1;
         }
@@ -251,6 +256,7 @@ int wait(pid_t pid) {
         } 
     }
     intr_set_level(old_level);
+
     if (waitee != NULL) {
         sema_down(waitee->waiter_sema);
         status = waitee->exit_status;
@@ -457,7 +463,7 @@ unsigned tell(int fd) {
  * closes all its open file descriptors, as if by calling this function for
  * each one.
  */
- void close(int fd) {
+void close(int fd) {
 
     struct thread * cur_thread = thread_current();
 
