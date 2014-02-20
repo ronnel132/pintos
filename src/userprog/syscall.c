@@ -18,7 +18,13 @@
 
 #include "userprog/process.h"
 
+/* Frees a page */
+extern void palloc_free_page (void *);
 
+/* Validates a user-provided pointer. Checks that it's in the required
+ * range, and that it correpsonds to a page directory entry
+ */
+bool valid_user_pointer(const void *ptr);
 
 /* Function prototype */
 static void syscall_handler(struct intr_frame *);
