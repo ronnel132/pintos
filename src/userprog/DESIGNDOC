@@ -44,14 +44,61 @@ We didn't declare any new global or static variables, nor any new structs.
 >> you arrange for the elements of argv[] to be in the right order?
 >> How do you avoid overflowing the stack page?
 
+When process_execute receives the input cmdline string, the first thing we do
+is check if the length of that string is less than or equal to the PGSIZE. If
+it is, we return TID_ERROR (-1). Then, we immediately make a copy of the 
+cmdline input, so we can be sure the caller does not free the string. In 
+process execute we also make an additional copy, and using strtok_r, we use 
+this second copy to create a string with the file name of the process, which
+is passed to thread_create() as the thread name. The function thread_create()
+will then execute start_process(), with its argument being the copied cmdline 
+string. In start_process(), we tokenize the string using a function called
+tokenize_process_args(). This function takes the input string, and creates an
+argv array, and also sets the value of argc, an int pointer passed in by 
+start_process().
+
+In tokenize_process_args(), we first palloc two memory regions. The first for
+storing the tokenized strings themselves, in a contiguous memory region 
+starting at the beginning of this string page. The second is for the argv 
+array itself -- so it stores pointers to strings in the string page. After
+pallocing the pages, we then tokenize the input string with strtok_r. We use 
+the space delimiter " ", so each token will be a string stripped of all the 
+whitespaces. These are stored in the string page with strlcpy, and we keep
+track of an offset in the string page so we know where to write the next 
+string. After writing the current token to the string page we increment argc,
+then we set argv for the current index to the string we just wrote into the 
+string page. After we do this, we set the last value in the argv array to be 
+NULL, and then return argv. 
+
+With start_process() now having access to an argv and argc, we pass this 
+information to the load function, which then passes it to the setup_stack()
+function. Here, we keep track of an offset pointer, initially set to 
+PHYS_BASE, and we use this pointer to first write all the strings onto the
+stack. After we strlcpy'ing a string in argv onto the stack, we then set the
+value of argv[i] at the current index to be a pointer to this new offset, 
+so that argv now points to strings on the stack, so that we can use it when
+we are writing the actual argv array onto the stack, and it won't point to 
+strings in the original string page. Then, we write the word-align 0 onto
+the stack, then all the pointers to the strings in argv onto the stack, 
+then the pointer to argv itself (which is just the memory address of the 
+previous byte we wrote to). Then, we write argc, and lastly, the dummy 
+return address. We then set *esp to the current offset, and free the old
+string page and the argv array. The stack is now set up.
+
 
 ---- RATIONALE ----
 
 >> A3: Why does Pintos implement strtok_r() but not strtok()?
+In the man page for strtok and strtok_r, it says strtok() function uses 
+a static buffer while parsing, so it's not thread safe. Thus, if two threads 
+are using strtok at the same time, that could cause serious issues. 
 
 >> A4: In Pintos, the kernel separates commands into a executable name
 >> and arguments.  In Unix-like systems, the shell does this
 >> separation.  Identify at least two advantages of the Unix approach.
+
+One advantage of the unix-like systems' approach is that you spend less time
+in the kernel, since the kernel doesn't have to tokenize the command. 
 
                              SYSTEM CALLS
                              ============
