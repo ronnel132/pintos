@@ -106,7 +106,7 @@ char **tokenize_process_args(const char *raw_args, int *argc) {
 static void start_process(void *raw_args_) {
     char *raw_args = (char *) raw_args_;
     const char **argv;
-    int argc;
+    int argc, stack_constants, raw_args_size;
     struct intr_frame if_;
     bool success;
     struct list_elem *e;
@@ -118,9 +118,25 @@ static void start_process(void *raw_args_) {
     if_.cs = SEL_UCSEG;
     if_.eflags = FLAG_IF | FLAG_MBS;
     
+    raw_args_size = strlen(raw_args);
     /* Tokenize the input, also get argc. */
     argv = tokenize_process_args(raw_args, &argc); 
-    success = load(argc, argv, &if_.eip, &if_.esp);
+
+    /* The stack_constants are the return address (4 bytes), the argc
+       (4 bytes), the argv ptr (4 bytes), & the word-align (1 byte). */ 
+    stack_constants = 4 + 4 + 4 + 1; 
+    
+    /* Check if we have enough space on the stack: The arg strings themselves,
+       the space for the stack constants, the argc pointers, and argc bytes 
+       for the null terminating characters that will be added at the end of 
+       each argv string. */
+    if ((raw_args_size + argc + stack_constants + 
+         argc * sizeof(char *)) > PGSIZE) {
+        success = false;
+    }
+    else {
+        success = load(argc, argv, &if_.eip, &if_.esp);
+    }
 
     /* If load failed, quit. */
     if (!success) {

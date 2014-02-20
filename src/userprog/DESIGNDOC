@@ -73,16 +73,22 @@ then we set argv for the current index to the string we just wrote into the
 string page. After we do this, we set the last value in the argv array to be 
 NULL, and then return argv. 
 
-With start_process() now having access to an argv and argc, we pass this 
-information to the load function, which then passes it to the setup_stack()
-function. Here, we keep track of an offset pointer, initially set to 
-PHYS_BASE, and we use this pointer to first write all the strings onto the
-stack. After we strlcpy'ing a string in argv onto the stack, we then set the
-value of argv[i] at the current index to be a pointer to this new offset, 
-so that argv now points to strings on the stack, so that we can use it when
-we are writing the actual argv array onto the stack, and it won't point to 
-strings in the original string page. Then, we write the word-align 0 onto
-the stack, then all the pointers to the strings in argv onto the stack, 
+With start_process() now having access to an argv and argc, we check that 
+everything can fit onto the stack. We do so by adding up all the bytes taken
+up by the arguments on the stack, the word-align, the return address, argc,
+as well as well as the argv pointer and all the argv[i] pointers. In addition,
+we add argc bytes to take into account the null terminating characters at the
+end of each string.
+
+We then pass this information to the load function, which then passes it to 
+the setup_stack() function. Here, we keep track of an offset pointer, 
+initially set to PHYS_BASE, and we use this pointer to first write all the 
+strings onto the stack. After we strlcpy'ing a string in argv onto the stack, 
+we then set the value of argv[i] at the current index to be a pointer to this 
+new offset, so that argv now points to strings on the stack, so that we can 
+use it when we are writing the actual argv array onto the stack, and it won't 
+point to strings in the original string page. Then, we write the word-align 0 
+onto the stack, then all the pointers to the strings in argv onto the stack, 
 then the pointer to argv itself (which is just the memory address of the 
 previous byte we wrote to). Then, we write argc, and lastly, the dummy 
 return address. We then set *esp to the current offset, and free the old
