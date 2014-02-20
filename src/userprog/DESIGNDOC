@@ -41,7 +41,12 @@ Archan Luhar     <archan@caltech.edu>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
-We didn't declare any new global or static variables, nor any new structs.
+We declared a global a global filesystem lock, to synchronize filesystem
+operations (since the FS implementation right now sucks).
+
+A dead_list: keeps track of processes (semaphore, tid, parent_id, exit_status)
+of a process that has exited, however not yet been waited on (reaped) by his
+parent. 
 
 ---- ALGORITHMS ----
 
