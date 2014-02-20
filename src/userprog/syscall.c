@@ -49,13 +49,13 @@ bool valid_user_pointer(const void *ptr) {
 
 /* Checks if a file is open */
 bool file_is_open(int fd) {
-    bool is_open = false;
+    bool opn = false;
 
     if (fd >= 0 && fd < MAX_OPEN_FILES) {
-        is_open = thread_current()->process_details->open_file_descriptors[fd];
+        opn = thread_current()->process_details->open_file_descriptors[fd];
     }
 
-    return is_open;
+    return opn;
 }
 
 /* Gets the file struct from a file descriptor */
@@ -94,8 +94,8 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
 
 
     /* Figure out which system call was invoked. Also note that we check the
-     * passed pointers for correctness. There probably is a more elegant way to
-     * write this; sorry about that
+     * passed pointers for correctness. There probably is a more elegant way
+     * to write this; sorry about that
      */
     switch(syscall_nr) {
         case SYS_HALT:
@@ -152,15 +152,22 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             break;
 
         case SYS_READ:
-            if ((!valid_user_pointer(arg1)) || (!valid_user_pointer(arg2)) ||
-                  (!valid_user_pointer(arg3)) || (!valid_user_pointer(arg4))) {
+            if ((!valid_user_pointer(arg1)) ||
+                (!valid_user_pointer(arg2)) ||
+                (!valid_user_pointer(arg3)) ||
+                (!valid_user_pointer(arg4))) {
+
                 exit(EXIT_BAD_PTR);
             }
-            f->eax = read(*((int *)arg1), *((void **)arg2), *((unsigned *)arg3));
+            f->eax = read(*((int *)arg1),
+                          *((void **)arg2),
+                          *((unsigned *)arg3));
             break;
 
         case SYS_WRITE:
-            f->eax = write(*((int *)arg1), *((void **)arg2), *((unsigned *)arg3));
+            f->eax = write(*((int *)arg1),
+                           *((void **)arg2),
+                           *((unsigned *)arg3));
             break;
 
         case SYS_SEEK:
