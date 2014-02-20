@@ -159,7 +159,20 @@ process. A separate array keeps track of which file descriptors are in use.
 >> B3: Describe your code for reading and writing user data from the
 >> kernel.
 
-// TODO: BELLO
+Reading and writing user data from the kernel happens in several system call
+functions. The following functions interact with user data: exec, create,
+remove, open, read, and write.
+
+Each is passed some pointer by the user program. The functions first verify
+that the pointers (as well as the pointers + some size argument) are in
+required range, and that they correpsond to a page directory entry.
+
+Then, the syscall functions proceed with their functionality. The exec
+function reads the program execution arguments string through process
+functions. create creates a file in the filesystem with the name given to
+it by a pointer to a string. Similarly remove deletes the file. Read reads
+a file and writes it into a buffer pointer given to it by the user. Write
+reads a buffer in the user space and writes given number of bytes to a file.
 
 
 >> B4: Suppose a system call causes a full page (4,096 bytes) of data
