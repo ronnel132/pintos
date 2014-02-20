@@ -40,6 +40,7 @@ Archan Luhar     <archan@caltech.edu>
 >> A1: Copy here the declaration of each new or changed `struct' or
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
+
 We didn't declare any new global or static variables, nor any new structs.
 
 ---- ALGORITHMS ----
@@ -213,6 +214,8 @@ process. A separate array keeps track of which file descriptors are in use.
 
 >> B9: Why did you choose to implement access to user memory from the
 >> kernel in the way that you did?
+
+// TODO
 
 
 >> B10: What advantages or disadvantages can you see to your design
