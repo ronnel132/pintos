@@ -19,8 +19,6 @@ Archan Luhar     <archan@caltech.edu>
    Repository URL:  /cs/courses/cs124/teams/pintos-bbl
    commit ...
 
-// TODO
-
 
 ---- PRELIMINARIES ----
 
@@ -236,7 +234,6 @@ This code essentially checks that the address provided by users is in the
 valid range, and that it corresponds to an allocated page. If not, we do
 an exit(-1), hence calling thread_exit(), releasing all that thread's
 resources.
-// TODO: Review this
 
 
 ---- SYNCHRONIZATION ----
@@ -273,7 +270,6 @@ error (return -1).
 >> terminates without waiting, before C exits?  After C exits?  Are
 >> there any special cases?
 
-// TODO: BELLO
 If P calls wait(C) before C exits, P will wait on C's waiter semaphore
 (initialized to 0), until C exits and sema_up-s this semaphore.
 
