@@ -95,19 +95,18 @@ string page and the argv array. The stack is now set up.
 
 >> A3: Why does Pintos implement strtok_r() but not strtok()?
 In the man page for strtok and strtok_r, it says strtok() function uses 
-a static buffer while parsing, so it's not thread safe. Thus, if two threads 
-are using strtok at the same time, that could cause serious issues. Thus,
-pintos only allows usage of strtok_r() because it is safer for a
-multithreaded system like the pintos kernel.  
+a static buffer while parsing, so it's not thread safe. Thus, two threads
+could be writing to the same locations in the static buffer at once. In 
+strtok_r, the saveptr allows the user to keep track of its own progress
+in parsing the string, so this makes it thread safe.  
 
 >> A4: In Pintos, the kernel separates commands into a executable name
 >> and arguments.  In Unix-like systems, the shell does this
 >> separation.  Identify at least two advantages of the Unix approach.
 
-One advantage of the unix-like systems' approach is that you spend less time
+An advantage of the unix-like systems' approach is that you spend less time
 in the kernel, since the kernel doesn't have to spend time tokenizing the 
 commands. 
-
 
                              SYSTEM CALLS
                              ============
