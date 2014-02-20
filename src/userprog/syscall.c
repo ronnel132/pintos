@@ -26,6 +26,12 @@ extern void palloc_free_page (void *);
  */
 bool valid_user_pointer(const void *ptr);
 
+/* Checks if a file is open */
+bool file_is_open(int fd);
+
+/* Gets the file struct from a file descriptor */
+struct file * get_file_struct(int fd);
+
 /* Function prototype */
 static void syscall_handler(struct intr_frame *);
 
@@ -156,7 +162,7 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             if ((!valid_user_pointer(arg1))) {
                 exit(EXIT_BAD_PTR);
             }
-            f->eax = filesize(*((const char **)arg1));
+            f->eax = filesize(*((int *) arg1));
             break;
 
         case SYS_READ:
@@ -167,15 +173,15 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
 
                 exit(EXIT_BAD_PTR);
             }
-            f->eax = read(*((int *)arg1),
-                          *((void **)arg2),
-                          *((unsigned *)arg3));
+            f->eax = read(*((int *) arg1),
+                          *((void **) arg2),
+                          *((unsigned *) arg3));
             break;
 
         case SYS_WRITE:
-            f->eax = write(*((int *)arg1),
-                           *((void **)arg2),
-                           *((unsigned *)arg3));
+            f->eax = write(*((int *) arg1),
+                           *((void **) arg2),
+                           *((unsigned *) arg3));
             break;
 
         case SYS_SEEK:
@@ -189,14 +195,14 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             if ((!valid_user_pointer(arg1))) {
                 exit(EXIT_BAD_PTR);
             }
-            f->eax = tell(*((int *)arg1));
+            f->eax = tell(*((int *) arg1));
             break;
 
         case SYS_CLOSE:
             if ((!valid_user_pointer(arg1))) {
                 exit(EXIT_BAD_PTR);
             }
-            close(*((int *)arg1));
+            close(*((int *) arg1));
             break;
         default:
             /* Yeah, we're not that nice */
