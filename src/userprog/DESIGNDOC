@@ -261,6 +261,16 @@ error (return -1).
 >> there any special cases?
 
 // TODO: BELLO
+If P calls wait(C) before C exits, P will wait on C's waiter semaphore
+(initialized to 0), until C exits and sema_up-s this semaphore.
+
+If P calls wait(C) after C exits, it won't find it in the all_list, but
+it will find it in dead_list, where all the information needed for the
+reaping is needed.
+
+When a thread exits, it's struct is always destroyed in schedule() (this was
+in pintos before we changed anything). The semaphore is freed by parent after
+reaping, or by the child itself if it's being inserted in the dead list.
 
 
 ---- RATIONALE ----
