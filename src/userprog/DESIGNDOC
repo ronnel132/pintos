@@ -164,13 +164,13 @@ process. A separate array keeps track of which file descriptors are in use.
 >> for a system call that only copies 2 bytes of data?  Is there room
 >> for improvement in these numbers, and how much?
 
-// TODO
+// TODO: WHOEVER KNOWS WHAT THIS IS ABOUT
 
 
 >> B5: Briefly describe your implementation of the "wait" system call
 >> and how it interacts with process termination.
 
-// TODO
+// TODO: BELLO
 
 
 >> B6: Any access to user program memory at a user-specified address
@@ -187,6 +187,8 @@ process. A separate array keeps track of which file descriptors are in use.
 >> paragraphs, describe the strategy or strategies you adopted for
 >> managing these issues.  Give an example.
 
+We created a wrapper function that validates the pointers given to the syscall
+by the user. This avoids a lot of repeated code.
 // TODO
 
 
@@ -197,7 +199,7 @@ process. A separate array keeps track of which file descriptors are in use.
 >> loading.  How does your code ensure this?  How is the load
 >> success/failure status passed back to the thread that calls "exec"?
 
-// TODO
+// TODO: BELLO
 
 
 >> B8: Consider parent process P with child process C.  How do you
@@ -207,7 +209,7 @@ process. A separate array keeps track of which file descriptors are in use.
 >> terminates without waiting, before C exits?  After C exits?  Are
 >> there any special cases?
 
-// TODO
+// TODO: BELLO
 
 
 ---- RATIONALE ----
@@ -215,7 +217,10 @@ process. A separate array keeps track of which file descriptors are in use.
 >> B9: Why did you choose to implement access to user memory from the
 >> kernel in the way that you did?
 
-// TODO
+We chose to verify user pointers to be in the users virtual memory space
+in addition to verifying that the pointers are in a page currently allocated.
+This was the easiest way to implement protection of the kernel from bad
+pointers given to it through syscalls by user programs.
 
 
 >> B10: What advantages or disadvantages can you see to your design
