@@ -21,11 +21,13 @@
 /*! Lock used by filesystem syscalls. */
 extern struct lock filesys_lock;
 
+/* Function prototype */
 static void syscall_handler(struct intr_frame *);
 
-
+/* Global thread lists */
 extern struct list dead_list;
 extern struct list all_list;
+
 
 /* Validates a user-provided pointer. Checks that it's in the required
  * range, and that it correpsonds to a page directory entry
@@ -44,6 +46,8 @@ bool valid_user_pointer(const void *ptr) {
     return false;
 }
 
+
+/* Helper functions for files related to process. */
 
 /* Checks if a file is open */
 bool file_is_open(int fd) {
@@ -67,11 +71,16 @@ struct file * get_file_struct(int fd) {
     return f;
 }
 
+
 /* Installs the syscall_handler into the interrupt vector table. */
 void syscall_init(void) {
     intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
+/* Based on the stack when interrupted, syscall_handler executes correct
+ * syscall according to the syscall number and with
+ * the proper arguments.
+ */
 static void syscall_handler(struct intr_frame *f UNUSED) {
     /* Check validity of syscall_nr */
     if (!valid_user_pointer(f->esp)) {
