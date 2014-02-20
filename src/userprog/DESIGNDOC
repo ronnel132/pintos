@@ -175,7 +175,31 @@ process. A separate array keeps track of which file descriptors are in use.
 >> B5: Briefly describe your implementation of the "wait" system call
 >> and how it interacts with process termination.
 
-// TODO: BELLO
+When a parent process waits for a child, we first have made sure that the 
+child is created. This is done in the exec (when exec returns, the child
+has actually been created, so it doesn't concern main).
+
+Then, the parent checks in the all_list (if the child is ready/blocked it will
+be there). Note that interrupts are disabled while looping that list, as it's a
+shared data structure. If it finds it there, it just tried to down the
+thread's wait semaphore (initialized to 0). Thus, the parent will
+clearly block itself. When the child exits, if its parent is
+waiting for it, it does a sema_up (hence lets the parent run and
+reap it).
+
+If the child exits and no one has waited for it yet, it is added to a 
+dead_list. Then, if the parent decides to wait, it can just look
+in the dead list (if it can't find it in all_list), and reap it.
+
+Long story short, each thread has a wait semaphore attached to it, initialzied
+to 0, that it can sema_up to signal a waiter (if there is one). If not, just
+add yourself to dead_list for later reaping.
+
+Note that we also make sure that the tid argument actually is a child
+of the caller, free appropriate pages etc, but I'll not go into boring
+details.
+
+
 
 
 >> B6: Any access to user program memory at a user-specified address
@@ -194,7 +218,12 @@ process. A separate array keeps track of which file descriptors are in use.
 
 We created a wrapper function that validates the pointers given to the syscall
 by the user. This avoids a lot of repeated code.
-// TODO
+
+This code essentially checks that the address provided by users is in the
+valid range, and that it corresponds to an allocated page. If not, we do
+an exit(-1), hence calling thread_exit(), releasing all that thread's
+resources.
+// TODO: Review this
 
 
 ---- SYNCHRONIZATION ----
@@ -204,7 +233,24 @@ by the user. This avoids a lot of repeated code.
 >> loading.  How does your code ensure this?  How is the load
 >> success/failure status passed back to the thread that calls "exec"?
 
-// TODO: BELLO
+Exec calls process_execute(), which does parsing and calls
+thread_create(). Thread create then sets up the thread to start at
+the desired function, with the desired arguments (the function will then
+load the executable). Thus, unfortunately, when we have created a new
+thread (hence when we have a new tid returned), the function hasn't
+started yet, hence the file isn't actually loaded! So we need some
+synchronization...
+
+The way we do it is that each parent (hence thread) has a special 
+load_semaphore and loaded_error field. The semaphore is initialized
+to 0. Then, in the function (start_process), after the loading is done,
+we signal the parent to wake up (it's waiting at the laod_sema), and we
+also update the loaded_error field, to indicate any errors.
+
+That way, the parent can actually know whether the process
+was stared successfully (go with given tid) or had a loading
+error (return -1).
+
 
 
 >> B8: Consider parent process P with child process C.  How do you
