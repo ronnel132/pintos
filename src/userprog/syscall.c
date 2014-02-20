@@ -18,8 +18,6 @@
 #include "userprog/process.h"
 
 
-/*! Lock used by filesystem syscalls. */
-extern struct lock filesys_lock;
 
 /* Function prototype */
 static void syscall_handler(struct intr_frame *);

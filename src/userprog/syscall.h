@@ -9,6 +9,9 @@
 #define EXIT_BAD_PTR -1         /*!< Bad pointer access during execution. */
 
 
+/*! Lock used by filesystem syscalls. */
+extern struct lock filesys_lock;
+
 /* Installs the syscall handler into the interrupt vector table. */
 void syscall_init(void);
 

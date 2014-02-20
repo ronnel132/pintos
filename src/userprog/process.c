@@ -7,6 +7,7 @@
 #include <string.h>
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
+#include "userprog/syscall.h"
 #include "userprog/tss.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
@@ -315,7 +316,8 @@ bool load(int argc, const char **argv, void (**eip) (void), void **esp) {
     if (t->pagedir == NULL) 
         goto done;
     process_activate();
-
+    
+    lock_acquire(&filesys_lock);
     /* Open executable file, named argv[0]. */
     file = filesys_open(argv[0]);
     if (file == NULL) {
@@ -392,6 +394,7 @@ bool load(int argc, const char **argv, void (**eip) (void), void **esp) {
             break;
         }
     }
+    lock_release(&filesys_lock);
 
     /* Set up stack. */
     if (!setup_stack(esp, argc, (char **) argv))
