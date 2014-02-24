@@ -3,6 +3,7 @@
 #include <debug.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <list.h>
 #include <random.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -34,6 +35,13 @@
 #else
 
 #include "tests/threads/tests.h"
+
+#endif
+
+#ifdef VM
+
+#include "vm/file.c"
+#include "vm/file.h"
 
 #endif
 
@@ -119,6 +127,10 @@ int main(void) {
 #ifdef USERPROG
     exception_init();
     syscall_init();
+#endif
+
+#ifdef VM
+    list_init(&frame_table);
 #endif
 
     /* Start thread scheduler and enable interrupts. */
