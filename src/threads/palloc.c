@@ -16,6 +16,7 @@
 #include <bitmap.h>
 #include <debug.h>
 #include <inttypes.h>
+#include <frame.h>
 #include <round.h>
 #include <stddef.h>
 #include <stdint.h>

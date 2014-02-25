@@ -4,7 +4,7 @@
 #define FRAME_MAX 2 << 20
 
 /*! Store the frame table as a list, sorted by frame number. */
-list frame_table;
+struct list frame_table;
 
 /*! Frame struct used by the frame table to keep track of which frames are
     free and which frames are allocated. */
