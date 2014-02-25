@@ -17,5 +17,3 @@ struct frame {
     struct list_elem elem;
 };
 
-void *get_frame(enum palloc_flags);
-void free_frame(void *);

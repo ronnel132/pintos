@@ -28,10 +28,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifdef VM
-#include "vm/frame.h"
-#endif
-
 #include "threads/loader.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
@@ -80,7 +76,7 @@ void * palloc_get_multiple(enum palloc_flags flags, size_t page_cnt) {
     void *pages;
     size_t page_idx;
     struct frame *user_frame;
-    int i;
+    int i, frame_num;
 
     if (page_cnt == 0)
         return NULL;
@@ -94,21 +90,21 @@ void * palloc_get_multiple(enum palloc_flags flags, size_t page_cnt) {
         if (flags & PAL_USER) {
             /* If we are allocating user memory, then store it in the frame 
                table. */
-            for (i = 0; i < page_cnt; i++) {
+            for (i = 0; i < (int) page_cnt; i++) {
                 /* Allocate a frame table entry in kernel VM. */
                 user_frame = (struct frame *) malloc(sizeof(struct frame));
                 frame_num = ((int) vtop(pages + i * PGSIZE)) >> 12; 
                 user_frame->frame_num = frame_num;
-                user_frame->vaddr = pages + i * PGSIZE;_
+                user_frame->vaddr = pages + i * PGSIZE;
                 /* TODO: Do an ordered insert. Doesn't matter for now since 
                    we are currently evicting randomly. */
-                list_push_front(&user_frame->elem);
+                list_push_front(&frame_table, &user_frame->elem);
             }
         }
     }
     else {
         pages = NULL;
-        /* TODO: Evict PAGE_CNT frames. */
+        /* TODO: Evict PAGE_CNT frames from the frame table. */
     }
 
     if (pages != NULL) {
