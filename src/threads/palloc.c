@@ -17,7 +17,11 @@
 #include <bitmap.h>
 #include <debug.h>
 #include <inttypes.h>
-#include <frame.h>
+
+#ifdef VM
+#include "vm/frame.h"
+#endif
+
 #include <round.h>
 #include <stddef.h>
 #include <stdint.h>
