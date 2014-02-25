@@ -1,4 +1,6 @@
 #include <list.h>
+#include <stdint.h>
+
 #define FRAME_MAX 2 << 20
 
 /*! Store the frame table as a list, sorted by frame number. */
@@ -14,3 +16,6 @@ struct frame {
     void *vaddr;
     struct list_elem elem;
 };
+
+void *get_frame(enum palloc_flags);
+void free_frame(void *);

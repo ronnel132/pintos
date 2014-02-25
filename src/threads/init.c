@@ -40,8 +40,7 @@
 
 #ifdef VM
 
-#include "vm/file.c"
-#include "vm/file.h"
+#include "vm/frame.h"
 
 #endif
 
