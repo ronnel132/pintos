@@ -95,7 +95,7 @@ void * palloc_get_multiple(enum palloc_flags flags, size_t page_cnt) {
             for (i = 0; i < (int) page_cnt; i++) {
                 /* Allocate a frame table entry in kernel VM. */
                 user_frame = (struct frame *) malloc(sizeof(struct frame));
-                frame_num = ((int) vtop(pages + i * PGSIZE)) >> 12; 
+                frame_num = ((int) vtop(pages + i * PGSIZE)) >> PGBITS; 
                 user_frame->frame_num = frame_num;
                 user_frame->vaddr = pages + i * PGSIZE;
                 /* TODO: Do an ordered insert. Doesn't matter for now since 
