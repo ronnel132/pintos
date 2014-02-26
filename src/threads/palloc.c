@@ -87,6 +87,8 @@ void * palloc_get_multiple(enum palloc_flags flags, size_t page_cnt) {
 
     if (page_idx != BITMAP_ERROR) {
         pages = pool->base + PGSIZE * page_idx;
+
+#ifdef VM
         if (flags & PAL_USER) {
             /* If we are allocating user memory, then store it in the frame 
                table. */
@@ -101,10 +103,14 @@ void * palloc_get_multiple(enum palloc_flags flags, size_t page_cnt) {
                 list_push_front(&frame_table, &user_frame->elem);
             }
         }
+#endif
     }
     else {
         pages = NULL;
-        /* TODO: Evict PAGE_CNT frames from the frame table. */
+        /* We ran out of pages. TODO: Swapping... Panic for now. */
+#ifdef VM
+        ASSERT(0); 
+#endif
     }
 
     if (pages != NULL) {
