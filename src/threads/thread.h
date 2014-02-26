@@ -158,6 +158,11 @@ struct thread {
     int child_loaded_error;
 #endif
 
+#ifdef VM
+    /* Each thread has a supplemental page table (SPT). */
+    struct list spt; 
+#endif
+
     /*! Owned by thread.c. */
     /**@{*/
     unsigned magic;                     /* Detects stack overflow. */

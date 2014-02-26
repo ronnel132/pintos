@@ -12,15 +12,22 @@
    user pool.  That should be huge overkill for the kernel pool, but that's
    just fine for demonstration purposes. */
 
+#include "threads/malloc.h"
 #include "threads/palloc.h"
 #include <bitmap.h>
 #include <debug.h>
 #include <inttypes.h>
+
+#ifdef VM
+#include "vm/frame.h"
+#endif
+
 #include <round.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+
 #include "threads/loader.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
@@ -68,6 +75,8 @@ void * palloc_get_multiple(enum palloc_flags flags, size_t page_cnt) {
     struct pool *pool = flags & PAL_USER ? &user_pool : &kernel_pool;
     void *pages;
     size_t page_idx;
+    struct frame *user_frame;
+    int i, frame_num;
 
     if (page_cnt == 0)
         return NULL;
@@ -76,10 +85,33 @@ void * palloc_get_multiple(enum palloc_flags flags, size_t page_cnt) {
     page_idx = bitmap_scan_and_flip(pool->used_map, 0, page_cnt, false);
     lock_release(&pool->lock);
 
-    if (page_idx != BITMAP_ERROR)
+    if (page_idx != BITMAP_ERROR) {
         pages = pool->base + PGSIZE * page_idx;
-    else
+
+#ifdef VM
+        if (flags & PAL_USER) {
+            /* If we are allocating user memory, then store it in the frame 
+               table. */
+            for (i = 0; i < (int) page_cnt; i++) {
+                /* Allocate a frame table entry in kernel VM. */
+                user_frame = (struct frame *) malloc(sizeof(struct frame));
+                frame_num = ((int) vtop(pages + i * PGSIZE)) >> 12; 
+                user_frame->frame_num = frame_num;
+                user_frame->vaddr = pages + i * PGSIZE;
+                /* TODO: Do an ordered insert. Doesn't matter for now since 
+                   we are currently evicting randomly. */
+                list_push_front(&frame_table, &user_frame->elem);
+            }
+        }
+#endif
+    }
+    else {
         pages = NULL;
+        /* We ran out of pages. TODO: Swapping... Panic for now. */
+#ifdef VM
+        ASSERT(0); 
+#endif
+    }
 
     if (pages != NULL) {
         if (flags & PAL_ZERO)
