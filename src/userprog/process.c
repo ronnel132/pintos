@@ -18,6 +18,7 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "vm/frame.h"
 
 
 static thread_func start_process NO_RETURN;
@@ -487,12 +488,21 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
 
         /* Get a page of memory. */
         uint8_t *kpage = palloc_get_page(PAL_USER);
-        if (kpage == NULL)
+        if (kpage == NULL) {
+#ifdef VM
+            frame_lock();
+            kpage = (unit8_t *) frame_evict();
+#else
             return false;
+#endif
+        }
 
         /* Load this page. */
         if (file_read(file, kpage, page_read_bytes) != (int) page_read_bytes) {
             palloc_free_page(kpage);
+#ifdef VM
+            frame_unlock();
+#endif
             return false;
         }
         memset(kpage + page_read_bytes, 0, page_zero_bytes);
@@ -500,8 +510,16 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
         /* Add the page to the process's address space. */
         if (!install_page(upage, kpage, writable)) {
             palloc_free_page(kpage);
+#ifdef VM
+            frame_unlock();
+#endif
             return false; 
         }
+
+#ifdef VM
+        frame_add(thread_current()->tid, upage, kpage);
+        frame_unlock();
+#endif
 
         /* Advance. */
         read_bytes -= page_read_bytes;
