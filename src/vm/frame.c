@@ -4,6 +4,9 @@
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 
+
+struct lock frame_lock;
+
 /* Evicts a frame from the frame table and returns the kernel virtual address
    of that frame. */
 void *frame_evict(void) {

@@ -25,6 +25,7 @@ static thread_func start_process NO_RETURN;
 static bool load(int argc, const char **argv, void (**eip)(void), void **esp);
 char **tokenize_process_args(const char *raw_args, int *argc);
 extern struct list all_list;
+extern struct lock frame_lock;
 
 // struct list starting_list;
 
@@ -490,8 +491,8 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
         uint8_t *kpage = palloc_get_page(PAL_USER);
         if (kpage == NULL) {
 #ifdef VM
-            frame_lock();
-            kpage = (unit8_t *) frame_evict();
+            lock_acquire(&frame_lock);
+            kpage = (uint8_t *) frame_evict();
 #else
             return false;
 #endif
@@ -501,7 +502,7 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
         if (file_read(file, kpage, page_read_bytes) != (int) page_read_bytes) {
             palloc_free_page(kpage);
 #ifdef VM
-            frame_unlock();
+            lock_release(&frame_lock);
 #endif
             return false;
         }
@@ -511,14 +512,14 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
         if (!install_page(upage, kpage, writable)) {
             palloc_free_page(kpage);
 #ifdef VM
-            frame_unlock();
+            lock_release(&frame_lock);
 #endif
             return false; 
         }
 
 #ifdef VM
         frame_add(thread_current()->tid, upage, kpage);
-        frame_unlock();
+        lock_release(&frame_lock);
 #endif
 
         /* Advance. */
@@ -544,8 +545,8 @@ static bool setup_stack(void **esp, int argc, char **argv) {
     kpage = palloc_get_page(PAL_USER | PAL_ZERO);
     if (kpage == NULL) {
 #ifdef VM
-        frame_lock();
-        kpage = (unit8_t *) frame_evict();
+        lock_acquire(&frame_lock);
+        kpage = (uint8_t *) frame_evict();
 #else
         return success;
 #endif
@@ -556,7 +557,7 @@ static bool setup_stack(void **esp, int argc, char **argv) {
     if (success) {
 #ifdef VM
         frame_add(thread_current()->tid, upage, kpage);
-        frame_unlock();
+        lock_release(&frame_lock);
 #endif
         /* Set up the stack. */
         /* Copy the argv strings in reverse order onto the stack. */
