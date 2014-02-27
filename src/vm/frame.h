@@ -1,7 +1,7 @@
 #include <list.h>
 #include <stdint.h>
 
-#define FRAME_MAX 2 << 20
+#include "threads/thread.h"
 
 /*! Store the frame table as a list, sorted by frame number. */
 struct list frame_table;
@@ -9,11 +9,19 @@ struct list frame_table;
 /*! Frame struct used by the frame table to keep track of which frames are
     free and which frames are allocated. */
 struct frame {
-    /* The frame number corresponding to the virtual address below. */ 
-    int frame_num;
+    /* The kernel virtual address of the frame. */
+    void *kpage;
     /* The virtual address of the page that currently occupies the frame at 
        index FRAME_NUM. */
-    void *vaddr;
+    void *upage;
+    /* The pid of the process whose virtual address this is. */
+    pid_t pid;
     struct list_elem elem;
 };
 
+void *evict_frame(void);
+
+void add_frame(pid_t pid, void *upage, void *kpage);
+
+bool frame_less(const struct list_elem *elem1, const struct list_elem *elem2, 
+                void *aux UNUSED);

@@ -378,6 +378,14 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
     /* Initialize thread. */
     init_thread(t, name, priority);
     tid = t->tid = allocate_tid();
+    
+
+    /* Initialize the supplemental page table. */
+    /* TODO: Are there any issues initializing the list here? */
+#ifdef VM
+    list_init(&t->spt);
+#endif
+
 #ifdef USERPROG
     /* Add process details */
     t->process_details = palloc_get_page(PAL_ZERO);
