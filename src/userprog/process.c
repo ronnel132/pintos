@@ -568,7 +568,7 @@ static bool setup_stack(void **esp, int argc, char **argv) {
             offset -= sizeof(int);
             *((int *) offset) = 0;
 
-            *esp = offset;
+            *esp = (uint8_t *) offset;
             /* Free argv and the original string page. */
             palloc_free_page(argv);
             palloc_free_page(argv_string_page);
