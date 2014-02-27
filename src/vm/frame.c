@@ -6,14 +6,14 @@
 
 /* Evicts a frame from the frame table and returns the kernel virtual address
    of that frame. */
-void *evict_frame(void) {
+void *frame_evict(void) {
     /* TODO: Implement fully. */
     ASSERT(0);
 }
 
 /* Add a frame to the frame table. Keep track of the upage, kpage, and the 
    process whose upage virtual address we wish to store in the kernel page. */
-void add_frame(pid_t pid, void *upage, void *kpage) {
+void frame_add(pid_t pid, void *upage, void *kpage) {
     struct frame *frame;
     ASSERT(upage != NULL);
     ASSERT(kpage != NULL);
