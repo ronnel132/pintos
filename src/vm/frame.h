@@ -19,9 +19,9 @@ struct frame {
     struct list_elem elem;
 };
 
-void *evict_frame(void);
+void *frame_evict(void);
 
-void add_frame(pid_t pid, void *upage, void *kpage);
+void frame_add(pid_t pid, void *upage, void *kpage);
 
 bool frame_less(const struct list_elem *elem1, const struct list_elem *elem2, 
                 void *aux UNUSED);
