@@ -39,6 +39,16 @@ typedef int pid_t;
 #define MAX_OPEN_FILES 128
 
 
+
+/* Definitions for types representing memory mapped files */
+typedef int mapid_t;
+struct mmap_t {
+    int mapid;
+    void * addr;
+    int num_pages;
+};
+
+
 /*! Process struct used by the kernel to keep track of process specific
     information as opposed to thread specific information. */
 
@@ -46,8 +56,12 @@ struct process {
     tid_t parent_id;
     struct file * exec_file;
     int num_files_open;
+
     bool open_file_descriptors[MAX_OPEN_FILES];
     struct file * files[MAX_OPEN_FILES];
+
+    bool open_mapids[MAX_OPEN_FILES];
+    struct mmap_t open_mmaps[MAX_OPEN_FILES];
 };
 
 /*! A kernel thread or user process.
