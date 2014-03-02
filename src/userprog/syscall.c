@@ -104,7 +104,6 @@ void syscall_init(void) {
 static void syscall_handler(struct intr_frame *f UNUSED) {
     /* Get esp address */
     void *esp = (void *) f->esp;
-    printf("syscall\n");
 
     /* Check validity of syscall_nr */
     if (!valid_user_pointer(esp, NULL)) {
