@@ -173,6 +173,9 @@ struct thread {
 
     /* This will be 1 if there's a child load error, otherwise undefined */
     int child_loaded_error;
+
+    /* Esp location, used if the interrupt context isn't available */
+    void *esp;
 #endif
 
 #ifdef VM
