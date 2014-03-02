@@ -492,7 +492,7 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
         struct vm_area_struct *vma = (struct vm_area_struct *)
                                      malloc(sizeof(struct vm_area_struct));
         vma->vm_start = upage;
-        vma->vm_end = upage + PGSIZE;
+        vma->vm_end = upage + PGSIZE - sizeof(int);
         vma->writable = writable;
         vma->pinned = 0;
         vma->vm_file = file;
