@@ -57,6 +57,11 @@ bool valid_user_pointer(const void *ptr, const void *esp) {
         }
         return true;
     }
+//     printf("%d\n", is_user_vaddr(ptr));
+//     printf("%d\n", *pde);
+//     printf("%p\n", esp);
+//     printf("%d\b", (*(void **) ptr < esp));
+//     printf("===========\n");
 
     return false;
 }
@@ -99,6 +104,7 @@ void syscall_init(void) {
 static void syscall_handler(struct intr_frame *f UNUSED) {
     /* Get esp address */
     void *esp = (void *) f->esp;
+    printf("syscall\n");
 
     /* Check validity of syscall_nr */
     if (!valid_user_pointer(esp, NULL)) {
@@ -187,10 +193,9 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             break;
 
         case SYS_WRITE:
-            if ((!valid_user_pointer(arg1, NULL)) ||
-                (!valid_user_pointer(arg2, esp)) ||
-                (!valid_user_pointer(arg3, NULL))) {
-
+            if ((!valid_user_pointer(arg1, NULL)))
+            
+            {
                 exit(EXIT_BAD_PTR);
             }
             f->eax = write(*((int *) arg1),
