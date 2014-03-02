@@ -52,7 +52,7 @@ bool valid_user_pointer(const void *ptr, const void *esp) {
 
     /* See lookup_page() for more info */
     if (is_user_vaddr(ptr) && (*pde != 0)) {
-        if ((esp >= 0) && (*ptr < esp)) {
+        if ((esp >= 0) && (*(void **) ptr < esp)) {
             return false;
         }
         return true;
