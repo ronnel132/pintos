@@ -1,3 +1,6 @@
+#ifndef FRAME_H
+#define FRAME_H
+
 #include <list.h>
 #include <stdint.h>
 
@@ -25,3 +28,5 @@ void frame_add(pid_t pid, void *upage, void *kpage);
 
 bool frame_less(const struct list_elem *elem1, const struct list_elem *elem2, 
                 void *aux UNUSED);
+
+#endif
