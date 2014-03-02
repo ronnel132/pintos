@@ -184,8 +184,9 @@ static void page_fault(struct intr_frame *f) {
                 ASSERT(0);
                 new_page = frame_evict();
             }
-            pagedir_set_page(t->pagedir, (void *) pg_no(fault_addr), new_page,
-                             vma->writable);
+            pagedir_set_page(t->pagedir, (void *) 
+                (pg_no(fault_addr) << PGBITS), new_page,vma->writable);
+                             
             if (vma->pg_type == FILE_SYS) {
                 /* Read the file into the kernel page. If we do not read the
                    PGSIZE bytes, then zero out the rest of the page. */
@@ -216,15 +217,16 @@ static void page_fault(struct intr_frame *f) {
                     new_page = frame_evict();
                 }
                 pagedir_set_page(t->pagedir, 
-                    (void *) pg_no(fault_addr), new_page, 1); 
+                    (void *) (pg_no(fault_addr) << PGBITS), new_page, 1); 
             }
             else if (fault_addr >= f->esp) {
                 new_page = palloc_get_page(PAL_ZERO | PAL_USER);
                 if (new_page == NULL) {
                     new_page = frame_evict();
                 }
-                pagedir_set_page(t->pagedir, (void *) pg_no(fault_addr),
-                                 new_page, 1);
+                pagedir_set_page(t->pagedir, (void *) 
+                    (pg_no(fault_addr) << PGBITS),new_page, 1);
+                                 
             }
             /* Else is probably an invalid access */
             else {
