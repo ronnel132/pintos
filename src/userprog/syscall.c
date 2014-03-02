@@ -105,6 +105,8 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
     /* Get esp address */
     void *esp = (void *) f->esp;
 
+//     printf("syscall!\n");
+
     /* Check validity of syscall_nr */
     if (!valid_user_pointer(esp, NULL)) {
         exit(EXIT_BAD_PTR);
@@ -112,6 +114,7 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
 
     /* Extract syscall numbers and arguments */
     int syscall_nr = *((int *)f->esp);
+//     printf("%d\n", syscall_nr);
 
 
 
@@ -138,7 +141,7 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             break;
 
         case SYS_EXEC:
-            if ((!valid_user_pointer(arg1, esp))) {
+            if ((!valid_user_pointer(arg1, NULL))) {
                 exit(EXIT_BAD_PTR);
             }
             f->eax = exec(*((const char **)arg1));
@@ -152,21 +155,21 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             break;
 
         case SYS_CREATE:
-            if ((!valid_user_pointer(arg1, esp)) || (!valid_user_pointer(arg2, NULL ))) {
+            if ((!valid_user_pointer(arg1, NULL)) || (!valid_user_pointer(arg2, NULL))) {
                 exit(EXIT_BAD_PTR);
             }
             f->eax = create(*((const char **)arg1), *((unsigned *)arg2)); 
             break;
 
         case SYS_REMOVE:
-            if ((!valid_user_pointer(arg1, esp))) {
+            if ((!valid_user_pointer(arg1, NULL))) {
                 exit(EXIT_BAD_PTR);
             }
             f->eax = remove(*((const char **)arg1));
             break; 
 
         case SYS_OPEN:
-            if ((!valid_user_pointer(arg1, esp))) {
+            if ((!valid_user_pointer(arg1, NULL))) {
                 exit(EXIT_BAD_PTR);
             }
             f->eax = open(*((const char **)arg1));
@@ -181,8 +184,9 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
 
         case SYS_READ:
             if ((!valid_user_pointer(arg1, NULL)) ||
-                (!valid_user_pointer(arg2, esp)) ||
+                (!valid_user_pointer(arg2, NULL)) ||
                 (!valid_user_pointer(arg3, NULL))) {
+//                     printf("syscall check failed\n");
 
                 exit(EXIT_BAD_PTR);
             }
@@ -192,11 +196,26 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             break;
 
         case SYS_WRITE:
-            if ((!valid_user_pointer(arg1, NULL)))
-            
-            {
+//             if ((!valid_user_pointer(arg1, NULL))) {
+//                 exit(EXIT_BAD_PTR);
+//             }
+// 
+//             if    (!valid_user_pointer(arg2, esp) && (* (int *) arg1 > 1)) {
+//                 exit(EXIT_BAD_PTR);
+//             }
+// 
+//             if    (!valid_user_pointer(arg3, NULL)) {
+//                 exit(EXIT_BAD_PTR);
+//             }
+
+            if ((!valid_user_pointer(arg1, NULL)) ||
+                (!valid_user_pointer(arg2, NULL)) ||
+                (!valid_user_pointer(arg3, NULL))) {
+                    printf("syscall check failed\n");
+
                 exit(EXIT_BAD_PTR);
             }
+
             f->eax = write(*((int *) arg1),
                            *((void **) arg2),
                            *((unsigned *) arg3));
@@ -246,8 +265,13 @@ void exit(int status) {
  * arguments, and returns the new process's program id (pid).
  */
 pid_t exec(const char *cmd_line) {
+    if (!valid_user_pointer(cmd_line, NULL)) {
+        exit(EXIT_BAD_PTR);
+    }
+
     tid_t tid = -1;
     tid = process_execute(cmd_line);
+
 
     /* Wait for process to actually load */
     sema_down(thread_current()->child_loaded_sema);
@@ -324,6 +348,10 @@ int wait(pid_t pid) {
 bool create(const char *file, unsigned initial_size) {
     bool status = false;
 
+    if (!valid_user_pointer(file, NULL)) {
+        exit(EXIT_BAD_PTR);
+    }
+
     /* Lock the file system while creating the file */
     lock_acquire(&filesys_lock);
 
@@ -339,6 +367,10 @@ bool create(const char *file, unsigned initial_size) {
  */
 bool remove(const char *file) {
     bool status = false;
+
+    if (!valid_user_pointer(file, NULL)) {
+        exit(EXIT_BAD_PTR);
+    }
     
     lock_acquire(&filesys_lock);
     status = filesys_remove(file);
@@ -355,6 +387,10 @@ int open(const char *file) {
     struct process * pd;
     int file_descriptor = -1;
     unsigned i;
+
+    if (!valid_user_pointer(file, NULL)) {
+        exit(EXIT_BAD_PTR);
+    }
 
     lock_acquire(&filesys_lock);
 
@@ -418,6 +454,10 @@ int filesize(int fd) {
 int read(int fd, void *buffer, unsigned size) {
     int bytes_read = -1;
 
+    if (!valid_user_pointer(buffer, NULL) || !valid_user_pointer(buffer + size, NULL)) {
+        exit(EXIT_BAD_PTR);
+    }
+
 //     printf("read_start\n");
     if (fd == STDIN_FILENO) {
         /* If file descriptor is the stdin descriptor, read from stdin to
@@ -455,6 +495,10 @@ int read(int fd, void *buffer, unsigned size) {
  */
 int write(int fd, const void *buffer, unsigned size) {
     int bytes_written = -1;
+
+    if (!valid_user_pointer(buffer, NULL) || !valid_user_pointer(buffer + size, NULL)) {
+        exit(EXIT_BAD_PTR);
+    }
 
     if (fd == STDOUT_FILENO) {
         /* If writing to stdout putbuf to output size bytes from buffer
@@ -535,6 +579,10 @@ void close(int fd) {
  */
 mapid_t mmap(int fd, void *addr) {
     int size, num_pages;
+
+//     if (!valid_user_pointer(addr, NULL)) {
+//         exit(EXIT_BAD_PTR);
+//     }
 
     /* TODO
     size =  = filesize(fd);

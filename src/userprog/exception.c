@@ -231,7 +231,7 @@ static void page_fault(struct intr_frame *f) {
             }
             /* Else is probably an invalid access */
             else {
-                printf("Invalid access\n");
+//                 printf("Invalid access\n");
                 printf("Page fault at %p: %s error %s page in %s context.\n",
                        fault_addr,
                        not_present ? "not present" : "rights violation",
