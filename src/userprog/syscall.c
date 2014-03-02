@@ -101,7 +101,7 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
     void *esp = (void *) f->esp;
 
     /* Check validity of syscall_nr */
-    if (!valid_user_pointer(esp, esp)) {
+    if (!valid_user_pointer(esp, (void *) -1)) {
         exit(EXIT_BAD_PTR);
     }
 
