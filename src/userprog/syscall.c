@@ -538,3 +538,19 @@ void close(int fd) {
     }
     lock_release(&filesys_lock);
 }
+
+
+/* Maps the file open as fd into the process's virtual address space. The
+ * entire file is mapped into consecutive virtual pages starting at addr.
+ */
+mapid_t mmap (int fd, void *addr) {
+    return NULL;
+}
+
+/* Unmaps the mapping designated by mapping, which must be a mapping ID
+ * returned by a previous call to mmap by the same process that has not yet
+ * been unmapped.
+ */
+void munmap (mapid_t mapping) {
+    return;
+}
