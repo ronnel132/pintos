@@ -142,6 +142,7 @@ static void page_fault(struct intr_frame *f) {
     asm ("movl %%cr2, %0" : "=r" (fault_addr));
 
     printf("pagefault_start\n");
+    printf("%d\n", f->esp);
 
 
     /* Turn interrupts back on (they were only off so that we could
