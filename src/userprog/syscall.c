@@ -46,15 +46,15 @@ extern struct list all_list;
 bool valid_user_pointer(const void *ptr, const void *esp) {
     uint32_t *pd, *pde;
 
-    if (ptr < esp) {
-        return false;
-    }
 
     pd = active_pd();
     pde = pd + pd_no(ptr);
 
     /* See lookup_page() for more info */
     if (is_user_vaddr(ptr) && (*pde != 0)) {
+        if ((esp >= 0) && (*ptr < esp)) {
+            return false;
+        }
         return true;
     }
 
@@ -126,7 +126,7 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             break;
 
         case SYS_EXIT:
-            if ((!valid_user_pointer(arg1, esp))) {
+            if ((!valid_user_pointer(arg1, (void *) -1))) {
                 exit(EXIT_BAD_PTR);
             }
             exit(*((int *)arg1));
@@ -140,14 +140,14 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             break;
 
         case SYS_WAIT:
-            if ((!valid_user_pointer(arg1, esp))) {
+            if ((!valid_user_pointer(arg1, (void *) -1))) {
                 exit(EXIT_BAD_PTR);
             }
             f->eax = wait(*((pid_t *)arg1));
             break;
 
         case SYS_CREATE:
-            if ((!valid_user_pointer(arg1, esp)) || (!valid_user_pointer(arg2, esp))) {
+            if ((!valid_user_pointer(arg1, esp)) || (!valid_user_pointer(arg2, (void *) -1 ))) {
                 exit(EXIT_BAD_PTR);
             }
             f->eax = create(*((const char **)arg1), *((unsigned *)arg2)); 
@@ -168,17 +168,16 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             break;
 
         case SYS_FILESIZE:
-            if ((!valid_user_pointer(arg1, esp))) {
+            if ((!valid_user_pointer(arg1, (void *) -1))) {
                 exit(EXIT_BAD_PTR);
             }
             f->eax = filesize(*((int *) arg1));
             break;
 
         case SYS_READ:
-            if ((!valid_user_pointer(arg1, esp)) ||
+            if ((!valid_user_pointer(arg1, (void *) -1)) ||
                 (!valid_user_pointer(arg2, esp)) ||
-                (!valid_user_pointer(arg3, esp)) ||
-                (!valid_user_pointer(arg4, esp))) {
+                (!valid_user_pointer(arg3, (void *) -1))) {
 
                 exit(EXIT_BAD_PTR);
             }
@@ -188,27 +187,33 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             break;
 
         case SYS_WRITE:
+            if ((!valid_user_pointer(arg1, (void *) -1)) ||
+                (!valid_user_pointer(arg2, esp)) ||
+                (!valid_user_pointer(arg3, (void *) -1))) {
+
+                exit(EXIT_BAD_PTR);
+            }
             f->eax = write(*((int *) arg1),
                            *((void **) arg2),
                            *((unsigned *) arg3));
             break;
 
         case SYS_SEEK:
-            if ((!valid_user_pointer(arg1, esp)) || (!valid_user_pointer(arg2, esp))) {
+            if ((!valid_user_pointer(arg1, (void *) -1)) || (!valid_user_pointer(arg2, (void *) -1))) {
                 exit(EXIT_BAD_PTR);
             }
             seek(*((int *)arg1), *((unsigned *)arg2)); 
             break;
 
         case SYS_TELL:
-            if ((!valid_user_pointer(arg1, esp))) {
+            if ((!valid_user_pointer(arg1, (void *) -1))) {
                 exit(EXIT_BAD_PTR);
             }
             f->eax = tell(*((int *) arg1));
             break;
 
         case SYS_CLOSE:
-            if ((!valid_user_pointer(arg1, esp))) {
+            if ((!valid_user_pointer(arg1, (void *) -1))) {
                 exit(EXIT_BAD_PTR);
             }
             close(*((int *) arg1));
