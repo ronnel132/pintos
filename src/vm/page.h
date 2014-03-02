@@ -1,3 +1,6 @@
+#ifndef PAGE_H
+#define PAGE_H
+
 #include <list.h>
 #include "filesys/off_t.h"
 #include "threads/thread.h"
@@ -18,6 +21,9 @@ struct vm_area_struct {
     /* Is this memory area writable. */
     bool writable;
 
+    /* Is this area pinned */
+    bool pinned;
+
     /* Pointer to the file object of the mapped file, if any. */
     struct file *vm_file;
 
@@ -34,3 +40,5 @@ void spt_add(struct thread *t, struct vm_area_struct *vm_area);
 void spt_remove(struct vm_area_struct *vm_area);
 
 bool spt_less(struct list_elem *e1, struct list_elem *e2, void *aux UNUSED);
+
+#endif
