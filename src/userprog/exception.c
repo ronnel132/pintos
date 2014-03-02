@@ -147,7 +147,11 @@ static void page_fault(struct intr_frame *f) {
 
 #ifdef VM
     if (!user) {
-        printf("Kernel page fault!!!\n");
+        printf("Page fault at %p: %s error %s page in %s context.\n",
+           fault_addr,
+           not_present ? "not present" : "rights violation",
+           write ? "writing" : "reading",
+           user ? "user" : "kernel");
         kill(f);
     }
 
@@ -169,10 +173,26 @@ static void page_fault(struct intr_frame *f) {
             pagedir_set_page(thread_current()->pagedir, 
                 (void *) pg_no(fault_addr), new_page, 1); 
         }
+        /* If the faulting address is above esp */
+        else if (fault_addr <= f->esp) {
+            new_page = palloc_get_page(PAL_ZERO | PAL_USER);
+            if (new_page == NULL) {
+                new_page = frame_evict();
+            }
+            pagedir_set_page(thread_current()->pagedir, 
+                (void *) pg_no(fault_addr), new_page, 1); 
+        }
+        /* Else is probably an invalid access */
+        else {
+            printf("Page fault at %p: %s error %s page in %s context.\n",
+                   fault_addr,
+                   not_present ? "not present" : "rights violation",
+                   write ? "writing" : "reading",
+                   user ? "user" : "kernel");
+            kill(f);
+        }
     }
 #else
-
-    // TODO: Remove rest
     /* To implement virtual memory, delete the rest of the function
        body, and replace it with code that brings in the page to
        which fault_addr refers. */
