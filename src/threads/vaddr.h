@@ -20,6 +20,9 @@
 #define PGSIZE  (1 << PGBITS)              /*!< Bytes in a page. */
 #define PGMASK  BITMASK(PGSHIFT, PGBITS)   /*!< Page offset bits (0:12). */
 
+/* Min stack pointer. Used to detect stack overflows */
+#define STACK_MIN (PHYS_BASE - (2 << 23)) 
+
 /*! Offset within a page. */
 static inline unsigned pg_ofs(const void *va) {
     return (uintptr_t) va & PGMASK;

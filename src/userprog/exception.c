@@ -5,12 +5,18 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "userprog/syscall.h"
+#include "vm/frame.h"
+#include "vm/page.h"
+#include "threads/vaddr.h"
+#include "threads/palloc.h"
+#include "userprog/pagedir.h"
 
 /*! Number of page faults processed. */
 static long long page_fault_cnt;
 
 static void kill(struct intr_frame *);
 static void page_fault(struct intr_frame *);
+extern struct lock frame_lock;
 
 /*! Registers handlers for interrupts that can be caused by user programs.
 
@@ -116,6 +122,7 @@ static void page_fault(struct intr_frame *f) {
     bool write;        /* True: access was write, false: access was read. */
     bool user;         /* True: access by user, false: access by kernel. */
     void *fault_addr;  /* Fault address. */
+    void *new_page;   /* New page that's being allocated */
 
     /* Obtain faulting address, the virtual address that was accessed to cause
        the fault.  It may point to code or to data.  It is not necessarily the
@@ -124,7 +131,6 @@ static void page_fault(struct intr_frame *f) {
        [IA32-v3a] 5.15 "Interrupt 14--Page Fault Exception (#PF)". */
     asm ("movl %%cr2, %0" : "=r" (fault_addr));
 
-    // TODO: Handle address that is allocated but not in physical memory
 
     /* Turn interrupts back on (they were only off so that we could
        be assured of reading CR2 before it changed). */
@@ -138,14 +144,37 @@ static void page_fault(struct intr_frame *f) {
     write = (f->error_code & PF_W) != 0;
     user = (f->error_code & PF_U) != 0;
 
+
+    if (!user) {
+        printf("Kernel page fault!!!\n");
+        kill(f);
+    }
+
+    if (user && not_present) {
+        // TODO: Handle address that is allocated but not in physical memory
+
+        /* If a push or pusha has caused the fault (probably) */
+        if ((fault_addr == f->esp - 4) || (fault_addr == f->esp - 32)) {
+            /* Check for stack overflow */
+            if (fault_addr < STACK_MIN) {
+                exit(-1);
+            }
+
+            /* If we're here, let's give this process another page */
+            new_page = palloc_get_page(PAL_ZERO | PAL_USER);
+            pagedir_set_page(thread_current()->pagedir, pg_no(fault_addr), new_page, 1); 
+        }
+    }
+
+    // TODO: Remove rest
     /* To implement virtual memory, delete the rest of the function
        body, and replace it with code that brings in the page to
        which fault_addr refers. */
-    printf("Page fault at %p: %s error %s page in %s context.\n",
-           fault_addr,
-           not_present ? "not present" : "rights violation",
-           write ? "writing" : "reading",
-           user ? "user" : "kernel");
-    kill(f);
+//     printf("Page fault at %p: %s error %s page in %s context.\n",
+//            fault_addr,
+//            not_present ? "not present" : "rights violation",
+//            write ? "writing" : "reading",
+//            user ? "user" : "kernel");
+//     kill(f);
 }
 
