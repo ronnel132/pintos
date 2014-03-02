@@ -174,7 +174,7 @@ static void page_fault(struct intr_frame *f) {
                 (void *) pg_no(fault_addr), new_page, 1); 
         }
         /* If the faulting address is above esp */
-        else if (fault_addr <= f->esp) {
+        else if (fault_addr >= f->esp) {
             new_page = palloc_get_page(PAL_ZERO | PAL_USER);
             if (new_page == NULL) {
                 new_page = frame_evict();
