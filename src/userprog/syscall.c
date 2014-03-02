@@ -419,6 +419,7 @@ int filesize(int fd) {
 int read(int fd, void *buffer, unsigned size) {
     int bytes_read = -1;
 
+    printf("read_start\n");
     /* If the ENTIRE buffer is valid pointer range */
     if (valid_user_pointer(buffer) && valid_user_pointer(buffer + size)) {
         if (fd == STDIN_FILENO) {
