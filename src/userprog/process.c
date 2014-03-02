@@ -29,8 +29,6 @@ char **tokenize_process_args(const char *raw_args, int *argc);
 extern struct list all_list;
 extern struct lock frame_lock;
 
-// struct list starting_list;
-
 /*! Starts a new thread running a user program loaded from FILENAME.  The new
     thread may be scheduled (and may even exit) before process_execute()
     returns.  Returns the new process's thread id, or TID_ERROR if the thread
@@ -496,6 +494,7 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
         vma->vm_start = upage;
         vma->vm_end = upage + PGSIZE;
         vma->writable = writable;
+        vma->pinned = 0;
         vma->vm_file = file;
         /* Store the current offset within the file. */
         vma->ofs = ofs;

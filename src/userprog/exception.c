@@ -124,6 +124,9 @@ static void page_fault(struct intr_frame *f) {
     bool user;         /* True: access by user, false: access by kernel. */
     void *fault_addr;  /* Fault address. */
     void *new_page;   /* New page that's being allocated */
+    struct thread *t = thread_current();
+    struct list_elem *e;
+    struct vm_area_struct *vma;
 
     /* Obtain faulting address, the virtual address that was accessed to cause
        the fault.  It may point to code or to data.  It is not necessarily the
@@ -145,14 +148,23 @@ static void page_fault(struct intr_frame *f) {
     write = (f->error_code & PF_W) != 0;
     user = (f->error_code & PF_U) != 0;
 
-
+#ifdef VM
     if (!user) {
-        printf("Kernel page fault!!!\n");
+        printf("Page fault at %p: %s error %s page in %s context.\n",
+           fault_addr,
+           not_present ? "not present" : "rights violation",
+           write ? "writing" : "reading",
+           user ? "user" : "kernel");
         kill(f);
     }
 
     if (user && not_present) {
-        // TODO: Handle address that is allocated but not in physical memory
+        /* Iterate through the current thread's supplemental page table to 
+           find if the faulting address is valid. */
+        for (e = list_begin(&t->spt); e != list_end(&t->spt);
+             e = list_next(e)) {
+            /* TODO */
+        }
 
         /* If a push or pusha has caused the fault (probably) */
         if ((fault_addr == f->esp - 4) || (fault_addr == f->esp - 32)) {
@@ -169,17 +181,36 @@ static void page_fault(struct intr_frame *f) {
             pagedir_set_page(thread_current()->pagedir, 
                 (void *) pg_no(fault_addr), new_page, 1); 
         }
+        /* If the faulting address is above esp */
+        else if (fault_addr <= f->esp) {
+            new_page = palloc_get_page(PAL_ZERO | PAL_USER);
+            if (new_page == NULL) {
+                new_page = frame_evict();
+            }
+            pagedir_set_page(thread_current()->pagedir, 
+                (void *) pg_no(fault_addr), new_page, 1); 
+        }
+        /* Else is probably an invalid access */
+        else {
+            printf("Page fault at %p: %s error %s page in %s context.\n",
+                   fault_addr,
+                   not_present ? "not present" : "rights violation",
+                   write ? "writing" : "reading",
+                   user ? "user" : "kernel");
+            kill(f);
+        }
     }
-
-    // TODO: Remove rest
+#else
     /* To implement virtual memory, delete the rest of the function
        body, and replace it with code that brings in the page to
        which fault_addr refers. */
-//     printf("Page fault at %p: %s error %s page in %s context.\n",
-//            fault_addr,
-//            not_present ? "not present" : "rights violation",
-//            write ? "writing" : "reading",
-//            user ? "user" : "kernel");
-//     kill(f);
+    printf("Page fault at %p: %s error %s page in %s context.\n",
+           fault_addr,
+           not_present ? "not present" : "rights violation",
+           write ? "writing" : "reading",
+           user ? "user" : "kernel");
+    kill(f);
+
+#endif
 }
 

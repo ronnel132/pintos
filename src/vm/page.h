@@ -21,6 +21,9 @@ struct vm_area_struct {
     /* Is this memory area writable. */
     bool writable;
 
+    /* Is this area pinned */
+    bool pinned;
+
     /* Pointer to the file object of the mapped file, if any. */
     struct file *vm_file;
 
