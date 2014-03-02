@@ -1,4 +1,5 @@
 #include <list.h>
+#include "filesys/off_t.h"
 #include "threads/thread.h"
 
 /* What type of pages are stored in this vm_area? They can be in the file 
@@ -21,7 +22,7 @@ struct vm_area_struct {
     struct file *vm_file;
 
     /* Offset in the mapped file. */
-    unsigned long vm_pgoff;
+    off_t ofs;
 
     enum pg_type_flags pg_type;
 
