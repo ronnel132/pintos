@@ -24,7 +24,7 @@ extern void palloc_free_page (void *);
 /* Validates a user-provided pointer. Checks that it's in the required
  * range, and that it correpsonds to a page directory entry
  */
-bool valid_user_pointer(const void *ptr);
+bool valid_user_pointer(const void *ptr, const void *esp);
 
 /* Checks if a file is open */
 bool file_is_open(int fd);
@@ -43,8 +43,12 @@ extern struct list all_list;
 /* Validates a user-provided pointer. Checks that it's in the required
  * range, and that it correpsonds to a page directory entry
  */
-bool valid_user_pointer(const void *ptr) {
+bool valid_user_pointer(const void *ptr, const void *esp) {
     uint32_t *pd, *pde;
+
+    if (ptr < esp) {
+        return false;
+    }
 
     pd = active_pd();
     pde = pd + pd_no(ptr);
@@ -93,13 +97,18 @@ void syscall_init(void) {
  * the proper arguments.
  */
 static void syscall_handler(struct intr_frame *f UNUSED) {
+    /* Get esp address */
+    void *esp = (void *) f->esp;
+
     /* Check validity of syscall_nr */
-    if (!valid_user_pointer(f->esp)) {
+    if (!valid_user_pointer(esp, esp)) {
         exit(EXIT_BAD_PTR);
     }
 
     /* Extract syscall numbers and arguments */
     int syscall_nr = *((int *)f->esp);
+
+
 
     void *arg1 = (void *) ((int *)(f->esp + 4));
     void *arg2 = (void *) ((int *)(f->esp + 8));
@@ -117,59 +126,59 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             break;
 
         case SYS_EXIT:
-            if ((!valid_user_pointer(arg1))) {
+            if ((!valid_user_pointer(arg1, esp))) {
                 exit(EXIT_BAD_PTR);
             }
             exit(*((int *)arg1));
             break;
 
         case SYS_EXEC:
-            if ((!valid_user_pointer(arg1))) {
+            if ((!valid_user_pointer(arg1, esp))) {
                 exit(EXIT_BAD_PTR);
             }
             f->eax = exec(*((const char **)arg1));
             break;
 
         case SYS_WAIT:
-            if ((!valid_user_pointer(arg1))) {
+            if ((!valid_user_pointer(arg1, esp))) {
                 exit(EXIT_BAD_PTR);
             }
             f->eax = wait(*((pid_t *)arg1));
             break;
 
         case SYS_CREATE:
-            if ((!valid_user_pointer(arg1)) || (!valid_user_pointer(arg2))) {
+            if ((!valid_user_pointer(arg1, esp)) || (!valid_user_pointer(arg2, esp))) {
                 exit(EXIT_BAD_PTR);
             }
             f->eax = create(*((const char **)arg1), *((unsigned *)arg2)); 
             break;
 
         case SYS_REMOVE:
-            if ((!valid_user_pointer(arg1))) {
+            if ((!valid_user_pointer(arg1, esp))) {
                 exit(EXIT_BAD_PTR);
             }
             f->eax = remove(*((const char **)arg1));
             break; 
 
         case SYS_OPEN:
-            if ((!valid_user_pointer(arg1))) {
+            if ((!valid_user_pointer(arg1, esp))) {
                 exit(EXIT_BAD_PTR);
             }
             f->eax = open(*((const char **)arg1));
             break;
 
         case SYS_FILESIZE:
-            if ((!valid_user_pointer(arg1))) {
+            if ((!valid_user_pointer(arg1, esp))) {
                 exit(EXIT_BAD_PTR);
             }
             f->eax = filesize(*((int *) arg1));
             break;
 
         case SYS_READ:
-            if ((!valid_user_pointer(arg1)) ||
-                (!valid_user_pointer(arg2)) ||
-                (!valid_user_pointer(arg3)) ||
-                (!valid_user_pointer(arg4))) {
+            if ((!valid_user_pointer(arg1, esp)) ||
+                (!valid_user_pointer(arg2, esp)) ||
+                (!valid_user_pointer(arg3, esp)) ||
+                (!valid_user_pointer(arg4, esp))) {
 
                 exit(EXIT_BAD_PTR);
             }
@@ -185,21 +194,21 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             break;
 
         case SYS_SEEK:
-            if ((!valid_user_pointer(arg1)) || (!valid_user_pointer(arg2))) {
+            if ((!valid_user_pointer(arg1, esp)) || (!valid_user_pointer(arg2, esp))) {
                 exit(EXIT_BAD_PTR);
             }
             seek(*((int *)arg1), *((unsigned *)arg2)); 
             break;
 
         case SYS_TELL:
-            if ((!valid_user_pointer(arg1))) {
+            if ((!valid_user_pointer(arg1, esp))) {
                 exit(EXIT_BAD_PTR);
             }
             f->eax = tell(*((int *) arg1));
             break;
 
         case SYS_CLOSE:
-            if ((!valid_user_pointer(arg1))) {
+            if ((!valid_user_pointer(arg1, esp))) {
                 exit(EXIT_BAD_PTR);
             }
             close(*((int *) arg1));
@@ -229,15 +238,13 @@ void exit(int status) {
  */
 pid_t exec(const char *cmd_line) {
     tid_t tid = -1;
-    if (valid_user_pointer(cmd_line)) {
-        tid = process_execute(cmd_line);
+    tid = process_execute(cmd_line);
 
-        /* Wait for process to actually load */
-        sema_down(thread_current()->child_loaded_sema);
+    /* Wait for process to actually load */
+    sema_down(thread_current()->child_loaded_sema);
 
-        if (thread_current()->child_loaded_error == 1) {
-            tid = -1;
-        }
+    if (thread_current()->child_loaded_error == 1) {
+        tid = -1;
     }
     return tid;
 }
@@ -308,19 +315,13 @@ int wait(pid_t pid) {
 bool create(const char *file, unsigned initial_size) {
     bool status = false;
 
-    /* Validate user pointer and then create file. */
-    if (valid_user_pointer(file)) {
-        /* Lock the file system while creating the file */
-        lock_acquire(&filesys_lock);
+    /* Lock the file system while creating the file */
+    lock_acquire(&filesys_lock);
 
-        status = filesys_create(file, initial_size);
+    status = filesys_create(file, initial_size);
 
-        /* Release the file system lock. */
-        lock_release(&filesys_lock);
-    } else {
-        /* If user pointer is invalid, exit. */
-        exit(EXIT_BAD_PTR);
-    }
+    /* Release the file system lock. */
+    lock_release(&filesys_lock);
 
     return status;
 }
@@ -330,14 +331,9 @@ bool create(const char *file, unsigned initial_size) {
 bool remove(const char *file) {
     bool status = false;
     
-    /* Validate user pointer and then remove file. */
-    if (valid_user_pointer(file)) {
-        lock_acquire(&filesys_lock);
-        status = filesys_remove(file);
-        lock_release(&filesys_lock);
-    } else {
-        exit(EXIT_BAD_PTR);
-    }
+    lock_acquire(&filesys_lock);
+    status = filesys_remove(file);
+    lock_release(&filesys_lock);
 
     return status;
 }
@@ -351,47 +347,41 @@ int open(const char *file) {
     int file_descriptor = -1;
     unsigned i;
 
-    /* Validate user pointer and then open file. */
-    if (valid_user_pointer(file)) {
-        lock_acquire(&filesys_lock);
+    lock_acquire(&filesys_lock);
 
-        /* Open the file and get the file struct from the filesystem. */
-        opened_file = filesys_open(file);
+    /* Open the file and get the file struct from the filesystem. */
+    opened_file = filesys_open(file);
 
-        /* If file actually exists */
-        if (opened_file != NULL) {
-            /* Get pointer to the process_details */
-            pd = thread_current()->process_details;
+    /* If file actually exists */
+    if (opened_file != NULL) {
+        /* Get pointer to the process_details */
+        pd = thread_current()->process_details;
 
-            /* If there are available file descriptors */
-            if (pd->num_files_open < MAX_OPEN_FILES) {
-                /* Search for first available file descriptor */
-                for (i = 0; i < MAX_OPEN_FILES; i++) {
-                    /* The file descriptor is the index into the
-                     * open_file_descriptors array.
-                     */
-                    if (pd->open_file_descriptors[i] == false) {
-                        file_descriptor = i;
-                        break;
-                    }
-                }
-
-                /* Update the current process_details file details.
-                 * Set the file descriptor index to true, is open.
-                 * Set the file struct at the file descriptor index to the
-                 * one returned by the filesystem.
-                 * Increment the variable number of files that are open.
+        /* If there are available file descriptors */
+        if (pd->num_files_open < MAX_OPEN_FILES) {
+            /* Search for first available file descriptor */
+            for (i = 0; i < MAX_OPEN_FILES; i++) {
+                /* The file descriptor is the index into the
+                 * open_file_descriptors array.
                  */
-                pd->open_file_descriptors[file_descriptor] = true;
-                pd->files[file_descriptor] = opened_file;
-                pd->num_files_open++;
+                if (pd->open_file_descriptors[i] == false) {
+                    file_descriptor = i;
+                    break;
+                }
             }
-        }
 
-        lock_release(&filesys_lock);
-    } else {
-        exit(EXIT_BAD_PTR);
+            /* Update the current process_details file details.
+             * Set the file descriptor index to true, is open.
+             * Set the file struct at the file descriptor index to the
+             * one returned by the filesystem.
+             * Increment the variable number of files that are open.
+             */
+            pd->open_file_descriptors[file_descriptor] = true;
+            pd->files[file_descriptor] = opened_file;
+            pd->num_files_open++;
+        }
     }
+    lock_release(&filesys_lock);
 
     return file_descriptor;
 }
@@ -419,37 +409,32 @@ int filesize(int fd) {
 int read(int fd, void *buffer, unsigned size) {
     int bytes_read = -1;
 
-    printf("read_start\n");
-    /* If the ENTIRE buffer is valid pointer range */
-    if (valid_user_pointer(buffer) && valid_user_pointer(buffer + size)) {
-        if (fd == STDIN_FILENO) {
-            /* If file descriptor is the stdin descriptor, read from stdin to
-             * the buffer.
+//     printf("read_start\n");
+    if (fd == STDIN_FILENO) {
+        /* If file descriptor is the stdin descriptor, read from stdin to
+         * the buffer.
+         */
+        while (size > 0) {
+            /* Get uint8_t character from the console and set it where
+             * the buffer points.
              */
-            while (size > 0) {
-                /* Get uint8_t character from the console and set it where
-                 * the buffer points.
-                 */
-                *((uint8_t *) buffer) = input_getc();
+            *((uint8_t *) buffer) = input_getc();
 
-                /* Increment the buffer pointer */
-                buffer = (void *) (((uint8_t *) buffer) + 1);
+            /* Increment the buffer pointer */
+            buffer = (void *) (((uint8_t *) buffer) + 1);
 
-                /* Decrement the size for the while loop condition */
-                size--;
-            }
-        } else if (fd != STDOUT_FILENO) {
-            /* If the file descriptor is not stdout, read the file using
-             * the filesystem.
-             */
-            lock_acquire(&filesys_lock);
-            if (file_is_open(fd)) {
-                bytes_read = file_read(get_file_struct(fd), buffer, size);
-            }
-            lock_release(&filesys_lock);
+            /* Decrement the size for the while loop condition */
+            size--;
         }
-    } else {
-        exit(EXIT_BAD_PTR);
+    } else if (fd != STDOUT_FILENO) {
+        /* If the file descriptor is not stdout, read the file using
+         * the filesystem.
+         */
+        lock_acquire(&filesys_lock);
+        if (file_is_open(fd)) {
+            bytes_read = file_read(get_file_struct(fd), buffer, size);
+        }
+        lock_release(&filesys_lock);
     }
 
     return bytes_read;
@@ -462,23 +447,18 @@ int read(int fd, void *buffer, unsigned size) {
 int write(int fd, const void *buffer, unsigned size) {
     int bytes_written = -1;
 
-    /* If the ENTIRE buffer is valid pointer range */
-    if (valid_user_pointer(buffer) && valid_user_pointer(buffer + size)) {
-        if (fd == STDOUT_FILENO) {
-            /* If writing to stdout putbuf to output size bytes from buffer
-             * to console.
-             */
-            putbuf((const char *) buffer, (size_t) size);
-        } else if (fd != STDIN_FILENO) {
-            /* If file is not stdin, write to file in the filesystem */
-            lock_acquire(&filesys_lock);
-            if (file_is_open(fd)) {
-                bytes_written = file_write(get_file_struct(fd), buffer, size);
-            }
-            lock_release(&filesys_lock);
+    if (fd == STDOUT_FILENO) {
+        /* If writing to stdout putbuf to output size bytes from buffer
+         * to console.
+         */
+        putbuf((const char *) buffer, (size_t) size);
+    } else if (fd != STDIN_FILENO) {
+        /* If file is not stdin, write to file in the filesystem */
+        lock_acquire(&filesys_lock);
+        if (file_is_open(fd)) {
+            bytes_written = file_write(get_file_struct(fd), buffer, size);
         }
-    } else {
-        exit(EXIT_BAD_PTR);
+        lock_release(&filesys_lock);
     }
 
     return bytes_written;
