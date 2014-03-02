@@ -5,12 +5,15 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "userprog/syscall.h"
+#include "vm/frame.h"
+#include "vm/page.h"
 
 /*! Number of page faults processed. */
 static long long page_fault_cnt;
 
 static void kill(struct intr_frame *);
 static void page_fault(struct intr_frame *);
+extern struct lock frame_lock;
 
 /*! Registers handlers for interrupts that can be caused by user programs.
 
