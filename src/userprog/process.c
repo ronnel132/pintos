@@ -506,7 +506,7 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
         }
 
         /* Add to the supplemental page table for the current process. */
-        spt_add(&thread_current()->spt, vma);
+        spt_add(thread_current(), vma);
 
 #else
         /* Get a page of memory. */

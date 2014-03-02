@@ -141,6 +141,8 @@ static void page_fault(struct intr_frame *f) {
        [IA32-v3a] 5.15 "Interrupt 14--Page Fault Exception (#PF)". */
     asm ("movl %%cr2, %0" : "=r" (fault_addr));
 
+    printf("pagefault\n");
+
 
     /* Turn interrupts back on (they were only off so that we could
        be assured of reading CR2 before it changed). */
@@ -224,6 +226,7 @@ static void page_fault(struct intr_frame *f) {
                 if (new_page == NULL) {
                     new_page = frame_evict();
                 }
+                printf("here1\n");
                 pagedir_set_page(t->pagedir, (void *) 
                     (pg_no(fault_addr) << PGBITS),new_page, 1);
                                  
