@@ -8,6 +8,7 @@
 #include "threads/vaddr.h"
 #include "threads/palloc.h"
 #include "userprog/pagedir.h"
+#include "vm/frame.h"
 
 /*! Number of page faults processed. */
 static long long page_fault_cnt;
@@ -159,6 +160,9 @@ static void page_fault(struct intr_frame *f) {
 
             /* If we're here, let's give this process another page */
             new_page = palloc_get_page(PAL_ZERO | PAL_USER);
+            if (new_page == NULL) {
+                new_page = frame_evict();
+            }
             pagedir_set_page(thread_current()->pagedir, pg_no(fault_addr), new_page, 1); 
         }
     }
