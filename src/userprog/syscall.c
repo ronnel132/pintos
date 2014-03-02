@@ -543,7 +543,25 @@ void close(int fd) {
 /* Maps the file open as fd into the process's virtual address space. The
  * entire file is mapped into consecutive virtual pages starting at addr.
  */
-mapid_t mmap (int fd, void *addr) {
+mapid_t mmap(int fd, void *addr) {
+    int size, num_pages;
+
+    /* TODO
+    size =  = filesize(fd);
+    num_pages = size / PGSIZE;
+
+    if (size == 0 || pg_ofs(addr) != 0)
+
+
+    if (size % PGSIZE != 0) {
+        num_pages++;
+        void *palloc_get_multiple (enum palloc_flags, size_t page_cnt);
+        memset();
+    } else {
+
+    }
+    */
+    
     return NULL;
 }
 
@@ -551,6 +569,6 @@ mapid_t mmap (int fd, void *addr) {
  * returned by a previous call to mmap by the same process that has not yet
  * been unmapped.
  */
-void munmap (mapid_t mapping) {
+void munmap(mapid_t mapping) {
     return;
 }
