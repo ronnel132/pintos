@@ -320,7 +320,7 @@ bool load(int argc, const char **argv, void (**eip) (void), void **esp) {
         goto done;
     process_activate();
     
-    lock_acquire(&filesys_lock);
+//     lock_acquire(&filesys_lock);
     /* Open executable file, named argv[0]. */
     file = filesys_open(argv[0]);
     if (file == NULL) {
@@ -397,7 +397,7 @@ bool load(int argc, const char **argv, void (**eip) (void), void **esp) {
             break;
         }
     }
-    lock_release(&filesys_lock);
+//     lock_release(&filesys_lock);
 
     /* Set up stack. */
     if (!setup_stack(esp, argc, (char **) argv))
@@ -506,7 +506,7 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
         }
 
         /* Add to the supplemental page table for the current process. */
-        spt_add(&thread_current()->spt, vma);
+        spt_add(thread_current(), vma);
 
 #else
         /* Get a page of memory. */
@@ -554,21 +554,21 @@ static bool setup_stack(void **esp, int argc, char **argv) {
 
     kpage = palloc_get_page(PAL_USER | PAL_ZERO);
     if (kpage == NULL) {
-#ifdef VM
-        lock_acquire(&frame_lock);
-        kpage = (uint8_t *) frame_evict();
-#else
+// #ifdef VM
+//         lock_acquire(&frame_lock);
+//         kpage = (uint8_t *) frame_evict();
+// #else
         return success;
-#endif
+// #endif
     }
 
     upage = ((uint8_t *) PHYS_BASE) - PGSIZE;
     success = install_page(upage, kpage, true);
     if (success) {
-#ifdef VM
-        frame_add(thread_current()->tid, upage, kpage);
-        lock_release(&frame_lock);
-#endif
+// #ifdef VM
+//         frame_add(thread_current()->tid, upage, kpage);
+//         lock_release(&frame_lock);
+// #endif
         /* Set up the stack. */
         /* Copy the argv strings in reverse order onto the stack. */
         for (i = argc - 1; i >= 0; i--) {
