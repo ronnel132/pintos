@@ -141,7 +141,7 @@ static void page_fault(struct intr_frame *f) {
        [IA32-v3a] 5.15 "Interrupt 14--Page Fault Exception (#PF)". */
     asm ("movl %%cr2, %0" : "=r" (fault_addr));
 
-    printf("pagefault\n");
+    printf("pagefault_start\n");
 
 
     /* Turn interrupts back on (they were only off so that we could
@@ -250,5 +250,6 @@ static void page_fault(struct intr_frame *f) {
     kill(f);
 
 #endif
+    printf("pagefault_end\n");
 }
 
