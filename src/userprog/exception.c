@@ -166,7 +166,8 @@ static void page_fault(struct intr_frame *f) {
             if (new_page == NULL) {
                 new_page = frame_evict();
             }
-            pagedir_set_page(thread_current()->pagedir, pg_no(fault_addr), new_page, 1); 
+            pagedir_set_page(thread_current()->pagedir, 
+                (void *) pg_no(fault_addr), new_page, 1); 
         }
     }
 
