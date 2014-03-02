@@ -1,6 +1,9 @@
 #include "userprog/exception.h"
 #include <inttypes.h>
 #include <stdio.h>
+#include <string.h>
+#include "filesys/file.h"
+#include "filesys/filesys.h"
 #include "userprog/gdt.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
@@ -122,8 +125,11 @@ static void page_fault(struct intr_frame *f) {
     bool not_present;  /* True: not-present page, false: writing r/o page. */
     bool write;        /* True: access was write, false: access was read. */
     bool user;         /* True: access by user, false: access by kernel. */
+    bool found_valid;  
+    off_t bytes_read;
     void *fault_addr;  /* Fault address. */
     void *new_page;   /* New page that's being allocated */
+    void *zero_start;
     struct thread *t = thread_current();
     struct list_elem *e;
     struct vm_area_struct *vma;
@@ -161,43 +167,75 @@ static void page_fault(struct intr_frame *f) {
     if (user && not_present) {
         /* Iterate through the current thread's supplemental page table to 
            find if the faulting address is valid. */
+
+        found_valid = false;
         for (e = list_begin(&t->spt); e != list_end(&t->spt);
              e = list_next(e)) {
-            /* TODO */
+             vma = list_entry(e, struct vm_area_struct, elem);
+             if (fault_addr >= vma->vm_start && fault_addr <= vma->vm_end) {
+                found_valid = true;   
+                break;
+             }
         }
 
-        /* If a push or pusha has caused the fault (probably) */
-        if ((fault_addr == f->esp - 4) || (fault_addr == f->esp - 32)) {
-            /* Check for stack overflow */
-            if (fault_addr < STACK_MIN) {
-                exit(-1);
-            }
-
-            /* If we're here, let's give this process another page */
-            new_page = palloc_get_page(PAL_ZERO | PAL_USER);
+        if (found_valid) {
+            new_page = palloc_get_page(PAL_USER); 
             if (new_page == NULL) {
+                /* ASSERT(0) for now ... */
+                ASSERT(0);
                 new_page = frame_evict();
             }
-            pagedir_set_page(thread_current()->pagedir, 
-                (void *) pg_no(fault_addr), new_page, 1); 
-        }
-        /* If the faulting address is above esp */
-        else if (fault_addr <= f->esp) {
-            new_page = palloc_get_page(PAL_ZERO | PAL_USER);
-            if (new_page == NULL) {
-                new_page = frame_evict();
+            pagedir_set_page(t->pagedir, (void *) pg_no(fault_addr), new_page,
+                             vma->writable);
+            if (vma->pg_type == FILE_SYS) {
+                /* Read the file into the kernel page. If we do not read the
+                   PGSIZE bytes, then zero out the rest of the page. */
+                if (bytes_read = file_read(vma->vm_file, new_page, (off_t) PGSIZE) 
+                    != PGSIZE) {
+                    /* Zero out the remaining bytes in the page. */
+                    zero_start = (void *) ((pg_no(fault_addr) << PGBITS) + 
+                                            ((uintptr_t) bytes_read));
+                    memset(zero_start, 0, PGSIZE - bytes_read);
+                }
             }
-            pagedir_set_page(thread_current()->pagedir, 
-                (void *) pg_no(fault_addr), new_page, 1); 
+            else if (vma->pg_type == ZERO) {
+                /* Zero out the page. */
+                memset((void *) (pg_no(fault_addr) << PGBITS), 0, PGSIZE);
+            }
+            /* TODO: Check for SWAP type. */
         }
-        /* Else is probably an invalid access */
         else {
-            printf("Page fault at %p: %s error %s page in %s context.\n",
-                   fault_addr,
-                   not_present ? "not present" : "rights violation",
-                   write ? "writing" : "reading",
-                   user ? "user" : "kernel");
-            kill(f);
+            if ((fault_addr == f->esp - 4) || (fault_addr == f->esp - 32)) {
+                /* Check for stack overflow */
+                if (fault_addr < STACK_MIN) {
+                    exit(-1);
+                }
+
+                /* If we're here, let's give this process another page */
+                new_page = palloc_get_page(PAL_ZERO | PAL_USER);
+                if (new_page == NULL) {
+                    new_page = frame_evict();
+                }
+                pagedir_set_page(t->pagedir, 
+                    (void *) pg_no(fault_addr), new_page, 1); 
+            }
+            else if (fault_addr <= f->esp) {
+                new_page = palloc_get_page(PAL_ZERO | PAL_USER);
+                if (new_page == NULL) {
+                    new_page = frame_evict();
+                }
+                pagedir_set_page(t->pagedir, (void *) pg_no(fault_addr),
+                                 new_page, 1);
+            }
+            /* Else is probably an invalid access */
+            else {
+                printf("Page fault at %p: %s error %s page in %s context.\n",
+                       fault_addr,
+                       not_present ? "not present" : "rights violation",
+                       write ? "writing" : "reading",
+                       user ? "user" : "kernel");
+                kill(f);
+            }
         }
     }
 #else
