@@ -18,6 +18,8 @@ struct vm_area_struct {
     void *vm_start;
     void *vm_end;
 
+    uint32_t pg_read_bytes;
+
     /* Is this memory area writable. */
     bool writable;
 

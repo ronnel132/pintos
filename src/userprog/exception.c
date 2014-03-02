@@ -157,14 +157,14 @@ static void page_fault(struct intr_frame *f) {
     user = (f->error_code & PF_U) != 0;
 
 #ifdef VM
-//     if (!user) {
-//         printf("Page fault at %p: %s error %s page in %s context.\n",
-//            fault_addr,
-//            not_present ? "not present" : "rights violation",
-//            write ? "writing" : "reading",
-//            user ? "user" : "kernel");
-//         kill(f);
-//     }
+    if (!user) {
+        printf("Page fault at %p: %s error %s page in %s context.\n",
+           fault_addr,
+           not_present ? "not present" : "rights violation",
+           write ? "writing" : "reading",
+           user ? "user" : "kernel");
+        kill(f);
+    }
 
     if (not_present) {
         /* Iterate through the current thread's supplemental page table to 
@@ -189,11 +189,10 @@ static void page_fault(struct intr_frame *f) {
             if (vma->pg_type == FILE_SYS) {
                 /* Read the file into the kernel page. If we do not read the
                    PGSIZE bytes, then zero out the rest of the page. */
-                bytes_read = file_read(vma->vm_file, new_page, (off_t) PGSIZE);
-                if (bytes_read != PGSIZE) { 
-                    /* Zero out the remaining bytes in the page. */
-                    memset(new_page + bytes_read, 0, PGSIZE - bytes_read);
-                }
+                bytes_read = file_read(vma->vm_file, new_page,
+                                      (off_t) vma->pg_read_bytes);
+                ASSERT(bytes_read == vma->pg_read_bytes);
+                memset(new_page + bytes_read, 0, PGSIZE - bytes_read);
             }
             else if (vma->pg_type == ZERO) {
                 /* Zero out the page. */
