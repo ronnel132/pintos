@@ -549,7 +549,8 @@ mapid_t mmap (int fd, void *addr) {
 
 /* Unmaps the mapping designated by mapping, which must be a mapping ID
  * returned by a previous call to mmap by the same process that has not yet
- * been unmapped. */
+ * been unmapped.
+ */
 void munmap (mapid_t mapping) {
     return;
 }

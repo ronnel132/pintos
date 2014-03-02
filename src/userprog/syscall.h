@@ -12,6 +12,9 @@
 /*! Lock used by filesystem syscalls. */
 extern struct lock filesys_lock;
 
+
+typedef int mapid_t;
+
 /* Installs the syscall handler into the interrupt vector table. */
 void syscall_init(void);
 
