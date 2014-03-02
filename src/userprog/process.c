@@ -551,6 +551,7 @@ static bool setup_stack(void **esp, int argc, char **argv) {
     /* Keep track of the page of strings in argv, so we may free it later. */
     char *argv_string_page = argv[0];
     bool success = false;
+    struct vm_area_struct *vma;
     int i;
 
     kpage = palloc_get_page(PAL_USER | PAL_ZERO);
@@ -570,6 +571,23 @@ static bool setup_stack(void **esp, int argc, char **argv) {
 //         frame_add(thread_current()->tid, upage, kpage);
 //         lock_release(&frame_lock);
 // #endif
+
+#ifdef VM
+        /* First add the vm area to the supplemental page table. */
+        vma = (struct vm_area_struct *) malloc(sizeof(struct vm_area_struct));
+        vma->vm_start = (void *) (((uint8_t *) PHYS_BASE) - PGSIZE);
+        vma->vm_end = (void *) (((uint8_t *) PHYS_BASE) - sizeof(uint8_t));
+        vma->kpage = kpage; 
+        vma->writable = true;
+        vma->pinned = false;
+        vma->vm_file = NULL;
+        vma->ofs = NULL;
+        vma->pg_type = PMEM;
+
+        /* Add the vm_area_struct to the thread's supplemental page table. */
+        spt_add(thread_current(), vma);
+#endif
+        
         /* Set up the stack. */
         /* Copy the argv strings in reverse order onto the stack. */
         for (i = argc - 1; i >= 0; i--) {
