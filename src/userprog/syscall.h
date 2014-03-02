@@ -12,6 +12,9 @@
 /*! Lock used by filesystem syscalls. */
 extern struct lock filesys_lock;
 
+
+typedef int mapid_t;
+
 /* Installs the syscall handler into the interrupt vector table. */
 void syscall_init(void);
 
@@ -77,6 +80,16 @@ unsigned tell(int fd);
  * closes all its open file descriptors, as if by calling this function for
  * each one.
  */
- void close(int fd);
+void close(int fd);
+
+/* Maps the file open as fd into the process's virtual address space. The
+ * entire file is mapped into consecutive virtual pages starting at addr.
+ */
+mapid_t mmap (int fd, void *addr);
+
+/* Unmaps the mapping designated by mapping, which must be a mapping ID
+ * returned by a previous call to mmap by the same process that has not yet
+ * been unmapped. */
+void munmap (mapid_t mapping);
 
 #endif /* userprog/syscall.h */
