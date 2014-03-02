@@ -123,6 +123,9 @@ static void page_fault(struct intr_frame *f) {
     bool user;         /* True: access by user, false: access by kernel. */
     void *fault_addr;  /* Fault address. */
     void *new_page;   /* New page that's being allocated */
+    struct thread *t = thread_current();
+    struct list_elem *e;
+    struct vm_area_struct *vma;
 
     /* Obtain faulting address, the virtual address that was accessed to cause
        the fault.  It may point to code or to data.  It is not necessarily the
@@ -151,7 +154,12 @@ static void page_fault(struct intr_frame *f) {
     }
 
     if (user && not_present) {
-        // TODO: Handle address that is allocated but not in physical memory
+        /* Iterate through the current thread's supplemental page table to 
+           find if the faulting address is valid. */
+        for (e = list_begin(&t->spt); e != list_end(&t->spt);
+             e = list_next(e)) {
+            /* TODO */
+        }
 
         /* If a push or pusha has caused the fault (probably) */
         if ((fault_addr == f->esp - 4) || (fault_addr == f->esp - 32)) {
@@ -162,7 +170,7 @@ static void page_fault(struct intr_frame *f) {
 
             /* If we're here, let's give this process another page */
             new_page = palloc_get_page(PAL_ZERO | PAL_USER);
-            pagedir_set_page(thread_current()->pagedir, pg_no(fault_addr), new_page, 1); 
+            pagedir_set_page(t->pagedir, pg_no(fault_addr), new_page, 1); 
         }
     }
 
