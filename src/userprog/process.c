@@ -493,9 +493,9 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
         /* Create a vm_area_struct for the page. */
         struct vm_area_struct *vma = (struct vm_area_struct *)
                                      malloc(sizeof(struct vm_area_struct));
-        vma->vm_start = upage; 
+        vma->vm_start = upage;
         vma->vm_end = upage + PGSIZE;
-        vma->writable = writable; 
+        vma->writable = writable;
         vma->vm_file = file;
         /* Store the current offset within the file. */
         vma->ofs = ofs;
