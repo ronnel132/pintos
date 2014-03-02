@@ -264,7 +264,9 @@ void halt (void) {
 /* Terminates the current user program, returning status to the kernel. */
 void exit(int status) {
     thread_current()->exit_status = status;
-    lock_release(&filesys_lock);
+    if (filesys_lock.holder == thread_current()) {
+        lock_release(&filesys_lock);
+    }
     thread_exit();
 }
 
@@ -583,6 +585,7 @@ void close(int fd) {
 }
 
 
+#ifdef VM
 /* Maps the file open as fd into the process's virtual address space. The
  * entire file is mapped into consecutive virtual pages starting at addr.
  */
@@ -712,3 +715,4 @@ void munmap(mapid_t mid) {
         pd->open_mapids[mid] = false;
     }
 }
+#endif
