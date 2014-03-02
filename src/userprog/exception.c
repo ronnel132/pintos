@@ -177,7 +177,6 @@ static void page_fault(struct intr_frame *f) {
                 break;
              }
         }
-
         if (found_valid) {
             new_page = palloc_get_page(PAL_USER); 
             if (new_page == NULL) {
