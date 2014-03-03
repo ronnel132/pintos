@@ -199,8 +199,10 @@ static void page_fault(struct intr_frame *f) {
                 memset(new_page, 0, PGSIZE);
             }
             /* TODO: Check for SWAP type. */
-            pagedir_set_page(t->pagedir, pg_round_down(fault_addr),
-                             new_page, vma->writable);
+            if (!pagedir_set_page(t->pagedir, pg_round_down(fault_addr),
+                             new_page, vma->writable)) {
+                kill(f);
+            }
         }
         else {
             if ((fault_addr == f->esp - 4) || (fault_addr == f->esp - 32)) {
