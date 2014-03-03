@@ -550,7 +550,12 @@ mapid_t mmap(int fd, void *addr) {
     size =  = filesize(fd);
     num_pages = size / PGSIZE;
 
-    if (size == 0 || pg_ofs(addr) != 0)
+    if (size == 0) {
+        return NULL;
+    }
+    if (pg_ofs(addr) != 0) {
+        exit(EXIT_BAD_PTR);
+    }
 
 
     if (size % PGSIZE != 0) {
@@ -561,7 +566,7 @@ mapid_t mmap(int fd, void *addr) {
 
     }
     */
-    
+
     return NULL;
 }
 
