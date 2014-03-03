@@ -8,15 +8,23 @@
 /* What type of pages are stored in this vm_area? They can be in the file 
    system, in swap, or an all zero page. */
 enum pg_type_flags {
+    /* Page is in the file system. */
     FILE_SYS = 001,
+    /* Page is in swap space. */
     SWAP = 002,
-    ZERO = 003
+    /* Page is all zeros. */
+    ZERO = 003,
+    /* Page is in physical memory. */
+    PMEM = 004
 };
 
 struct vm_area_struct {
     /* Virtual memory start and end addresses. */
     void *vm_start;
     void *vm_end;
+
+    /* The kernel virtual address for when pg_type == PMEM. */
+    void *kpage; 
 
     uint32_t pg_read_bytes;
 
@@ -32,6 +40,7 @@ struct vm_area_struct {
     /* Offset in the mapped file. */
     off_t ofs;
 
+    /* The type of page. */
     enum pg_type_flags pg_type;
 
     struct list_elem elem;
