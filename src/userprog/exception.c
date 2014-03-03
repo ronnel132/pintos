@@ -141,6 +141,8 @@ static void page_fault(struct intr_frame *f) {
        [IA32-v3a] 5.15 "Interrupt 14--Page Fault Exception (#PF)". */
     asm ("movl %%cr2, %0" : "=r" (fault_addr));
 
+    printf("pagefault\n");
+
 
     /* Turn interrupts back on (they were only off so that we could
        be assured of reading CR2 before it changed). */
@@ -164,7 +166,7 @@ static void page_fault(struct intr_frame *f) {
         kill(f);
     }
 
-    if (user && not_present) {
+    if (not_present) {
         /* Iterate through the current thread's supplemental page table to 
            find if the faulting address is valid. */
 
@@ -177,7 +179,6 @@ static void page_fault(struct intr_frame *f) {
                 break;
              }
         }
-
         if (found_valid) {
             new_page = palloc_get_page(PAL_USER); 
             if (new_page == NULL) {
@@ -185,24 +186,21 @@ static void page_fault(struct intr_frame *f) {
                 ASSERT(0);
                 new_page = frame_evict();
             }
-            pagedir_set_page(t->pagedir, (void *) pg_no(fault_addr), new_page,
-                             vma->writable);
             if (vma->pg_type == FILE_SYS) {
                 /* Read the file into the kernel page. If we do not read the
                    PGSIZE bytes, then zero out the rest of the page. */
-                if (bytes_read = file_read(vma->vm_file, new_page, (off_t) PGSIZE) 
-                    != PGSIZE) {
-                    /* Zero out the remaining bytes in the page. */
-                    zero_start = (void *) ((pg_no(fault_addr) << PGBITS) + 
-                                            ((uintptr_t) bytes_read));
-                    memset(zero_start, 0, PGSIZE - bytes_read);
-                }
+                bytes_read = file_read(vma->vm_file, new_page,
+                                      (off_t) vma->pg_read_bytes);
+                ASSERT(bytes_read == vma->pg_read_bytes);
+                memset(new_page + bytes_read, 0, PGSIZE - bytes_read);
             }
             else if (vma->pg_type == ZERO) {
                 /* Zero out the page. */
-                memset((void *) (pg_no(fault_addr) << PGBITS), 0, PGSIZE);
+                memset(new_page, 0, PGSIZE);
             }
             /* TODO: Check for SWAP type. */
+            pagedir_set_page(t->pagedir, pg_round_down(fault_addr),
+                             new_page, vma->writable);
         }
         else {
             if ((fault_addr == f->esp - 4) || (fault_addr == f->esp - 32)) {
@@ -216,16 +214,18 @@ static void page_fault(struct intr_frame *f) {
                 if (new_page == NULL) {
                     new_page = frame_evict();
                 }
-                pagedir_set_page(t->pagedir, 
-                    (void *) pg_no(fault_addr), new_page, 1); 
+                pagedir_set_page(t->pagedir, pg_round_down(fault_addr),
+                                 new_page, 1);
             }
             else if (fault_addr >= f->esp) {
                 new_page = palloc_get_page(PAL_ZERO | PAL_USER);
                 if (new_page == NULL) {
                     new_page = frame_evict();
                 }
-                pagedir_set_page(t->pagedir, (void *) pg_no(fault_addr),
+                printf("here1\n");
+                pagedir_set_page(t->pagedir, pg_round_down(fault_addr),
                                  new_page, 1);
+                                 
             }
             /* Else is probably an invalid access */
             else {
