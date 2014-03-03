@@ -1,5 +1,6 @@
 #include <debug.h>
 #include <list.h>
+#include "threads/malloc.h"
 #include "threads/thread.h"
 #include "vm/page.h"
 
@@ -26,6 +27,7 @@ void spt_add(struct thread *t, struct vm_area_struct *vm_area) {
 /* Removes a vm_area_struct from its supplemental page table. */
 void spt_remove(struct vm_area_struct *vm_area) {
     list_remove(&vm_area->elem);
+    free(vm_area);
 }
 
 bool spt_less(struct list_elem *e1, struct list_elem *e2, void *aux UNUSED) {
