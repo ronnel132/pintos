@@ -224,7 +224,6 @@ static void page_fault(struct intr_frame *f) {
                 if (new_page == NULL) {
                     new_page = frame_evict();
                 }
-                printf("here1\n");
                 pagedir_set_page(t->pagedir, pg_round_down(fault_addr),
                                  new_page, 1);
                                  
