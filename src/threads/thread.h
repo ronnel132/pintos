@@ -46,6 +46,7 @@ struct mmap_t {
     int mapid;
     void * addr;
     int num_pages;
+    struct file * mapped_file;
 };
 
 
@@ -54,12 +55,14 @@ struct mmap_t {
 
 struct process {
     tid_t parent_id;
-    struct file * exec_file;
-    int num_files_open;
 
+    struct file * exec_file;
+
+    int num_files_open;
     bool open_file_descriptors[MAX_OPEN_FILES];
     struct file * files[MAX_OPEN_FILES];
 
+    int num_mapids_open;
     bool open_mapids[MAX_OPEN_FILES];
     struct mmap_t open_mmaps[MAX_OPEN_FILES];
 };
