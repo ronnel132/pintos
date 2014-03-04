@@ -16,6 +16,10 @@
 #include "userprog/process.h"
 #endif
 
+#ifdef VM
+#include "vm/frame.h"
+#endif
+
 /*! Random value for struct thread's `magic' member.
     Used to detect stack overflow.  See the big comment at the top
     of thread.h for details. */
@@ -44,6 +48,10 @@ struct lock filesys_lock;
 /* Processes that are dead but haven't been reaped yet */
 #ifdef USERPROG
 struct list dead_list;
+#endif
+
+#ifdef VM
+extern struct lock frame_lock;
 #endif
 
 /* Declare pri_donation_list struct from the header file definition */
@@ -138,6 +146,11 @@ void thread_init(void) {
 
     lock_init(&tid_lock);
     lock_init(&filesys_lock);
+
+    #ifdef VM
+    /* Initialize the frame lock. */
+    lock_init(&frame_lock);
+    #endif
 
     list_init(&ready_list);
 

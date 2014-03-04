@@ -27,7 +27,9 @@ static thread_func start_process NO_RETURN;
 static bool load(int argc, const char **argv, void (**eip)(void), void **esp);
 char **tokenize_process_args(const char *raw_args, int *argc);
 extern struct list all_list;
+#ifdef VM
 extern struct lock frame_lock;
+#endif
 
 /*! Starts a new thread running a user program loaded from FILENAME.  The new
     thread may be scheduled (and may even exit) before process_execute()
@@ -320,7 +322,7 @@ bool load(int argc, const char **argv, void (**eip) (void), void **esp) {
         goto done;
     process_activate();
     
-//     lock_acquire(&filesys_lock);
+    lock_acquire(&filesys_lock);
     /* Open executable file, named argv[0]. */
     file = filesys_open(argv[0]);
     if (file == NULL) {
@@ -397,7 +399,7 @@ bool load(int argc, const char **argv, void (**eip) (void), void **esp) {
             break;
         }
     }
-//     lock_release(&filesys_lock);
+    lock_release(&filesys_lock);
 
     /* Set up stack. */
     if (!setup_stack(esp, argc, (char **) argv))
@@ -556,23 +558,21 @@ static bool setup_stack(void **esp, int argc, char **argv) {
 
     kpage = palloc_get_page(PAL_USER | PAL_ZERO);
     if (kpage == NULL) {
-// #ifdef VM
-//         lock_acquire(&frame_lock);
-//         kpage = (uint8_t *) frame_evict();
-// #else
+#ifdef VM
+        kpage = (uint8_t *) frame_evict();
+#else
         return success;
-// #endif
+#endif
     }
 
     upage = ((uint8_t *) PHYS_BASE) - PGSIZE;
     success = install_page(upage, kpage, true);
     if (success) {
-// #ifdef VM
-//         frame_add(thread_current()->tid, upage, kpage);
-//         lock_release(&frame_lock);
-// #endif
-
 #ifdef VM
+        lock_acquire(&frame_lock);
+        frame_add(thread_current()->tid, upage, kpage);
+        lock_release(&frame_lock);
+
         /* First add the vm area to the supplemental page table. */
         vma = (struct vm_area_struct *) malloc(sizeof(struct vm_area_struct));
         vma->vm_start = (void *) (((uint8_t *) PHYS_BASE) - PGSIZE);
