@@ -18,6 +18,7 @@
 
 #include "userprog/process.h"
 
+#include "threads/malloc.h"
 #include <list.h>
 #include "vm/page.h"
 
@@ -307,10 +308,10 @@ void halt (void) {
 
 /* Terminates the current user program, returning status to the kernel. */
 void exit(int status) {
-    thread_current()->exit_status = status;
-    if (filesys_lock.holder == thread_current()) {
+    if (lock_held_by_current_thread(&filesys_lock)) {
         lock_release(&filesys_lock);
     }
+    thread_current()->exit_status = status;
     thread_exit();
 }
 
@@ -665,7 +666,7 @@ mapid_t mmap(int fd, void *addr) {
     /* Get the size of the file so we can determine number of pages
      * required.
      */
-    size = filesize(fd);
+    size = file_length(get_file_struct(fd));
     if (size == 0) {
         lock_release(&filesys_lock);
         return MAP_FAILED;
@@ -759,7 +760,7 @@ void munmap(mapid_t mid) {
 
     if (pd->open_mapids[mid]) {
         next_vas = pd->open_mmaps[mid].first_vm_area;
-        f = vas->vm_file;
+        f = next_vas->vm_file;
 
         for (i = 0; i < pd->open_mmaps[mid].num_pages; i++) {
             vas = next_vas;
