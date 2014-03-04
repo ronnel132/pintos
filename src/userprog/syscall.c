@@ -50,6 +50,7 @@ bool valid_user_pointer(const void *ptr) {
     struct list_elem *e;
     struct vm_area_struct *iter;
     struct thread *t = thread_current();
+    void *esp = t->esp;
 
     /* See lookup_page() for more info */
     if (!is_user_vaddr(ptr)) {
@@ -65,6 +66,15 @@ bool valid_user_pointer(const void *ptr) {
             return true;
         }
     }
+
+    /* If the pointer is above esp (but in user_vaddr), it may correspond to
+     * a part of the stack that would be later loaded lazily on a pagefault.
+     * So this should be considered a good pointer.
+     */
+
+     if (ptr > esp) {
+        return true;
+     }
 
     
 
