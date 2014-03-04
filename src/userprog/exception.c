@@ -297,23 +297,25 @@ static void page_fault(struct intr_frame *f) {
             
             /* Else is probably an invalid access */
             else {
-                printf("Page fault at %p: %s error %s page in %s context.\n",
-                       fault_addr,
-                       not_present ? "not present" : "rights violation",
-                       write ? "writing" : "reading",
-                       user ? "user" : "kernel");
-                kill(f);
+//                 printf("Page fault at %p: %s error %s page in %s context.\n",
+//                        fault_addr,
+//                        not_present ? "not present" : "rights violation",
+//                        write ? "writing" : "reading",
+//                        user ? "user" : "kernel");
+//                 kill(f);
+                exit(-1);
             }
         }
     }
     /* Rights violation */
     else {
-        printf("Page fault at %p: %s error %s page in %s context.\n",
-               fault_addr,
-               not_present ? "not present" : "rights violation",
-               write ? "writing" : "reading",
-               user ? "user" : "kernel");
-        kill(f);
+//         printf("Page fault at %p: %s error %s page in %s context.\n",
+//                fault_addr,
+//                not_present ? "not present" : "rights violation",
+//                write ? "writing" : "reading",
+//                user ? "user" : "kernel");
+//         kill(f);
+        exit(-1);
     }
 
 #else
