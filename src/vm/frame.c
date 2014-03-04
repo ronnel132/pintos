@@ -32,7 +32,12 @@ void *frame_evict(void) {
         e = list_pop_front(&frame_queue);
         frame = list_entry(e, struct frame, q_elem);
 
-        if (!pagedir_is_accessed(frame->thread->pagedir, frame->upage)) {
+        /* Uncomment next line, and comment out the second next
+           one for a Second Chance algorithm. Read the design
+           doc for caveats though! */
+
+//         if (!pagedir_is_accessed(frame->thread->pagedir, frame->upage)) {
+        if (1) {
             /* The frame has NOT been accessed. */
             /* Swap it out. First update the vm_area_struct for this page. */
             vma = spt_get_struct(frame->thread, frame->upage); 
