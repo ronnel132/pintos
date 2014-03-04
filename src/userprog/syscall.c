@@ -626,7 +626,7 @@ mapid_t mmap(int fd, void *addr) {
         return MAP_FAILED;
     }
 
-    if (!valid_user_pointer(addr)) {
+    if (!is_user_vaddr(addr)) {
         exit(EXIT_BAD_PTR);
     }
 
