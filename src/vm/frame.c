@@ -5,6 +5,9 @@
 #include "threads/synch.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "userprog/pagedir.h"
+#include "filesys/filesys.h"
+#include "filesys/file.h"
 
 struct lock frame_lock;
 
@@ -16,6 +19,7 @@ void *frame_evict(void) {
     static uint32_t pte;
     static uint32_t *pt, *pde;
     struct vm_area_struct *vma; 
+    int bytes_written;
 
     ASSERT(list_size(&frame_queue) > 0);
     while (1) {
@@ -37,8 +41,23 @@ void *frame_evict(void) {
                supplemental page table for this thread. */
             ASSERT(vma != NULL);
             vma->kpage = NULL;
-            vma->pg_type = SWAP;
-            vma->swap_ind = swap_add(frame->kpage);
+
+            /* If it's a file don't swap; write back */
+            if (vma->pg_type == FILE_SYS) {
+                if (pagedir_is_dirty(thread_current()->pagedir, vma->vm_start)) {
+                    file_seek(vma->vm_file, vma->ofs);
+                    bytes_written = file_write(vma->vm_file,
+                                               vma->vm_start,
+                                               vma->pg_read_bytes);
+                    ASSERT(bytes_written == vma->pg_read_bytes);
+                }
+            }
+
+            /* Otherwise write to swap */
+            else {
+                vma->pg_type = SWAP;
+                vma->swap_ind = swap_add(frame->kpage);
+            }
             
             /* Remove the frame from the frame table. */
             frame_table_remove(frame);
