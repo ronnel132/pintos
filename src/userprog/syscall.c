@@ -18,6 +18,7 @@
 
 #include "userprog/process.h"
 
+#include "threads/malloc.h"
 #include <list.h>
 #include "vm/page.h"
 
@@ -47,12 +48,19 @@ extern struct list all_list;
  * range, and that it correpsonds to a page directory entry
  */
 bool valid_user_pointer(const void *ptr) {
+    uint32_t *pd, *pde;
     struct list_elem *e;
     struct vm_area_struct *iter;
     struct thread *t = thread_current();
+    void *esp = t->esp;
 
-    /* See lookup_page() for more info */
-    if (!is_user_vaddr(ptr)) {
+    /* Special case for esp, must be in pagedir */
+    pd = active_pd();
+    pde = pd + pd_no(esp);
+
+    /* If we have messed up esp */
+    if (*pde == 0) {
+//     printf("here!\n\n");
         return false;
     }
 
@@ -66,6 +74,16 @@ bool valid_user_pointer(const void *ptr) {
         }
     }
 
+    /* If the pointer is above esp (but in user_vaddr), it may correspond to
+     * a part of the stack that would be later loaded lazily on a pagefault.
+     * So this should be considered a good pointer.
+     */
+
+     if (is_user_vaddr(ptr) && ptr >= esp) {
+        return true;
+     }
+
+
     
 
 //     printf("%d\n", is_user_vaddr(ptr));
@@ -75,6 +93,7 @@ bool valid_user_pointer(const void *ptr) {
 //     printf("===========\n");
 
     /* If we're here, this isn't a valid address */
+//     printf("here!\n\n");
     return false;
 }
 
@@ -222,11 +241,13 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
 //             if    (!valid_user_pointer(arg3)) {
 //                 exit(EXIT_BAD_PTR);
 //             }
+        
+//             printf("trying to write()\n");
 
             if ((!valid_user_pointer(arg1)) ||
                 (!valid_user_pointer(arg2)) ||
                 (!valid_user_pointer(arg3))) {
-                    printf("syscall check failed\n");
+//                     printf("syscall check failed\n");
 
                 exit(EXIT_BAD_PTR);
             }
@@ -287,10 +308,10 @@ void halt (void) {
 
 /* Terminates the current user program, returning status to the kernel. */
 void exit(int status) {
-    thread_current()->exit_status = status;
-    if (filesys_lock.holder == thread_current()) {
+    if (lock_held_by_current_thread(&filesys_lock)) {
         lock_release(&filesys_lock);
     }
+    thread_current()->exit_status = status;
     thread_exit();
 }
 
@@ -532,6 +553,7 @@ int write(int fd, const void *buffer, unsigned size) {
     int bytes_written = -1;
 
     if (!valid_user_pointer(buffer) || !valid_user_pointer(buffer + size)) {
+//         printf("here!\n\n");
         exit(EXIT_BAD_PTR);
     }
 
@@ -644,7 +666,7 @@ mapid_t mmap(int fd, void *addr) {
     /* Get the size of the file so we can determine number of pages
      * required.
      */
-    size = filesize(fd);
+    size = file_length(get_file_struct(fd));
     if (size == 0) {
         lock_release(&filesys_lock);
         return MAP_FAILED;
@@ -738,7 +760,7 @@ void munmap(mapid_t mid) {
 
     if (pd->open_mapids[mid]) {
         next_vas = pd->open_mmaps[mid].first_vm_area;
-        f = vas->vm_file;
+        f = next_vas->vm_file;
 
         for (i = 0; i < pd->open_mmaps[mid].num_pages; i++) {
             vas = next_vas;
