@@ -24,7 +24,7 @@ static void page_fault(struct intr_frame *);
 /*! Lock used by filesystem syscalls. */
 extern struct lock filesys_lock;
 
-struct lock frame_lock;
+// struct lock frame_lock;
 
 /*! Registers handlers for interrupts that can be caused by user programs.
 
@@ -211,10 +211,6 @@ static void page_fault(struct intr_frame *f) {
 
                 /* Checking for lock holder should be atomic */
                 intr_disable();
-                if (!lock_held_by_current_thread(&filesys_lock)) {
-                    fs_lock = true;
-                    lock_acquire(&filesys_lock);
-                }
 
                 if (!lock_held_by_current_thread(&filesys_lock)) {
                     lock_acquire(&filesys_lock);
