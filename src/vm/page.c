@@ -2,6 +2,7 @@
 #include "threads/malloc.h"
 #include "threads/thread.h"
 #include "vm/page.h"
+#include "vm/frame.h"
 
 /* Procedures for accessing and manipulating the supplemental page table. */
 
@@ -63,4 +64,24 @@ bool spt_less(struct hash_elem *e1, struct hash_elem *e2, void *aux UNUSED) {
     va2 = hash_entry(e2, struct vm_area_struct, elem);
 
     return va1->vm_start <  va2->vm_start;
+}
+
+/* Free the entries in T's supplemental page table. */
+void spt_free(struct thread *t) {
+    struct vm_area_struct *vma;
+    struct hash_iterator i;
+    struct frame f;
+    
+    hash_first(&i, &t->spt);
+    while (hash_next(&i)) {
+        vma = hash_entry(hash_cur(&i), struct vm_area_struct, elem);
+        if (vma->pg_type == SWAP) {
+            swap_remove(vma->swap_ind, NULL);
+        }
+        else if (vma->pg_type == PMEM) {
+            f.kpage = vma->kpage; 
+            frame_table_remove(&f);
+        }
+        free(vma);
+    }
 }

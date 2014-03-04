@@ -1,6 +1,7 @@
 #ifndef FRAME_H
 #define FRAME_H
 
+#include <hash.h>
 #include <list.h>
 #include <stdint.h>
 
@@ -9,7 +10,7 @@
 #include "vm/page.h"
 
 /*! Store the frame table as a list, sorted by frame number. */
-struct list frame_table;
+struct hash frame_table;
 
 /*! The frame queue -- used for implementing a second chance policy. */
 struct list frame_queue;
@@ -26,7 +27,7 @@ struct frame {
     struct thread *thread;
     
     /* The list_elem in the frame table list. */
-    struct list_elem elem;
+    struct hash_elem elem;
 
     /* The list_elem for the frame queue for eviction policy. */
     struct list_elem q_elem;
@@ -35,7 +36,8 @@ struct frame {
 void *frame_evict(void);
 void frame_table_remove(struct frame *frame);
 void frame_add(struct thread *t, void *upage, void *kpage);
-bool frame_less(const struct list_elem *elem1, const struct list_elem *elem2, 
+bool frame_less(const struct hash_elem *elem1, const struct hash_elem *elem2, 
                 void *aux UNUSED);
+unsigned frame_hash_func(const struct hash_elem *element, void *aux UNUSED);
 
 #endif

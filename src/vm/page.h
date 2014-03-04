@@ -56,5 +56,6 @@ void spt_remove(struct thread *t, struct vm_area_struct *vm_area);
 bool spt_present(struct thread *t, void *upage);
 unsigned spt_hash_func(const struct hash_elem *element, void *aux UNUSED); 
 bool spt_less(struct hash_elem *e1, struct hash_elem *e2, void *aux UNUSED);
+void spt_free(struct thread *t);
 
 #endif
