@@ -625,12 +625,9 @@ mapid_t mmap(int fd, void *addr) {
         num_pages++;
     }
 
-    /* If bad address pointers, exit. */
-
-
 
     /* Get process struct to reopen file for mapping */
-    cur_thread = thread_current;
+    cur_thread = thread_current();
     pd = cur_thread->process_details;
 
     /* If there are no available mapids */
@@ -687,15 +684,13 @@ mapid_t mmap(int fd, void *addr) {
  * been unmapped.
  */
 void munmap(mapid_t mid) {
-    struct thread * cur_thread;
     struct process * pd;
     struct vm_area_struct * vas;
     struct vm_area_struct * next_vas;
     struct file * f;
     int i;
 
-    cur_thread = thread_current();
-    pd = cur_thread->process_details;
+    pd = thread_current()->process_details;
 
     if (pd->open_mapids[mid]) {
         next_vas = pd->open_mmaps[mid].first_vm_area;
