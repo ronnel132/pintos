@@ -599,7 +599,7 @@ mapid_t mmap(int fd, void *addr) {
 
     /* Address is bad if not page aligned (page offset = 0). */
     if (pg_ofs(addr) != 0) {
-        exit(EXIT_BAD_PTR);
+        return MAP_FAILED;
     }
 
     /* LOCK filesystem while getting information about address range and
@@ -609,7 +609,8 @@ mapid_t mmap(int fd, void *addr) {
 
     /* If bad descriptor, exit. */
     if (!file_is_open(fd)) {
-        exit(EXIT_BAD_PTR);
+        lock_release(&filesys_lock);
+        return MAP_FAILED;
     }
 
     /* Get the size of the file so we can determine number of pages
@@ -617,7 +618,8 @@ mapid_t mmap(int fd, void *addr) {
      */
     size = filesize(fd);
     if (size == 0) {
-        return NULL;
+        lock_release(&filesys_lock);
+        return MAP_FAILED;
     }
 
     /* Since num_pages rounds down, increase number of pages by 1 if size is
@@ -635,7 +637,8 @@ mapid_t mmap(int fd, void *addr) {
 
     /* If there are no available mapids */
     if (pd->num_mapids_open >= MAX_OPEN_FILES) {
-        return NULL;
+        lock_release(&filesys_lock);
+        return MAP_FAILED;
     }
 
     /* Search for first available file descriptor */

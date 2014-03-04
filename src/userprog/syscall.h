@@ -9,6 +9,9 @@
 #define EXIT_BAD_PTR -1         /*!< Bad pointer access during execution. */
 
 
+#define MAP_FAILED ((mapid_t) -1)
+
+
 /*! Lock used by filesystem syscalls. */
 extern struct lock filesys_lock;
 
