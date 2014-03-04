@@ -459,6 +459,7 @@ int read(int fd, void *buffer, unsigned size) {
     void *esp = thread_current()->esp;
 
     if (!valid_user_pointer(buffer, esp) || !valid_user_pointer(buffer + size, esp)) {
+//         printf("here1\n\n");
         exit(EXIT_BAD_PTR);
     }
 
