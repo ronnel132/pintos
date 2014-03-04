@@ -247,6 +247,21 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             }
             close(*((int *) arg1));
             break;
+
+        case SYS_MMAP:
+            if ((!valid_user_pointer(arg1, NULL)) || (!valid_user_pointer(arg2, NULL))) {
+                exit(EXIT_BAD_PTR);
+            }
+            mmap(*((int *)arg1), *((void **)arg2)); 
+            break;
+
+        case SYS_MUNMAP:
+            if ((!valid_user_pointer(arg1, NULL))) {
+                exit(EXIT_BAD_PTR);
+            }
+            munmap(*((mapid_t *) arg1));
+            break;
+
         default:
             /* Yeah, we're not that nice */
             exit(-1);
@@ -602,6 +617,10 @@ mapid_t mmap(int fd, void *addr) {
         return MAP_FAILED;
     }
 
+    if (!valid_user_pointer(addr, NULL)) {
+        exit(EXIT_BAD_PTR);
+    }
+
     /* LOCK filesystem while getting information about address range and
      * file.
      */
@@ -656,9 +675,7 @@ mapid_t mmap(int fd, void *addr) {
                   calloc(1, sizeof(struct vm_area_struct));
 
         mapping->vm_start = addr + i * PGSIZE;
-
         mapping->vm_end = mapping->vm_start + PGSIZE - 1;
-
         mapping->pg_type = FILE_SYS;
         mapping->vm_file = f;
         mapping->ofs = i * PGSIZE;
