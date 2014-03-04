@@ -62,7 +62,8 @@ void *frame_evict(void) {
 
             lock_release(&frame_lock);
             
-            /* Return the now free kernel page. */
+            /* Release and return the now free kernel page. */
+            lock_release(&frame_lock);
             return frame->kpage;
         }
         else {
