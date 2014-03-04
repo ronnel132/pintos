@@ -9,8 +9,10 @@
 #include "userprog/pagedir.h"
 #include "filesys/filesys.h"
 #include "filesys/file.h"
+#include "threads/interrupt.h"
 
 struct lock frame_lock;
+struct lock filesys_lock;
 
 /* Evicts a frame from the frame table and returns the kernel virtual address
    of that frame. */
@@ -19,12 +21,14 @@ void *frame_evict(void) {
     struct frame *frame;
     struct vm_area_struct *vma; 
     int bytes_written;
+    int fs_lock = 0;
+    enum intr_level old_level;
 
     ASSERT(list_size(&frame_queue) > 0);
-//     printf("trying to acq 1\n");
-//     printf("%d\n", thread_current()->tid);
+    printf("trying to acq 1\n");
+    printf("%d\n", thread_current()->tid);
     lock_acquire(&frame_lock);
-//     printf("go tit\n");
+    printf("go tit\n");
     while (1) {
         e = list_pop_front(&frame_queue);
         frame = list_entry(e, struct frame, q_elem);
@@ -42,12 +46,25 @@ void *frame_evict(void) {
             /* If it's a file don't swap; write back */
             if (vma->pg_type == FILE_SYS) {
                 if (pagedir_is_dirty(frame->thread->pagedir, frame->upage)) {
+                    old_level = intr_disable();
+                    if (!lock_held_by_current_thread(&filesys_lock)) {
+                        fs_lock = 1;
+                        lock_acquire(&filesys_lock);
+                    }
+                    lock_acquire(&filesys_lock);
+                    intr_set_level(old_level);
+
                     ASSERT(vma->writable);
+
                     file_seek(vma->vm_file, vma->ofs);
                     bytes_written = file_write(vma->vm_file,
                                                vma->vm_start,
                                                vma->pg_read_bytes);
                     ASSERT(bytes_written == vma->pg_read_bytes);
+
+                    if (fs_lock == 1) {
+                        lock_release(&filesys_lock);
+                    }
                 }
             }
             else if (vma->pg_type == PMEM) {
