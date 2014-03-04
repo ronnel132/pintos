@@ -43,10 +43,8 @@ typedef int pid_t;
 /* Definitions for types representing memory mapped files */
 typedef int mapid_t;
 struct mmap_t {
-    int mapid;
-    void * addr;
+    struct vm_area_struct * first_vm_area;
     int num_pages;
-    struct file * mapped_file;
 };
 
 
@@ -173,6 +171,9 @@ struct thread {
 
     /* This will be 1 if there's a child load error, otherwise undefined */
     int child_loaded_error;
+
+    /* Esp location, used if the interrupt context isn't available */
+    void *esp;
 #endif
 
 #ifdef VM
