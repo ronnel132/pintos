@@ -21,8 +21,8 @@ void *frame_evict(void) {
     int bytes_written;
 
     ASSERT(list_size(&frame_queue) > 0);
+    lock_acquire(&frame_lock);
     while (1) {
-        lock_acquire(&frame_lock);
         e = list_pop_front(&frame_queue);
         frame = list_entry(e, struct frame, q_elem);
 
@@ -60,7 +60,6 @@ void *frame_evict(void) {
             /* Remove the frame from the frame table. */
             frame_table_remove(frame);
             
-            lock_release(&frame_lock);
             /* Return the now free kernel page. */
             return frame->kpage;
         }
@@ -69,8 +68,8 @@ void *frame_evict(void) {
             /* Set its accessed bit to 0, then enqueue it. */
             pagedir_set_accessed(frame->thread->pagedir, frame->upage, 0);
             list_push_back(&frame_queue, &frame->q_elem);
-            lock_release(&frame_lock);
         }
+        lock_release(&frame_lock);
     }
 }
 
