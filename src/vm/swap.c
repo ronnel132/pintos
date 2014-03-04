@@ -31,7 +31,7 @@ block_sector_t swap_add(void *kpage) {
     block_sector_t i, j, swap_size;
     bool found_space = false;
 
-    swap_size = swap_device->size;
+    swap_size = block_size(swap_device);
 
     /* Find the first free sector within the swap partition to store the KPAGE
        contents. */
