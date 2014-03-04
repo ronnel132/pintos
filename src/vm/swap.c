@@ -60,11 +60,13 @@ block_sector_t swap_add(void *kpage) {
     if (hash_insert(&swap_table, &ss->hash_elem) != NULL) {
         PANIC("Overwriting swap partition write detected.");
     }
+    lock_release(&swap_lock);
     return i; 
 }
 
 /* Remove the swapped in page at SECTOR, and write it to BUFFER. */
 void swap_remove(block_sector_t sector, void *buffer) {
+    struct hash_elem *e;
     struct swap_slot ss;
     block_sector_t i;
     for (i = 0; i < SECTORS_PER_PAGE; i++) {
@@ -73,10 +75,12 @@ void swap_remove(block_sector_t sector, void *buffer) {
     /* Remove the struct swap_slot from the swap table. */ 
     ss.sector_ind = sector; 
     lock_acquire(&swap_lock);
-    if (hash_delete(&swap_table, &ss.hash_elem) == NULL) {
+    e = hash_delete(&swap_table, &ss.hash_elem);
+    if (e == NULL) {
         PANIC("Attempting to release a free slot in swap.");
     }
     lock_release(&swap_lock);
+    free(hash_entry(e, struct swap_slot, hash_elem));
 }
 
 unsigned swap_hash_func(const struct hash_elem *element, void *aux UNUSED) {
