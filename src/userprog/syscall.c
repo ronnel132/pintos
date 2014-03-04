@@ -675,8 +675,8 @@ mapid_t mmap(int fd, void *addr) {
     struct vm_area_struct * mapping;
     struct thread * cur_thread;
 
-    /* Address is bad if not page aligned (page offset = 0). */
-    if (pg_ofs(addr) != 0) {
+    /* Address is bad if NULL or not page aligned (page offset = 0). */
+    if (addr == NULL || pg_ofs(addr) != 0) {
         return MAP_FAILED;
     }
 
