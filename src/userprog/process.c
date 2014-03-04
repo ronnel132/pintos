@@ -487,29 +487,29 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
         size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
         size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
-// #ifdef VM
-//         /* Create a vm_area_struct for the page. */
-//         struct vm_area_struct *vma = (struct vm_area_struct *)
-//                                      malloc(sizeof(struct vm_area_struct));
-//         vma->vm_start = upage;
-//         vma->vm_end = upage + PGSIZE - sizeof(uint8_t);
-//         vma->pg_read_bytes = page_read_bytes;
-//         vma->writable = writable;
-//         vma->pinned = 0;
-//         vma->vm_file = file;
-//         /* Store the current offset within the file. */
-//         vma->ofs = ofs;
-//         if (page_zero_bytes == PGSIZE) {
-//             vma->pg_type = ZERO;
-//         }
-//         else {
-//             vma->pg_type = FILE_SYS;
-//         }
-// 
-//         /* Add to the supplemental page table for the current process. */
-//         spt_add(thread_current(), vma);
-// 
-// #else
+#ifdef VM
+        /* Create a vm_area_struct for the page. */
+        struct vm_area_struct *vma = (struct vm_area_struct *)
+                                     malloc(sizeof(struct vm_area_struct));
+        vma->vm_start = upage;
+        vma->vm_end = upage + PGSIZE - sizeof(uint8_t);
+        vma->pg_read_bytes = page_read_bytes;
+        vma->writable = writable;
+        vma->pinned = 0;
+        vma->vm_file = file;
+        /* Store the current offset within the file. */
+        vma->ofs = ofs;
+        if (page_zero_bytes == PGSIZE) {
+            vma->pg_type = ZERO;
+        }
+        else {
+            vma->pg_type = FILE_SYS;
+        }
+
+        /* Add to the supplemental page table for the current process. */
+        spt_add(thread_current(), vma);
+
+#else
         /* Get a page of memory. */
         uint8_t *kpage = palloc_get_page(PAL_USER);
         if (kpage == NULL) {
@@ -529,14 +529,14 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
             return false; 
         }
 
-// #endif
+#endif
         /* Advance. */
         read_bytes -= page_read_bytes;
         zero_bytes -= page_zero_bytes;
         upage += PGSIZE;
-// #ifdef VM
-//         ofs += PGSIZE;
-// #endif
+#ifdef VM
+        ofs += PGSIZE;
+#endif
     }
     return true;
 }

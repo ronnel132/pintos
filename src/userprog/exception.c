@@ -190,6 +190,10 @@ static void page_fault(struct intr_frame *f) {
             if (vma->pg_type == FILE_SYS) {
                 /* Read the file into the kernel page. If we do not read the
                    PGSIZE bytes, then zero out the rest of the page. */
+                /* Seek to the correct offset. */
+                file_seek(vma->vm_file, vma->ofs);
+
+                /* Read from the file. */
                 bytes_read = file_read(vma->vm_file, new_page,
                                       (off_t) vma->pg_read_bytes);
                 ASSERT(bytes_read == vma->pg_read_bytes);
@@ -200,6 +204,7 @@ static void page_fault(struct intr_frame *f) {
                 memset(new_page, 0, PGSIZE);
             }
             /* TODO: Check for SWAP type. */
+
             if (!pagedir_set_page(t->pagedir, pg_round_down(fault_addr),
                              new_page, vma->writable)) {
                 kill(f);
