@@ -27,7 +27,9 @@ void frame_add(pid_t pid, void *upage, void *kpage) {
     frame->kpage = kpage;
 
     /* The frame table remains ordered by the physical address of the frame. */
+    lock_acquire(&frame_lock);
     list_insert_ordered(&frame_table, &frame->elem, &frame_less, NULL);
+    lock_release(&frame_lock);
 }
 
 /* The function used for ordered inserts into the frame table. We order the 
