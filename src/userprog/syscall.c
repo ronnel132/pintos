@@ -18,6 +18,9 @@
 
 #include "userprog/process.h"
 
+#include <list.h>
+#include "vm/page.h"
+
 /* Frees a page */
 extern void palloc_free_page (void *);
 
@@ -258,6 +261,7 @@ void halt (void) {
 /* Terminates the current user program, returning status to the kernel. */
 void exit(int status) {
     thread_current()->exit_status = status;
+    lock_release(&filesys_lock);
     thread_exit();
 }
 
@@ -578,40 +582,133 @@ void close(int fd) {
  * entire file is mapped into consecutive virtual pages starting at addr.
  */
 mapid_t mmap(int fd, void *addr) {
-    int size, num_pages;
+    int size, num_pages, i;
+    struct process * pd;
+    struct file * f;
+    mapid_t mid;
+    struct vm_area_struct * mapping;
+    struct thread * cur_thread;
 
-//     if (!valid_user_pointer(addr, NULL)) {
-//         exit(EXIT_BAD_PTR);
-//     }
-
-    /* TODO
-    size =  = filesize(fd);
-    num_pages = size / PGSIZE;
-
-    if (size == 0) {
-        return NULL;
-    }
+    /* Address is bad if not page aligned (page offset = 0). */
     if (pg_ofs(addr) != 0) {
         exit(EXIT_BAD_PTR);
     }
 
+    /* LOCK filesystem while getting information about address range and
+     * file.
+     */
+    lock_acquire(&filesys_lock);
 
+    /* If bad descriptor or bad address, exit. */
+    if (file_is_open(fd)) {
+        exit(EXIT_BAD_PTR);
+    }
+
+    /* Get the size of the file so we can determine number of pages
+     * required.
+     */
+    size = filesize(fd);
+    if (size == 0) {
+        return NULL;
+    }
+
+    /* Since num_pages rounds down, increase number of pages by 1 if size is
+     * not perfect multiple of PGSIZE.
+     */
+    num_pages = size / PGSIZE;
     if (size % PGSIZE != 0) {
         num_pages++;
-        void *palloc_get_multiple (enum palloc_flags, size_t page_cnt);
-        memset();
-    } else {
-
     }
-    */
 
-    return NULL;
+    /* If bad address pointers, exit. */
+
+
+
+    /* Get process struct to reopen file for mapping */
+    cur_thread = thread_current;
+    pd = cur_thread->process_details;
+
+    /* If there are no available mapids */
+    if (pd->num_mapids_open >= MAX_OPEN_FILES) {
+        return NULL;
+    }
+
+    /* Search for first available file descriptor */
+    for (mid = 0; mid < MAX_OPEN_FILES; mid++) {
+        /* The map id is the index into the open_mapids array. */
+        if (pd->open_mapids[mid] == false) {
+            pd->open_mapids[mid] = true;
+            break;
+        }
+    }
+
+    f = file_reopen(pd->files[fd]);
+    for (i = 0; i < num_pages; i++) {
+        mapping = (struct vm_area_struct *)
+                  calloc(1, sizeof(struct vm_area_struct));
+
+        mapping->vm_start = addr + i * PGSIZE;
+        if (!valid_user_pointer(mapping->vm_start, NULL)) {
+            exit(EXIT_BAD_PTR);
+        }
+
+        mapping->vm_end = mapping->vm_start + PGSIZE - 1;
+        if (!valid_user_pointer(mapping->vm_end, NULL)) {
+            exit(EXIT_BAD_PTR);
+        }
+
+        mapping->pg_type = FILE_SYS;
+        mapping->vm_file = f;
+        mapping->ofs = i * PGSIZE;
+
+        spt_add(cur_thread, mapping);
+
+        if (i == 0) {
+            pd->open_mmaps[mid].first_vm_area = mapping;
+            pd->open_mmaps[mid].num_pages = num_pages;
+        }
+    }
+
+    /* UNLOCK filesystem while done getting information about address range
+     * and file.
+     */
+    lock_release(&filesys_lock);
+
+    return mid;
 }
 
 /* Unmaps the mapping designated by mapping, which must be a mapping ID
  * returned by a previous call to mmap by the same process that has not yet
  * been unmapped.
  */
-void munmap(mapid_t mapping) {
-    return;
+void munmap(mapid_t mid) {
+    struct thread * cur_thread;
+    struct process * pd;
+    struct vm_area_struct * vas;
+    struct vm_area_struct * next_vas;
+    struct file * f;
+    int i;
+
+    cur_thread = thread_current();
+    pd = cur_thread->process_details;
+
+    if (pd->open_mapids[mid]) {
+        next_vas = pd->open_mmaps[mid].first_vm_area;
+        f = vas->vm_file;
+
+        for (i = 0; i < pd->open_mmaps[mid].num_pages; i++) {
+            vas = next_vas;
+            next_vas = list_entry(list_next(&(vas->elem)),
+                                  struct vm_area_struct,
+                                  elem);
+
+            ASSERT(next_vas->vm_file == f);
+            ASSERT(next_vas->ofs > vas->ofs);
+
+            spt_remove(vas);
+        }
+
+        file_close(f);
+        pd->open_mapids[mid] = false;
+    }
 }
