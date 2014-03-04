@@ -50,7 +50,6 @@ void *frame_evict(void) {
                         fs_lock = 1;
                         lock_acquire(&filesys_lock);
                     }
-                    lock_acquire(&filesys_lock);
                     intr_set_level(old_level);
 
                     ASSERT(vma->writable);
