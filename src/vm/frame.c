@@ -112,7 +112,6 @@ void frame_add(struct thread *t, void *upage, void *kpage) {
     ASSERT(upage != NULL);
     ASSERT(kpage != NULL);
     
-    printf("-------------%p\n", kpage);
 
     frame = (struct frame *) malloc(sizeof(struct frame));
     /* Store the thread/process that owns this upage. */
