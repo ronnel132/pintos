@@ -41,6 +41,7 @@
 #ifdef VM
 
 #include "vm/frame.h"
+#include "vm/swap.h"
 
 #endif
 
@@ -130,6 +131,7 @@ int main(void) {
 
 #ifdef VM
     list_init(&frame_table);
+    swap_init();
 #endif
 
     /* Start thread scheduler and enable interrupts. */

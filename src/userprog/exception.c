@@ -20,7 +20,9 @@ static long long page_fault_cnt;
 
 static void kill(struct intr_frame *);
 static void page_fault(struct intr_frame *);
+#ifdef VM
 extern struct lock frame_lock;
+#endif
 
 /*! Registers handlers for interrupts that can be caused by user programs.
 
@@ -223,6 +225,10 @@ static void page_fault(struct intr_frame *f) {
                              new_page, vma->writable)) {
                 kill(f);
             }
+            /* Add the new page-frame mapping to the frame table. */
+            lock_acquire(&frame_lock);
+            frame_add(t->tid, pg_round_down(fault_addr), new_page);
+            lock_release(&frame_lock);
         }
         else {
             if ((fault_addr == esp - 4) || (fault_addr == esp - 32)) {
@@ -250,7 +256,6 @@ static void page_fault(struct intr_frame *f) {
             }
             /* Else is probably an invalid access */
             else {
-//                 printf("Invalid access\n");
                 printf("Page fault at %p: %s error %s page in %s context.\n",
                        fault_addr,
                        not_present ? "not present" : "rights violation",
