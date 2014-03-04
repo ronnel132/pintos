@@ -25,10 +25,10 @@ void *frame_evict(void) {
     enum intr_level old_level;
 
     ASSERT(list_size(&frame_queue) > 0);
-    printf("trying to acq 1\n");
-    printf("%d\n", thread_current()->tid);
+//     printf("trying to acq 1\n");
+//     printf("%d\n", thread_current()->tid);
     lock_acquire(&frame_lock);
-    printf("go tit\n");
+//     printf("go tit\n");
     while (1) {
         e = list_pop_front(&frame_queue);
         frame = list_entry(e, struct frame, q_elem);
