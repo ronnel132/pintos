@@ -21,7 +21,9 @@ void *frame_evict(void) {
     int bytes_written;
 
     ASSERT(list_size(&frame_queue) > 0);
+    printf("trying to acq 1\n");
     lock_acquire(&frame_lock);
+    printf("go tit\n");
     while (1) {
         e = list_pop_front(&frame_queue);
         frame = list_entry(e, struct frame, q_elem);
@@ -60,9 +62,9 @@ void *frame_evict(void) {
             /* Remove the frame from the frame table. */
             frame_table_remove(frame);
 
-            lock_release(&frame_lock);
             
-            /* Release and return the now free kernel page. */
+            /* Return the now free kernel page. */
+            printf("releaseing 1, before loop\n");
             lock_release(&frame_lock);
             return frame->kpage;
         }
@@ -73,6 +75,7 @@ void *frame_evict(void) {
             list_push_back(&frame_queue, &frame->q_elem);
         }
     }
+    printf("releaseing 1, after loop\n");
     lock_release(&frame_lock);
 }
 
@@ -96,9 +99,12 @@ void frame_add(struct thread *t, void *upage, void *kpage) {
     frame->kpage = kpage;
 
     /* The frame table remains ordered by the physical address of the frame. */
+    printf("trying to acq 2\n");
     lock_acquire(&frame_lock);
+    printf("got 2\n");
     list_insert_ordered(&frame_table, &frame->elem, &frame_less, NULL);
     list_push_back(&frame_queue, &frame->q_elem);
+    printf("released 2\n");
     lock_release(&frame_lock);
 }
 
