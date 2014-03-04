@@ -11,7 +11,7 @@
 #include "filesys/file.h"
 #include "threads/interrupt.h"
 
-struct lock frame_lock;
+// struct lock frame_lock;
 struct lock filesys_lock;
 
 /* Evicts a frame from the frame table and returns the kernel virtual address
@@ -27,7 +27,7 @@ void *frame_evict(void) {
     ASSERT(list_size(&frame_queue) > 0);
 //     printf("trying to acq 1\n");
 //     printf("%d\n", thread_current()->tid);
-    lock_acquire(&frame_lock);
+//     lock_acquire(&frame_lock);
 //     printf("go tit\n");
     while (1) {
         e = list_pop_front(&frame_queue);
@@ -83,7 +83,7 @@ void *frame_evict(void) {
             
             /* Return the now free kernel page. */
             printf("releaseing 1, before loop\n");
-            lock_release(&frame_lock);
+//             lock_release(&frame_lock);
             return frame->kpage;
         }
         else {
@@ -94,7 +94,7 @@ void *frame_evict(void) {
         }
     }
     printf("releaseing 1, after loop\n");
-    lock_release(&frame_lock);
+//     lock_release(&frame_lock);
 }
 
 /* Remove the frame from the frame table. */
@@ -117,10 +117,10 @@ void frame_add(struct thread *t, void *upage, void *kpage) {
     frame->kpage = kpage;
 
     /* The frame table remains ordered by the physical address of the frame. */
-    lock_acquire(&frame_lock);
+//     lock_acquire(&frame_lock);
     list_insert_ordered(&frame_table, &frame->elem, &frame_less, NULL);
     list_push_back(&frame_queue, &frame->q_elem);
-    lock_release(&frame_lock);
+//     lock_release(&frame_lock);
 }
 
 /* The function used for ordered inserts into the frame table. We order the 

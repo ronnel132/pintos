@@ -24,6 +24,8 @@ static void page_fault(struct intr_frame *);
 /*! Lock used by filesystem syscalls. */
 extern struct lock filesys_lock;
 
+struct lock frame_lock;
+
 /*! Registers handlers for interrupts that can be caused by user programs.
 
     In a real Unix-like OS, most of these interrupts would be passed along to
@@ -200,7 +202,13 @@ static void page_fault(struct intr_frame *f) {
         if (found_valid) {
             new_page = palloc_get_page(PAL_USER); 
             if (new_page == NULL) {
+//                 printf("1\n");
+                lock_acquire(&frame_lock);
+//                 printf("0\n");
                 new_page = frame_evict();
+//                 printf("did shit 1\n");
+                lock_release(&frame_lock);
+//                 printf("released 1\n");
             }
             if (vma->pg_type == FILE_SYS) {
                 /* Read the file into the kernel page. If we do not read the
@@ -264,7 +272,11 @@ static void page_fault(struct intr_frame *f) {
                 /* If we're here, let's give this process another page */
                 new_page = palloc_get_page(PAL_ZERO | PAL_USER);
                 if (new_page == NULL) {
+//                     printf("11\n");
+                    lock_acquire(&frame_lock);
+//                     printf("00\n");
                     new_page = frame_evict();
+                    lock_release(&frame_lock);
                 }
                 pagedir_set_page(t->pagedir, pg_round_down(fault_addr),
                                  new_page, 1);
@@ -292,7 +304,11 @@ static void page_fault(struct intr_frame *f) {
             else if (fault_addr >= esp) {
                 new_page = palloc_get_page(PAL_ZERO | PAL_USER);
                 if (new_page == NULL) {
+//                     printf("111\n");
+                    lock_acquire(&frame_lock);
+//                     printf("000\n");
                     new_page = frame_evict();
+                    lock_release(&frame_lock);
                 }
                 pagedir_set_page(t->pagedir, pg_round_down(fault_addr),
                                  new_page, 1);

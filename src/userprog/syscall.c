@@ -42,6 +42,10 @@ static void syscall_handler(struct intr_frame *);
 /*! Lock used by filesystem syscalls. */
 extern struct lock filesys_lock;
 
+
+/*! Lock used when modifying frame table. */
+extern struct lock frame_lock;
+
 /* Global thread lists */
 extern struct list dead_list;
 extern struct list all_list;
@@ -340,6 +344,10 @@ void exit(int status) {
     }
 
     if (lock_held_by_current_thread(&filesys_lock)) {
+        lock_release(&filesys_lock);
+    }
+
+    if (lock_held_by_current_thread(&frame_lock)) {
         lock_release(&filesys_lock);
     }
 
