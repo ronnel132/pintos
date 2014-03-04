@@ -133,6 +133,7 @@ static void page_fault(struct intr_frame *f) {
     struct thread *t = thread_current();
     struct list_elem *e;
     struct vm_area_struct *vma;
+    void *esp; /* Esp of faulting thread */
 
     /* Obtain faulting address, the virtual address that was accessed to cause
        the fault.  It may point to code or to data.  It is not necessarily the
@@ -158,13 +159,26 @@ static void page_fault(struct intr_frame *f) {
     user = (f->error_code & PF_U) != 0;
 
 #ifdef VM
+    /* If we pagefaulted in kernel code, let's  assume we were coming from
+     * a syscall, hence we have a valid esp for the thread (in user context).
+     * If not this will freak out, but there's not much else we could do here
+     * anyway, so it's OK
+     */
+//     if (!user) {
+//         printf("page fault at %p: %s error %s page in %s context.\n",
+//            fault_addr,
+//            not_present ? "not present" : "rights violation",
+//            write ? "writing" : "reading",
+//            user ? "user" : "kernel");
+//         kill(f);
+//     }
+
+    
     if (!user) {
-        printf("Page fault at %p: %s error %s page in %s context.\n",
-           fault_addr,
-           not_present ? "not present" : "rights violation",
-           write ? "writing" : "reading",
-           user ? "user" : "kernel");
-        kill(f);
+        esp = t->esp;
+    }
+    else {
+        esp = f->esp;
     }
 
     if (not_present) {
@@ -211,7 +225,7 @@ static void page_fault(struct intr_frame *f) {
             }
         }
         else {
-            if ((fault_addr == f->esp - 4) || (fault_addr == f->esp - 32)) {
+            if ((fault_addr == esp - 4) || (fault_addr == esp - 32)) {
                 /* Check for stack overflow */
                 if (fault_addr < STACK_MIN) {
                     exit(-1);
@@ -225,7 +239,7 @@ static void page_fault(struct intr_frame *f) {
                 pagedir_set_page(t->pagedir, pg_round_down(fault_addr),
                                  new_page, 1);
             }
-            else if (fault_addr >= f->esp) {
+            else if (fault_addr >= esp) {
                 new_page = palloc_get_page(PAL_ZERO | PAL_USER);
                 if (new_page == NULL) {
                     new_page = frame_evict();
@@ -255,6 +269,7 @@ static void page_fault(struct intr_frame *f) {
                user ? "user" : "kernel");
         kill(f);
     }
+
 #else
     /* To implement virtual memory, delete the rest of the function
        body, and replace it with code that brings in the page to
