@@ -656,20 +656,22 @@ mapid_t mmap(int fd, void *addr) {
                   calloc(1, sizeof(struct vm_area_struct));
 
         mapping->vm_start = addr + i * PGSIZE;
-        if (!valid_user_pointer(mapping->vm_start, NULL)) {
-            exit(EXIT_BAD_PTR);
-        }
 
         mapping->vm_end = mapping->vm_start + PGSIZE - 1;
-        if (!valid_user_pointer(mapping->vm_end, NULL)) {
-            exit(EXIT_BAD_PTR);
-        }
 
         mapping->pg_type = FILE_SYS;
         mapping->vm_file = f;
         mapping->ofs = i * PGSIZE;
 
         spt_add(cur_thread, mapping);
+
+        /* Check if the user pointers for the boundaries of the mapping are
+           valid AFTER we add to the supplemental page table, because the spt
+           checks the spt to determine if a user memory address is valid. */
+        if (!valid_user_pointer(mapping->vm_start, NULL) ||
+            !valid_user_pointer(mapping->vm_end, NULL)) {
+            exit(EXIT_BAD_PTR);
+        }
 
         if (i == 0) {
             pd->open_mmaps[mid].first_vm_area = mapping;
