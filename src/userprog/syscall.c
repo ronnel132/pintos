@@ -604,8 +604,8 @@ mapid_t mmap(int fd, void *addr) {
      */
     lock_acquire(&filesys_lock);
 
-    /* If bad descriptor or bad address, exit. */
-    if (file_is_open(fd)) {
+    /* If bad descriptor, exit. */
+    if (!file_is_open(fd)) {
         exit(EXIT_BAD_PTR);
     }
 
