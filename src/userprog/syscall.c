@@ -256,6 +256,21 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             }
             close(*((int *) arg1));
             break;
+
+        case SYS_MMAP:
+            if ((!valid_user_pointer(arg1)) || (!valid_user_pointer(arg2))) {
+                exit(EXIT_BAD_PTR);
+            }
+            mmap(*((int *)arg1), *((void **)arg2)); 
+            break;
+
+        case SYS_MUNMAP:
+            if ((!valid_user_pointer(arg1))) {
+                exit(EXIT_BAD_PTR);
+            }
+            munmap(*((mapid_t *) arg1));
+            break;
+
         default:
             /* Yeah, we're not that nice */
             exit(-1);
@@ -608,6 +623,10 @@ mapid_t mmap(int fd, void *addr) {
 
     /* Address is bad if not page aligned (page offset = 0). */
     if (pg_ofs(addr) != 0) {
+        return MAP_FAILED;
+    }
+
+    if (!valid_user_pointer(addr)) {
         exit(EXIT_BAD_PTR);
     }
 
@@ -618,7 +637,8 @@ mapid_t mmap(int fd, void *addr) {
 
     /* If bad descriptor, exit. */
     if (!file_is_open(fd)) {
-        exit(EXIT_BAD_PTR);
+        lock_release(&filesys_lock);
+        return MAP_FAILED;
     }
 
     /* Get the size of the file so we can determine number of pages
@@ -626,7 +646,8 @@ mapid_t mmap(int fd, void *addr) {
      */
     size = filesize(fd);
     if (size == 0) {
-        return NULL;
+        lock_release(&filesys_lock);
+        return MAP_FAILED;
     }
 
     /* Since num_pages rounds down, increase number of pages by 1 if size is
@@ -644,7 +665,8 @@ mapid_t mmap(int fd, void *addr) {
 
     /* If there are no available mapids */
     if (pd->num_mapids_open >= MAX_OPEN_FILES) {
-        return NULL;
+        lock_release(&filesys_lock);
+        return MAP_FAILED;
     }
 
     /* Search for first available file descriptor */
@@ -662,6 +684,7 @@ mapid_t mmap(int fd, void *addr) {
                   calloc(1, sizeof(struct vm_area_struct));
 
         mapping->vm_start = addr + i * PGSIZE;
+
         if (!valid_user_pointer(mapping->vm_start)) {
             exit(EXIT_BAD_PTR);
         }
@@ -671,11 +694,20 @@ mapid_t mmap(int fd, void *addr) {
             exit(EXIT_BAD_PTR);
         }
 
+        mapping->vm_end = mapping->vm_start + PGSIZE - 1;
         mapping->pg_type = FILE_SYS;
         mapping->vm_file = f;
         mapping->ofs = i * PGSIZE;
 
         spt_add(cur_thread, mapping);
+
+        /* Check if the user pointers for the boundaries of the mapping are
+           valid AFTER we add to the supplemental page table, because the spt
+           checks the spt to determine if a user memory address is valid. */
+        if (!valid_user_pointer(mapping->vm_start) ||
+            !valid_user_pointer(mapping->vm_end)) {
+            exit(EXIT_BAD_PTR);
+        }
 
         if (i == 0) {
             pd->open_mmaps[mid].first_vm_area = mapping;
