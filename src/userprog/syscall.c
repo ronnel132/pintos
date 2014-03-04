@@ -27,7 +27,7 @@ extern void palloc_free_page (void *);
 /* Validates a user-provided pointer. Checks that it's in the required
  * range, and that it correpsonds to a page directory entry
  */
-bool valid_user_pointer(const void *ptr, const void *esp);
+bool valid_user_pointer(const void *ptr);
 
 /* Checks if a file is open */
 bool file_is_open(int fd);
@@ -46,26 +46,35 @@ extern struct list all_list;
 /* Validates a user-provided pointer. Checks that it's in the required
  * range, and that it correpsonds to a page directory entry
  */
-bool valid_user_pointer(const void *ptr, const void *esp) {
-    uint32_t *pd, *pde;
-
-
-    pd = active_pd();
-    pde = pd + pd_no(ptr);
+bool valid_user_pointer(const void *ptr) {
+    struct list_elem *e;
+    struct vm_area_struct *iter;
+    struct thread *t = thread_current();
 
     /* See lookup_page() for more info */
-    if (is_user_vaddr(ptr) && (*pde != 0)) {
-        if ((esp != NULL) && (ptr < esp)) {
-            return false;
-        }
-        return true;
+    if (!is_user_vaddr(ptr)) {
+        return false;
     }
+
+    /* Look through the vm_area stucts to see if address falls
+     * in one of them
+     */
+    for (e = list_begin(&t->spt); e != list_end(&t->spt); e = list_next(e)) {
+        iter = list_entry(e, struct vm_area_struct, elem);
+        if (ptr < iter->vm_end && ptr > iter->vm_start) {
+            return true;
+        }
+    }
+
+    
+
 //     printf("%d\n", is_user_vaddr(ptr));
 //     printf("%d\n", *pde);
 //     printf("%p\n", esp);
 //     printf("%d\b", (*(void **) ptr < esp));
 //     printf("===========\n");
 
+    /* If we're here, this isn't a valid address */
     return false;
 }
 
@@ -114,7 +123,7 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
 //     printf("syscall!\n");
 
     /* Check validity of syscall_nr */
-    if (!valid_user_pointer(esp, NULL)) {
+    if (!valid_user_pointer(esp)) {
         exit(EXIT_BAD_PTR);
     }
 
@@ -140,58 +149,58 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             break;
 
         case SYS_EXIT:
-            if ((!valid_user_pointer(arg1, NULL))) {
+            if ((!valid_user_pointer(arg1))) {
                 exit(EXIT_BAD_PTR);
             }
             exit(*((int *)arg1));
             break;
 
         case SYS_EXEC:
-            if ((!valid_user_pointer(arg1, NULL))) {
+            if ((!valid_user_pointer(arg1))) {
                 exit(EXIT_BAD_PTR);
             }
             f->eax = exec(*((const char **)arg1));
             break;
 
         case SYS_WAIT:
-            if ((!valid_user_pointer(arg1, NULL))) {
+            if ((!valid_user_pointer(arg1))) {
                 exit(EXIT_BAD_PTR);
             }
             f->eax = wait(*((pid_t *)arg1));
             break;
 
         case SYS_CREATE:
-            if ((!valid_user_pointer(arg1, NULL)) || (!valid_user_pointer(arg2, NULL))) {
+            if ((!valid_user_pointer(arg1)) || (!valid_user_pointer(arg2))) {
                 exit(EXIT_BAD_PTR);
             }
             f->eax = create(*((const char **)arg1), *((unsigned *)arg2)); 
             break;
 
         case SYS_REMOVE:
-            if ((!valid_user_pointer(arg1, NULL))) {
+            if ((!valid_user_pointer(arg1))) {
                 exit(EXIT_BAD_PTR);
             }
             f->eax = remove(*((const char **)arg1));
             break; 
 
         case SYS_OPEN:
-            if ((!valid_user_pointer(arg1, NULL))) {
+            if ((!valid_user_pointer(arg1))) {
                 exit(EXIT_BAD_PTR);
             }
             f->eax = open(*((const char **)arg1));
             break;
 
         case SYS_FILESIZE:
-            if ((!valid_user_pointer(arg1, NULL))) {
+            if ((!valid_user_pointer(arg1))) {
                 exit(EXIT_BAD_PTR);
             }
             f->eax = filesize(*((int *) arg1));
             break;
 
         case SYS_READ:
-            if ((!valid_user_pointer(arg1, NULL)) ||
-                (!valid_user_pointer(arg2, NULL)) ||
-                (!valid_user_pointer(arg3, NULL))) {
+            if ((!valid_user_pointer(arg1)) ||
+                (!valid_user_pointer(arg2)) ||
+                (!valid_user_pointer(arg3))) {
 //                     printf("syscall check failed\n");
 
                 exit(EXIT_BAD_PTR);
@@ -202,21 +211,21 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             break;
 
         case SYS_WRITE:
-//             if ((!valid_user_pointer(arg1, NULL))) {
+//             if ((!valid_user_pointer(arg1))) {
 //                 exit(EXIT_BAD_PTR);
 //             }
 // 
-//             if    (!valid_user_pointer(arg2, esp) && (* (int *) arg1 > 1)) {
+//             if    (!valid_user_pointer(arg2)&& (* (int *) arg1 > 1)) {
 //                 exit(EXIT_BAD_PTR);
 //             }
 // 
-//             if    (!valid_user_pointer(arg3, NULL)) {
+//             if    (!valid_user_pointer(arg3)) {
 //                 exit(EXIT_BAD_PTR);
 //             }
 
-            if ((!valid_user_pointer(arg1, NULL)) ||
-                (!valid_user_pointer(arg2, NULL)) ||
-                (!valid_user_pointer(arg3, NULL))) {
+            if ((!valid_user_pointer(arg1)) ||
+                (!valid_user_pointer(arg2)) ||
+                (!valid_user_pointer(arg3))) {
                     printf("syscall check failed\n");
 
                 exit(EXIT_BAD_PTR);
@@ -228,21 +237,21 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             break;
 
         case SYS_SEEK:
-            if ((!valid_user_pointer(arg1, NULL)) || (!valid_user_pointer(arg2, NULL))) {
+            if ((!valid_user_pointer(arg1)) || (!valid_user_pointer(arg2))) {
                 exit(EXIT_BAD_PTR);
             }
             seek(*((int *)arg1), *((unsigned *)arg2)); 
             break;
 
         case SYS_TELL:
-            if ((!valid_user_pointer(arg1, NULL))) {
+            if ((!valid_user_pointer(arg1))) {
                 exit(EXIT_BAD_PTR);
             }
             f->eax = tell(*((int *) arg1));
             break;
 
         case SYS_CLOSE:
-            if ((!valid_user_pointer(arg1, NULL))) {
+            if ((!valid_user_pointer(arg1))) {
                 exit(EXIT_BAD_PTR);
             }
             close(*((int *) arg1));
@@ -274,7 +283,7 @@ void exit(int status) {
  * arguments, and returns the new process's program id (pid).
  */
 pid_t exec(const char *cmd_line) {
-    if (!valid_user_pointer(cmd_line, NULL)) {
+    if (!valid_user_pointer(cmd_line)) {
         exit(EXIT_BAD_PTR);
     }
 
@@ -357,7 +366,7 @@ int wait(pid_t pid) {
 bool create(const char *file, unsigned initial_size) {
     bool status = false;
 
-    if (!valid_user_pointer(file, NULL)) {
+    if (!valid_user_pointer(file)) {
         exit(EXIT_BAD_PTR);
     }
 
@@ -377,7 +386,7 @@ bool create(const char *file, unsigned initial_size) {
 bool remove(const char *file) {
     bool status = false;
 
-    if (!valid_user_pointer(file, NULL)) {
+    if (!valid_user_pointer(file)) {
         exit(EXIT_BAD_PTR);
     }
     
@@ -397,7 +406,7 @@ int open(const char *file) {
     int file_descriptor = -1;
     unsigned i;
 
-    if (!valid_user_pointer(file, NULL)) {
+    if (!valid_user_pointer(file)) {
         exit(EXIT_BAD_PTR);
     }
 
@@ -464,7 +473,7 @@ int read(int fd, void *buffer, unsigned size) {
     int bytes_read = -1;
     void *esp = thread_current()->esp;
 
-    if (!valid_user_pointer(buffer, esp) || !valid_user_pointer(buffer + size, esp)) {
+    if (!valid_user_pointer(buffer) || !valid_user_pointer(buffer + size)) {
 //         printf("here1\n\n");
         exit(EXIT_BAD_PTR);
     }
@@ -507,7 +516,7 @@ int read(int fd, void *buffer, unsigned size) {
 int write(int fd, const void *buffer, unsigned size) {
     int bytes_written = -1;
 
-    if (!valid_user_pointer(buffer, NULL) || !valid_user_pointer(buffer + size, NULL)) {
+    if (!valid_user_pointer(buffer) || !valid_user_pointer(buffer + size)) {
         exit(EXIT_BAD_PTR);
     }
 
@@ -653,12 +662,12 @@ mapid_t mmap(int fd, void *addr) {
                   calloc(1, sizeof(struct vm_area_struct));
 
         mapping->vm_start = addr + i * PGSIZE;
-        if (!valid_user_pointer(mapping->vm_start, NULL)) {
+        if (!valid_user_pointer(mapping->vm_start)) {
             exit(EXIT_BAD_PTR);
         }
 
         mapping->vm_end = mapping->vm_start + PGSIZE - 1;
-        if (!valid_user_pointer(mapping->vm_end, NULL)) {
+        if (!valid_user_pointer(mapping->vm_end)) {
             exit(EXIT_BAD_PTR);
         }
 
