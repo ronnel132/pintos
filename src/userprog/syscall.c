@@ -47,13 +47,19 @@ extern struct list all_list;
  * range, and that it correpsonds to a page directory entry
  */
 bool valid_user_pointer(const void *ptr) {
+    uint32_t *pd, *pde;
     struct list_elem *e;
     struct vm_area_struct *iter;
     struct thread *t = thread_current();
     void *esp = t->esp;
 
-    /* See lookup_page() for more info */
-    if (!is_user_vaddr(ptr)) {
+    /* Special case for esp, must be in pagedir */
+    pd = active_pd();
+    pde = pd + pd_no(esp);
+
+    /* If we have messed up esp */
+    if (*pde == 0) {
+//     printf("here!\n\n");
         return false;
     }
 
@@ -72,9 +78,10 @@ bool valid_user_pointer(const void *ptr) {
      * So this should be considered a good pointer.
      */
 
-     if (ptr > esp) {
+     if (is_user_vaddr(ptr) && ptr >= esp) {
         return true;
      }
+
 
     
 
@@ -85,6 +92,7 @@ bool valid_user_pointer(const void *ptr) {
 //     printf("===========\n");
 
     /* If we're here, this isn't a valid address */
+//     printf("here!\n\n");
     return false;
 }
 
@@ -232,11 +240,13 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
 //             if    (!valid_user_pointer(arg3)) {
 //                 exit(EXIT_BAD_PTR);
 //             }
+        
+//             printf("trying to write()\n");
 
             if ((!valid_user_pointer(arg1)) ||
                 (!valid_user_pointer(arg2)) ||
                 (!valid_user_pointer(arg3))) {
-                    printf("syscall check failed\n");
+//                     printf("syscall check failed\n");
 
                 exit(EXIT_BAD_PTR);
             }
@@ -542,6 +552,7 @@ int write(int fd, const void *buffer, unsigned size) {
     int bytes_written = -1;
 
     if (!valid_user_pointer(buffer) || !valid_user_pointer(buffer + size)) {
+//         printf("here!\n\n");
         exit(EXIT_BAD_PTR);
     }
 
