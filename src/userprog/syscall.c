@@ -55,7 +55,7 @@ bool valid_user_pointer(const void *ptr, const void *esp) {
 
     /* See lookup_page() for more info */
     if (is_user_vaddr(ptr) && (*pde != 0)) {
-        if ((esp != NULL) && (*(void **) ptr < esp)) {
+        if ((esp != NULL) && (ptr < esp)) {
             return false;
         }
         return true;
@@ -107,6 +107,9 @@ void syscall_init(void) {
 static void syscall_handler(struct intr_frame *f UNUSED) {
     /* Get esp address */
     void *esp = (void *) f->esp;
+
+    /* Store esp in thread struct */
+    thread_current()->esp = esp;
 
 //     printf("syscall!\n");
 
@@ -457,8 +460,10 @@ int filesize(int fd) {
  */
 int read(int fd, void *buffer, unsigned size) {
     int bytes_read = -1;
+    void *esp = thread_current()->esp;
 
-    if (!valid_user_pointer(buffer, NULL) || !valid_user_pointer(buffer + size, NULL)) {
+    if (!valid_user_pointer(buffer, esp) || !valid_user_pointer(buffer + size, esp)) {
+//         printf("here1\n\n");
         exit(EXIT_BAD_PTR);
     }
 
