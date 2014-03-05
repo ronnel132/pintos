@@ -39,6 +39,9 @@ struct file * get_file_struct(int fd);
 /* Function prototype */
 static void syscall_handler(struct intr_frame *);
 
+/*! Lock used by filesystem syscalls. */
+extern struct lock filesys_lock;
+
 /* Global thread lists */
 extern struct list dead_list;
 extern struct list all_list;

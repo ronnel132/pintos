@@ -12,10 +12,6 @@
 #define MAP_FAILED ((mapid_t) -1)
 
 
-/*! Lock used by filesystem syscalls. */
-extern struct lock filesys_lock;
-
-
 /* Installs the syscall handler into the interrupt vector table. */
 void syscall_init(void);
 
