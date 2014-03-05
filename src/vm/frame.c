@@ -7,6 +7,8 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "userprog/pagedir.h"
+#include "filesys/filesys.h"
+#include "filesys/file.h"
 
 struct lock frame_lock;
 
@@ -16,6 +18,7 @@ void *frame_evict(void) {
     struct list_elem *e;
     struct frame *frame;
     struct vm_area_struct *vma; 
+    int bytes_written;
 
     ASSERT(list_size(&frame_queue) > 0);
     while (1) {
@@ -33,16 +36,15 @@ void *frame_evict(void) {
             ASSERT(vma->pg_type != SWAP);
             ASSERT(vma->kpage != NULL);
 
-            if (vma->pg_type == FILESYS) {
-            /* A page from the file system. */
-            /* Check the dirty bit. */
+            /* If it's a file don't swap; write back */
+            if (vma->pg_type == FILE_SYS) {
                 if (pagedir_is_dirty(frame->thread->pagedir, frame->upage)) {
-                    /* The page is dirty. */ 
-                    /* Since this page has been written to, assert that it is
-                       writable. */
                     ASSERT(vma->writable);
                     file_seek(vma->vm_file, vma->ofs);
-                    file_write(vma->vm_file, vma->kpage, PGSIZE);
+                    bytes_written = file_write(vma->vm_file,
+                                               vma->vm_start,
+                                               vma->pg_read_bytes);
+                    ASSERT(bytes_written == vma->pg_read_bytes);
                 }
             }
             else if (vma->pg_type == PMEM) {
@@ -53,7 +55,6 @@ void *frame_evict(void) {
             }
             vma->kpage = NULL;
 
-            /* Update the valid bit for the virtual address. */
             pagedir_clear_page(frame->thread->pagedir, vma->vm_start);
 
             /* Remove the frame from the frame table. */
