@@ -27,8 +27,6 @@ struct vm_area_struct {
     /* The kernel virtual address for when pg_type == PMEM. */
     void *kpage; 
 
-    uint32_t pg_read_bytes;
-
     /* Is this memory area writable. */
     bool writable;
 
@@ -40,6 +38,8 @@ struct vm_area_struct {
 
     /* Offset in the mapped file. */
     off_t ofs;
+
+    uint32_t pg_read_bytes;
 
     /* Sector index within the swap partition. NULL if pg_type != SWAP. */
     block_sector_t swap_ind; 

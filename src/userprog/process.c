@@ -492,12 +492,14 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
                                      malloc(sizeof(struct vm_area_struct));
         vma->vm_start = upage;
         vma->vm_end = upage + PGSIZE - sizeof(uint8_t);
-        vma->pg_read_bytes = page_read_bytes;
         vma->writable = writable;
         vma->pinned = 0;
         vma->vm_file = file;
         /* Store the current offset within the file. */
         vma->ofs = ofs;
+        vma->pg_read_bytes = page_read_bytes;
+        vma->swap_ind = NULL;
+
         if (page_zero_bytes == PGSIZE) {
             vma->pg_type = ZERO;
         }
@@ -507,7 +509,6 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
 
         /* Add to the supplemental page table for the current process. */
         spt_add(thread_current(), vma);
-
 #else
         /* Get a page of memory. */
         uint8_t *kpage = palloc_get_page(PAL_USER);
@@ -566,21 +567,23 @@ static bool setup_stack(void **esp, int argc, char **argv) {
     success = install_page(upage, kpage, true);
     if (success) {
 #ifdef VM
-        frame_add(thread_current(), upage, kpage);
-
         /* First add the vm area to the supplemental page table. */
         vma = (struct vm_area_struct *) malloc(sizeof(struct vm_area_struct));
         vma->vm_start = (void *) (((uint8_t *) PHYS_BASE) - PGSIZE);
         vma->vm_end = (void *) (((uint8_t *) PHYS_BASE) - sizeof(uint8_t));
         vma->kpage = kpage; 
+        vma->pg_read_bytes = NULL;
         vma->writable = true;
         vma->pinned = false;
         vma->vm_file = NULL;
         vma->ofs = NULL;
+        vma->swap_ind = NULL;
         vma->pg_type = PMEM;
 
         /* Add the vm_area_struct to the thread's supplemental page table. */
         spt_add(thread_current(), vma);
+
+        frame_add(thread_current(), upage, kpage);
 #endif
         
         /* Set up the stack. */

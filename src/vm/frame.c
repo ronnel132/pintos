@@ -6,7 +6,6 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 
-
 struct lock frame_lock;
 
 /* Evicts a frame from the frame table and returns the kernel virtual address

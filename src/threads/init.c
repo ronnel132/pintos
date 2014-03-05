@@ -129,12 +129,6 @@ int main(void) {
     syscall_init();
 #endif
 
-#ifdef VM
-    list_init(&frame_table);
-    list_init(&frame_queue);
-    swap_init();
-#endif
-
     /* Start thread scheduler and enable interrupts. */
     thread_start();
     serial_init_queue();
@@ -147,6 +141,11 @@ int main(void) {
     filesys_init(format_filesys);
 #endif
 
+#ifdef VM
+    list_init(&frame_table);
+    list_init(&frame_queue);
+    swap_init();
+#endif
     printf("Boot complete.\n");
 
     /* Run actions specified on kernel command line. */
