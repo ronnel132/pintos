@@ -216,12 +216,20 @@ static void page_fault(struct intr_frame *f) {
                 /* Zero out the page. */
                 memset(new_page, 0, PGSIZE);
             }
-            /* TODO: Check for SWAP type. */
+            else if (vma->pg_type == SWAP) {
+                ASSERT(vma->swap_ind != NULL);
+                /* Read in from swap into the new page. */
+                swap_remove(vma->swap_ind, new_page);
+                vma->swap_ind = NULL;
+                vma->pg_type = PMEM;
+            }
 
             if (!pagedir_set_page(t->pagedir, pg_round_down(fault_addr),
                              new_page, vma->writable)) {
                 kill(f);
             }
+            /* Record the new kpage in the vm_area_struct. */
+            vma->kpage = new_page;
             /* Add the new page-frame mapping to the frame table. */
             frame_add(t, pg_round_down(fault_addr), new_page);
         }
@@ -239,6 +247,26 @@ static void page_fault(struct intr_frame *f) {
                 }
                 pagedir_set_page(t->pagedir, pg_round_down(fault_addr),
                                  new_page, 1);
+
+                /* Record the new stack page in the supplemental page table and 
+                   the frame table. */
+                vma = (struct vm_area_struct *) 
+                      malloc(sizeof(struct vm_area_struct));
+                vma->vm_start = pg_round_down(fault_addr);
+                vma->vm_end = pg_round_down(fault_addr) + PGSIZE 
+                              - sizeof(uint8_t);
+                vma->kpage = new_page;
+                vma->pg_read_bytes = NULL;
+                vma->writable = true;
+                vma->pinned = false;
+                vma->vm_file = NULL;
+                vma->ofs = NULL;
+                vma->swap_ind = NULL;
+                vma->pg_type = PMEM;
+
+                spt_add(thread_current(), vma);
+
+                frame_add(t, pg_round_down(fault_addr), new_page);
             }
             else if (fault_addr >= esp) {
                 new_page = palloc_get_page(PAL_ZERO | PAL_USER);
@@ -248,7 +276,27 @@ static void page_fault(struct intr_frame *f) {
                 pagedir_set_page(t->pagedir, pg_round_down(fault_addr),
                                  new_page, 1);
                                  
+                /* Record the new stack page in the supplemental page table and 
+                   the frame table. */
+                vma = (struct vm_area_struct *) 
+                      malloc(sizeof(struct vm_area_struct));
+                vma->vm_start = pg_round_down(fault_addr);
+                vma->vm_end = pg_round_down(fault_addr) + PGSIZE 
+                              - sizeof(uint8_t);
+                vma->kpage = new_page;
+                vma->pg_read_bytes = NULL;
+                vma->writable = true;
+                vma->pinned = false;
+                vma->vm_file = NULL;
+                vma->ofs = NULL;
+                vma->swap_ind = NULL;
+                vma->pg_type = PMEM;
+
+                spt_add(thread_current(), vma);
+
+                frame_add(t, pg_round_down(fault_addr), new_page);
             }
+            
             /* Else is probably an invalid access */
             else {
                 printf("Page fault at %p: %s error %s page in %s context.\n",

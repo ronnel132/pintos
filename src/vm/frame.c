@@ -1,10 +1,12 @@
 #include <debug.h>
+#include "filesys/file.h"
 #include "vm/frame.h"
 #include "vm/swap.h"
 #include "threads/malloc.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "userprog/pagedir.h"
 
 struct lock frame_lock;
 
@@ -13,8 +15,6 @@ struct lock frame_lock;
 void *frame_evict(void) {
     struct list_elem *e;
     struct frame *frame;
-    static uint32_t pte;
-    static uint32_t *pt, *pde;
     struct vm_area_struct *vma; 
 
     ASSERT(list_size(&frame_queue) > 0);
@@ -22,24 +22,40 @@ void *frame_evict(void) {
         lock_acquire(&frame_lock);
         e = list_pop_front(&frame_queue);
         frame = list_entry(e, struct frame, q_elem);
-        pde = frame->thread->pagedir + pd_no(frame->upage);
-        /* Assert this because everything in our frame table MUST be mapped to 
-           the page table entry. */
-        ASSERT(*pde != 0);
-        pt = pde_get_pt(*pde);
 
-        pte = pt[pt_no(frame->upage)]; 
-        if ((pte & PTE_A) == 0) {
+        if (!pagedir_is_accessed(frame->thread->pagedir, frame->upage)) {
             /* The frame has NOT been accessed. */
             /* Swap it out. First update the vm_area_struct for this page. */
             vma = spt_get_struct(frame->thread, frame->upage); 
             /* The vm_area_struct for this upage MUST be present in the
                supplemental page table for this thread. */
             ASSERT(vma != NULL);
+            ASSERT(vma->pg_type != SWAP);
+            ASSERT(vma->kpage != NULL);
+
+            if (vma->pg_type == FILESYS) {
+            /* A page from the file system. */
+            /* Check the dirty bit. */
+                if (pagedir_is_dirty(frame->thread->pagedir, frame->upage)) {
+                    /* The page is dirty. */ 
+                    /* Since this page has been written to, assert that it is
+                       writable. */
+                    ASSERT(vma->writable);
+                    file_seek(vma->vm_file, vma->ofs);
+                    file_write(vma->vm_file, vma->kpage, PGSIZE);
+                }
+            }
+            else if (vma->pg_type == PMEM) {
+                /* A stack page. */
+                vma->kpage = NULL;
+                vma->pg_type = SWAP;
+                vma->swap_ind = swap_add(frame->kpage);
+            }
             vma->kpage = NULL;
-            vma->pg_type = SWAP;
-            vma->swap_ind = swap_add(frame->kpage);
-            
+
+            /* Update the valid bit for the virtual address. */
+            pagedir_clear_page(frame->thread->pagedir, vma->vm_start);
+
             /* Remove the frame from the frame table. */
             frame_table_remove(frame);
             
@@ -50,7 +66,7 @@ void *frame_evict(void) {
         else {
             /* The frame HAS been accessed. */
             /* Set its accessed bit to 0, then enqueue it. */
-            pt[pt_no(frame->upage)] &= ~PTE_A;
+            pagedir_set_accessed(frame->thread->pagedir, frame->upage, 0);
             list_push_back(&frame_queue, &frame->q_elem);
             lock_release(&frame_lock);
         }
