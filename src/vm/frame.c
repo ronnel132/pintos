@@ -11,7 +11,7 @@
 #include "filesys/file.h"
 #include "threads/interrupt.h"
 
-// struct lock frame_lock;
+struct lock frame_lock;
 struct lock filesys_lock;
 
 /* Evicts a frame from the frame table and returns the kernel virtual address
@@ -23,12 +23,12 @@ void *frame_evict(void) {
     int bytes_written;
     int fs_lock = 0;
     enum intr_level old_level;
+    void *ret_kpage;
 
     ASSERT(list_size(&frame_queue) > 0);
-//     printf("trying to acq 1\n");
-//     printf("%d\n", thread_current()->tid);
-//     lock_acquire(&frame_lock);
-//     printf("go tit\n");
+
+    lock_acquire(&frame_lock);
+
     while (1) {
         e = list_pop_front(&frame_queue);
         frame = list_entry(e, struct frame, q_elem);
@@ -77,14 +77,16 @@ void *frame_evict(void) {
 
             pagedir_clear_page(frame->thread->pagedir, vma->vm_start);
 
+            /* Save the kpage we return before freeing in 
+               frame_table_remove. */
+            ret_kpage = frame->kpage;
             /* Remove the frame from the frame table. */
             frame_table_remove(frame);
 
             
             /* Return the now free kernel page. */
-            printf("releaseing 1, before loop\n");
-//             lock_release(&frame_lock);
-            return frame->kpage;
+            lock_release(&frame_lock);
+            return ret_kpage;
         }
         else {
             /* The frame HAS been accessed. */
@@ -94,7 +96,7 @@ void *frame_evict(void) {
         }
     }
     printf("releaseing 1, after loop\n");
-//     lock_release(&frame_lock);
+    lock_release(&frame_lock);
 }
 
 /* Remove the frame from the frame table. */
@@ -109,6 +111,8 @@ void frame_add(struct thread *t, void *upage, void *kpage) {
     struct frame *frame;
     ASSERT(upage != NULL);
     ASSERT(kpage != NULL);
+    
+    printf("-------------%p\n", kpage);
 
     frame = (struct frame *) malloc(sizeof(struct frame));
     /* Store the thread/process that owns this upage. */
@@ -117,10 +121,10 @@ void frame_add(struct thread *t, void *upage, void *kpage) {
     frame->kpage = kpage;
 
     /* The frame table remains ordered by the physical address of the frame. */
-//     lock_acquire(&frame_lock);
+    lock_acquire(&frame_lock);
     list_insert_ordered(&frame_table, &frame->elem, &frame_less, NULL);
     list_push_back(&frame_queue, &frame->q_elem);
-//     lock_release(&frame_lock);
+    lock_release(&frame_lock);
 }
 
 /* The function used for ordered inserts into the frame table. We order the 
