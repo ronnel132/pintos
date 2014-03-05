@@ -308,6 +308,30 @@ void halt (void) {
 
 /* Terminates the current user program, returning status to the kernel. */
 void exit(int status) {
+    struct thread * cur_thread;
+    struct process * pd;
+    mapid_t mid = 0;
+    int fd = 0;
+
+    cur_thread = thread_current();
+    pd = cur_thread->process_details;
+
+    /* Unmap all open mmaps */
+    while (pd->num_mapids_open > 0) {
+        if (pd->open_mapids[mid]) {
+            munmap(mid);
+        }
+        mid++;
+    }
+
+    /* Close all open files */
+    while (pd->num_files_open > 0) {
+        if (pd->open_file_descriptors[fd]) {
+            close(fd);
+        }
+        fd++;
+    }
+
     if (lock_held_by_current_thread(&filesys_lock)) {
         lock_release(&filesys_lock);
     }
@@ -696,11 +720,16 @@ mapid_t mmap(int fd, void *addr) {
         /* The map id is the index into the open_mapids array. */
         if (pd->open_mapids[mid] == false) {
             pd->open_mapids[mid] = true;
+            pd->num_mapids_open++;
             break;
         }
     }
 
     f = file_reopen(pd->files[fd]);
+    // if (pd->files[fd]->deny_write) {
+    //     file_deny_write(f);
+    // }
+
     for (i = 0; i < num_pages; i++) {
         mapping = (struct vm_area_struct *)
                   calloc(1, sizeof(struct vm_area_struct));
@@ -711,15 +740,20 @@ mapid_t mmap(int fd, void *addr) {
             exit(EXIT_BAD_PTR);
         }
 
-        mapping->vm_end = mapping->vm_start + PGSIZE - 1;
+        mapping->vm_end = mapping->vm_start + PGSIZE - sizeof(uint8_t);
         if (!valid_user_pointer(mapping->vm_end)) {
             exit(EXIT_BAD_PTR);
         }
 
-        mapping->vm_end = mapping->vm_start + PGSIZE - 1;
         mapping->pg_type = FILE_SYS;
         mapping->vm_file = f;
         mapping->ofs = i * PGSIZE;
+        mapping->pg_read_bytes = i == num_pages - 1 ?
+                                 size - (PGSIZE * (num_pages - 1)) :
+                                 PGSIZE;
+
+        // TODO IS THE FOLLOWING CORRECT?:
+        // mapping->writable = f->deny_write;
 
         spt_add(cur_thread, mapping);
 
@@ -750,32 +784,48 @@ mapid_t mmap(int fd, void *addr) {
  * been unmapped.
  */
 void munmap(mapid_t mid) {
+    struct thread * cur_thread;
     struct process * pd;
-    struct vm_area_struct * vas;
-    struct vm_area_struct * next_vas;
+    struct vm_area_struct * vma;
+    struct vm_area_struct * next_vma;
     struct file * f;
-    int i;
+    int i, bytes_written;
 
-    pd = thread_current()->process_details;
+    cur_thread = thread_current();
+    pd = cur_thread->process_details;
 
     if (pd->open_mapids[mid]) {
-        next_vas = pd->open_mmaps[mid].first_vm_area;
-        f = next_vas->vm_file;
+        lock_acquire(&filesys_lock);
+
+        next_vma = pd->open_mmaps[mid].first_vm_area;
+        f = next_vma->vm_file;
 
         for (i = 0; i < pd->open_mmaps[mid].num_pages; i++) {
-            vas = next_vas;
-            next_vas = list_entry(list_next(&(vas->elem)),
+            vma = next_vma;
+            next_vma = list_entry(list_next(&(vma->elem)),
                                   struct vm_area_struct,
                                   elem);
 
-            ASSERT(next_vas->vm_file == f);
-            ASSERT(next_vas->ofs > vas->ofs);
+            ASSERT(next_vma->vm_file == f);
+            ASSERT(next_vma->ofs > vma->ofs);
 
-            spt_remove(vas);
+            /* Write dirty page to file */
+            if (pagedir_is_dirty(cur_thread->pagedir, vma->vm_start)) {
+                file_seek(f, vma->ofs);
+                bytes_written = file_write(f,
+                                           vma->vm_start,
+                                           vma->pg_read_bytes);
+                ASSERT(bytes_written == vma->pg_read_bytes);
+            }
+
+            spt_remove(vma);
         }
 
         file_close(f);
         pd->open_mapids[mid] = false;
+        pd->num_mapids_open--;
+
+        lock_release(&filesys_lock);
     }
 }
 #endif
