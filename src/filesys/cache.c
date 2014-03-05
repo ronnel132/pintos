@@ -341,6 +341,7 @@ static void read_ahead_daemon(void * aux) {
     struct cache_entry *next_centry;
 
     while (true) {
+        // TODO: Locks
         // TODO conditions
         // ASSERT(!list_empty(&read_ahead_list));
 
@@ -379,7 +380,7 @@ void write_behind_daemon(void *aux) {
     int64_t current_ticks = timer_ticks();
 
     /* If last_flushed was never initialized */
-    /* Based on SO answer */
+    /* This trick was based on a SO answer */
     if (last_flushed == 0) {
         last_flushed = timer_ticks();
     }
@@ -398,8 +399,10 @@ void write_behind() {
     int i;
 
     for (i = 0; i < CACHE_SIZE; i++) {
+        read_lock(&cache[i]);
         if (cache[i].valid && cache[i].dirty) {
             block_write(fs_device, cache[i].sector_idx, cache[i].data);
         }
+        read_unlock(&cache[i]);
     }
 }
