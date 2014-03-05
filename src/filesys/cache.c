@@ -9,10 +9,36 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx);
 /*! Initialize the buffer cache by malloc'ing the space it needs. */
 void cache_init(void) {
     hash_init(&cache_table, &cache_hash, &cache_less, NULL);
+    list_init(&cache_queue);
 }
 
+/* Pick a cache entry to evict, and kick it out of the cache 
+ * Using second chance strategy
+ */
 static void cache_evict(void) {
-    /* TODO: Implement. */
+    struct list_elem *e;
+    struct cache_entry *c;
+    while (1) {
+        e = list_pop_front(&cache_queue);
+        c = list_entry(e, struct cache_entry, q_elem);
+        
+        /* If accessed, clear accessed bit and push back */
+        if (c->accessed) {
+            c->accessed = 0;
+            list_push_back(&cache_queue, &c->q_elem);
+        }
+
+        /* Otherwise remove it. Also check if writeback is needed */
+        else {
+            if (c->dirty) {
+                block_write(fs_device, c->sector_idx, c->data); 
+            }
+
+            free(c->data);
+            free(c);
+            break;
+        }
+    }
     return;
 }
 

@@ -1,4 +1,5 @@
 #include <hash.h>
+#include <list.h>
 #include <stdlib.h>
 #include "devices/block.h"
 #include "filesys/off_t.h"
@@ -7,6 +8,9 @@
 
 /*! The mapping between filesys sector index and cache index. */
 struct hash cache_table; 
+
+/*! A queue of the element in the cache. Used for evicting */
+struct list cache_queue;
 
 /*! An entry in the filesystem buffer cache. */
 struct cache_entry {
@@ -23,6 +27,9 @@ struct cache_entry {
 
     /*! The element stored in the hash table for the buffer cache. */
     struct hash_elem elem;
+
+    /*! The linked list queue pointer. */
+    struct list_elem q_elem;
 }; 
 
 void cache_init(void); 
