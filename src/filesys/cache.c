@@ -104,11 +104,12 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
     struct cache_entry ce;
     struct hash_elem *elem;
 
+    block_sector_t tmp_sector;
+
     centry = malloc(sizeof(struct cache_entry));
     if (centry == NULL) {
         PANIC("Filesystem cache failure.");
     }
-    printf("----acquired\n");
     lock_acquire(&hand_lock);
 
     if (hash_size(&cache_table) == CACHE_SIZE) {
@@ -116,16 +117,16 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
          * Using second chance strategy
          */
         while (1) {
+            tmp_sector = cache[hand].sector_idx;
             cb = &cache[hand];
 
             /* Lock this cache block */
             read_lock(cb);
 
             /* If cache block changed, retry */
-            if (cache[cache_get_entry(sector_idx)->cache_idx].sector_idx != sector_idx) {
+            if (cache[cache_get_entry(sector_idx)->cache_idx].sector_idx != tmp_sector) {
                 return cache_miss(sector_idx);
             }
-    printf("----here\n");
             ASSERT(cb->valid);
             if (cb->accessed) {
                 cb->accessed = 0;
@@ -166,7 +167,6 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
     cblock->valid = 1;
     block_read(fs_device, sector_idx, cblock->data);
     write_unlock(cblock);
-    printf("----released\n");
     lock_release(&hand_lock);
     return centry;
 }
