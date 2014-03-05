@@ -124,7 +124,7 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
             read_lock(cb);
 
             /* If cache block changed, retry */
-            if (cache[cache_get_entry(sector_idx)->cache_idx].sector_idx != tmp_sector) {
+            if (cb->sector_idx != tmp_sector) {
                 return cache_miss(sector_idx);
             }
             ASSERT(cb->valid);
