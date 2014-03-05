@@ -130,8 +130,8 @@ int main(void) {
     /* Initialize file system. */
     ide_init();
     locate_block_devices();
-    filesys_init(format_filesys);
     cache_init();
+    filesys_init(format_filesys);
 #endif
 
     printf("Boot complete.\n");
