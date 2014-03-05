@@ -66,10 +66,10 @@ void cache_init(void) {
     /* Initialize read_ahead and write_behind threads. */
     cond_init(&read_ahead_condition);
     list_init(&read_ahead_list);
-    /*thread_create("rad",
+    thread_create("rad",
                   3,
                   read_ahead_daemon,
-                  NULL);*/
+                  NULL);
     thread_create("wbd", 3, write_behind_daemon, NULL);
 }
 
