@@ -31,6 +31,9 @@ static void read_ahead_daemon(void * aux);
 struct condition read_ahead_condition;
 static struct list read_ahead_list;
 
+/* Read ahead list lock */
+struct lock ra_lock;
+
 
 /*! The mapping between filesys sector index and cache index. */
 struct hash cache_table; 
@@ -68,6 +71,9 @@ void cache_init(void) {
 
     /* Initialize hand lock */
     lock_init(&hand_lock);
+
+    /* Initialize ra lock */
+    lock_init(&ra_lock);
 
     /* Initialize read_ahead and write_behind threads. */
     cond_init(&read_ahead_condition);
@@ -350,6 +356,7 @@ void read_ahead(block_sector_t sector_idx, block_sector_t next_sector_idx) {
     ASSERT(sector_idx != -1);
     ASSERT(next_sector_idx != -1);
 
+    lock_acquire(&ra_lock);
     if (list_size(&read_ahead_list) < 256) {
         raentry = (struct read_ahead_entry *) malloc(sizeof(struct read_ahead_entry));
 
@@ -359,6 +366,7 @@ void read_ahead(block_sector_t sector_idx, block_sector_t next_sector_idx) {
             list_push_back(&read_ahead_list, &raentry->elem);
         }
     }
+    lock_release(&ra_lock);
 }
 
 static void read_ahead_daemon(void * aux) {
@@ -371,6 +379,7 @@ static void read_ahead_daemon(void * aux) {
         // ASSERT(!list_empty(&read_ahead_list));
 
         // stupid thread yielding for now
+        lock_acquire(&ra_lock);
         if (!list_empty(&read_ahead_list)) {
             raentry = list_entry(list_pop_front(&read_ahead_list),
                                  struct read_ahead_entry,
@@ -394,8 +403,10 @@ static void read_ahead_daemon(void * aux) {
             else {
                 free(raentry);
             }
+            lock_release(&ra_lock);
         }
         else {
+            lock_release(&ra_lock);
             thread_yield();
         }
     }
