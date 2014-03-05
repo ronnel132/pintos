@@ -59,6 +59,8 @@ void *frame_evict(void) {
 
             /* Remove the frame from the frame table. */
             frame_table_remove(frame);
+
+            lock_release(&frame_lock);
             
             /* Return the now free kernel page. */
             return frame->kpage;
