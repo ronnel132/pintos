@@ -4,19 +4,40 @@
 #include "filesys/filesys.h"
 #include "threads/malloc.h"
 
+
+/* Acquire a read lock for this cache descriptor */
+static void read_lock(struct cache_block *cd);
+/* Release a read lock for this cache descriptor */
+static void read_unlock(struct cache_block *cd);
+
+/* Acquire a write lock for this cache descriptor */
+static void write_lock(struct cache_block *cd);
+/* Release a write lock for this cache descriptor */
+static void write_unlock(struct cache_block *cd);
+
 static void cache_evict(void);
 static struct cache_entry *cache_miss(block_sector_t sector_idx);
+
+/* Prototypes for pre-emptive writing and reading functions/threads. */
+static void read_ahead(void);
+static void write_behind(void);
+
+/*! The mapping between filesys sector index and cache index. */
+struct hash cache_table; 
+
+/*! The actual cache itself. An array of cache_block's. */
+struct cache_block cache[CACHE_SIZE];
+
+/*! The clock hand index for implementing the clock policy. Corresponds to an 
+    index in cache. */ 
+static int hand;
 
 /*! Initialize the buffer cache by malloc'ing the space it needs. */
 void cache_init(void) {
     int i;
-    cache = (struct cache_block *) malloc(CACHE_SIZE * 
-                                         sizeof(struct cache_block));
-    if (cache == NULL) {
-        PANIC("Unable to initialize file system cache.");
-    }
+
     for (i = 0; i < CACHE_SIZE; i++) {
-        cache[i].sector_idx = NULL;
+        cache[i].sector_idx = 0;
         cache[i].valid = 0;
         cache[i].accessed = 0;
         cache[i].dirty = 0;
@@ -38,7 +59,7 @@ void cache_init(void) {
 static void cache_evict(void) {
     struct cache_block *cb;
     struct cache_entry ce;
-    struct hash_elem *elem; 
+    struct hash_elem *elem;
         
     while (1) {
         cb = &cache[hand];
@@ -258,4 +279,14 @@ bool cache_less(const struct hash_elem *a, const struct hash_elem *b,
     struct cache_entry *ce1 = hash_entry(a, struct cache_entry, elem);
     struct cache_entry *ce2 = hash_entry(b, struct cache_entry, elem);
     return ce1->sector_idx < ce2->sector_idx;
+}
+
+
+
+static void read_ahead(void) {
+
+}
+
+static void write_behind(void) {
+
 }
