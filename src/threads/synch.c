@@ -231,7 +231,11 @@ void lock_acquire(struct lock *lock) {
     enum intr_level old_level;
     ASSERT(lock != NULL);
     ASSERT(!intr_context());
-    ASSERT(!lock_held_by_current_thread(lock));
+//     ASSERT(!lock_held_by_current_thread(lock));
+
+    if(lock_held_by_current_thread(lock)) {
+        ASSERT(0);
+    }
 
 
     /* Only do this if we aren't using MLFQS option. */
