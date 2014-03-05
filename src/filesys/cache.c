@@ -9,36 +9,51 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx);
 
 /*! Initialize the buffer cache by malloc'ing the space it needs. */
 void cache_init(void) {
+    int i;
+    cache = (struct cache_block *) malloc(CACHE_SIZE * 
+                                         sizeof(struct cache_block));
+    if (cache == NULL) {
+        PANIC("Unable to initialize file system cache.");
+    }
+    for (i = 0; i < CACHE_SIZE; i++) {
+        cache[i].sector_idx = NULL;
+        cache[i].valid = 0;
+        cache[i].accessed = 0;
+        cache[i].dirty = 0;
+    }
     hash_init(&cache_table, &cache_hash, &cache_less, NULL);
-    list_init(&cache_queue);
+    hand = 0;
 }
 
 /* Pick a cache entry to evict, and kick it out of the cache 
  * Using second chance strategy
  */
 static void cache_evict(void) {
-    struct list_elem *e;
-    struct cache_entry *c;
-    // TODO: Locks
-    while (1) {
-        e = list_pop_front(&cache_queue);
-        c = list_entry(e, struct cache_entry, q_elem);
+    struct cache_block *cb;
+    struct cache_entry ce;
+    struct hash_elem *elem; 
         
-        /* If accessed, clear accessed bit and push back */
-        if (c->accessed) {
-            c->accessed = 0;
-            list_push_back(&cache_queue, &c->q_elem);
+    while (1) {
+        cb = &cache[hand];
+        ASSERT(cb->valid);
+        if (cb->accessed) {
+            cb->accessed = 0;
+            hand = (hand + 1) % CACHE_SIZE;
         }
-
-        /* Otherwise remove it. Also check if writeback is needed */
         else {
-            if (c->dirty) {
-                block_write(fs_device, c->sector_idx, c->data); 
+            cb->valid = 0;
+            ce.sector_idx = cb->sector_idx;
+            elem = hash_find(&cache_table, &ce.elem);
+            /* The cache_entry corresponding to the sector in this cache index
+               should be present in the cache_table. */
+            ASSERT(elem != NULL);
+            hash_delete(&cache_table, elem);
+
+            if (cb->dirty) {
+                block_write(fs_device, cb->sector_idx, cb->data);
             }
             
-            hash_delete(&cache_table, &c->elem);
-            free(c->data);
-            free(c);
+            free(hash_entry(elem, struct cache_entry, elem));
             break;
         }
     }
@@ -49,6 +64,8 @@ static void cache_evict(void) {
    Store it in the cache, then return its corresponding cache_entry struct. */
 static struct cache_entry *cache_miss(block_sector_t sector_idx) {
     struct cache_entry *ce; 
+    struct cache_block *cblock;
+
     ce = malloc(sizeof(struct cache_entry));
     if (ce == NULL) {
         PANIC("Filesystem cache failure.");
@@ -56,18 +73,18 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
     if (hash_size(&cache_table) == CACHE_SIZE) {
         cache_evict();
     }
-    /* TODO: synchronization: what if another process adds to the cache table
-       before we do? */ 
-    ce->data = malloc(BLOCK_SECTOR_SIZE);
-    if (ce->data == NULL) {
-        PANIC("Filesystem cache failure.");
-    }
-    ce->sector_idx = sector_idx;
-    block_read(fs_device, sector_idx, ce->data);
-    ce->accessed = 0;
-    ce->dirty = 0;
+    ASSERT(!cache[hand].valid);
+    ce->cache_idx = hand; 
+    hand = (hand + 1) % CACHE_SIZE;
+    ce->sector_idx = sector_idx;  
     hash_insert(&cache_table, &ce->elem);
-    list_push_back(&cache_queue, &ce->q_elem);
+
+    cblock = &cache[ce->cache_idx];
+    cblock->sector_idx = sector_idx;
+    cblock->accessed = 0;
+    cblock->dirty = 0;
+    cblock->valid = 1;
+    block_read(fs_device, sector_idx, cblock->data);
     return ce;
 }
 
@@ -77,23 +94,29 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
 void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
                 off_t offset) {
     struct cache_entry ce; 
-    struct hash_elem *helem;
+    struct hash_elem *e;
     struct cache_entry *stored_ce;
+    struct cache_block *cblock;
 
     ASSERT(offset + size <= BLOCK_SECTOR_SIZE);
 
     ce.sector_idx = sector_idx;
-    helem = hash_find(&cache_table, &ce.elem);
-    stored_ce = helem == NULL ? NULL : hash_entry(helem, struct cache_entry,
+    e = hash_find(&cache_table, &ce.elem);
+    stored_ce = e == NULL ? NULL : hash_entry(e, struct cache_entry,
                                                   elem);
-    if (stored_ce == NULL) {
+    bool present = stored_ce != NULL;
+
+    if (!present) {
         stored_ce = cache_miss(sector_idx);
     }
-    else {
-        stored_ce->accessed = 1;
+    
+    cblock = &cache[stored_ce->cache_idx];
+    
+    if (present) {
+        cblock->accessed = 1;
     }
 
-    memcpy(buffer, (void *) ((uint32_t) stored_ce->data + (uint32_t) offset), 
+    memcpy(buffer, (void *) ((off_t) cblock->data + offset), 
            (size_t) size);
 }
 
@@ -102,25 +125,31 @@ void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
 void cache_write(block_sector_t sector_idx, void *buffer, off_t size,
                  off_t offset) {
     struct cache_entry ce;
-    struct hash_elem *helem;
+    struct hash_elem *e;
     struct cache_entry *stored_ce;
+    struct cache_block *cblock;
 
     ASSERT(offset + size <= BLOCK_SECTOR_SIZE); 
 
     ce.sector_idx = sector_idx;
-    helem = hash_find(&cache_table, &ce.elem);
-    stored_ce = helem == NULL ? NULL : hash_entry(helem, struct cache_entry,
+    e = hash_find(&cache_table, &ce.elem);
+    stored_ce = e == NULL ? NULL : hash_entry(e, struct cache_entry,
                                                   elem);
-    if (stored_ce == NULL) {
+    bool present = stored_ce != NULL;
+
+    if (!present) {
         stored_ce = cache_miss(sector_idx);
-    } 
-    else {
-        stored_ce->accessed = 1;
+    }
+    
+    cblock = &cache[stored_ce->cache_idx];
+    
+    if (present) {
+        cblock->accessed = 1;
     }
 
-    memcpy((void *) ((uint32_t) stored_ce->data + (uint32_t) offset), buffer, 
+    memcpy((void *) ((off_t) cblock->data + offset), buffer, 
            (size_t) size);
-    stored_ce->dirty = 1;
+    cblock->dirty = 1;
 }
 
 
@@ -210,7 +239,7 @@ static void write_unlock(struct cache_desc *cd) {
 
 unsigned cache_hash(const struct hash_elem *element, void *aux UNUSED) {
     struct cache_entry *ce = hash_entry(element, struct cache_entry, elem);
-    return hash_int(ce->sector_idx);
+    return hash_int((int) ce->sector_idx);
 }
 
 bool cache_less(const struct hash_elem *a, const struct hash_elem *b,
