@@ -711,15 +711,17 @@ mapid_t mmap(int fd, void *addr) {
             exit(EXIT_BAD_PTR);
         }
 
-        mapping->vm_end = mapping->vm_start + PGSIZE - 1;
+        mapping->vm_end = mapping->vm_start + PGSIZE - sizeof(uint8_t);
         if (!valid_user_pointer(mapping->vm_end)) {
             exit(EXIT_BAD_PTR);
         }
 
-        mapping->vm_end = mapping->vm_start + PGSIZE - 1;
         mapping->pg_type = FILE_SYS;
         mapping->vm_file = f;
         mapping->ofs = i * PGSIZE;
+        mapping->pg_read_bytes = i == num_pages - 1 ?
+                                 size - (PGSIZE * (num_pages - 1)) :
+                                 PGSIZE;
 
         spt_add(cur_thread, mapping);
 
