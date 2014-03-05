@@ -69,8 +69,8 @@ void *frame_evict(void) {
             pagedir_set_accessed(frame->thread->pagedir, frame->upage, 0);
             list_push_back(&frame_queue, &frame->q_elem);
         }
-        lock_release(&frame_lock);
     }
+    lock_release(&frame_lock);
 }
 
 /* Remove the frame from the frame table. */
