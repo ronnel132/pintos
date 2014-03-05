@@ -196,8 +196,6 @@ static void page_fault(struct intr_frame *f) {
         if (found_valid) {
             new_page = palloc_get_page(PAL_USER); 
             if (new_page == NULL) {
-                /* ASSERT(0) for now ... */
-                ASSERT(0);
                 new_page = frame_evict();
             }
             if (vma->pg_type == FILE_SYS) {
