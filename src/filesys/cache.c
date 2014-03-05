@@ -20,10 +20,17 @@ static void write_unlock(struct cache_block *cb);
 
 static struct cache_entry *cache_miss(block_sector_t sector_idx);
 
+/* Write-back daemon */
+static void write_behind_daemon(void * aux);
+
+/* Last time a write_behind was performed */
+static last_flushed = 0;
+
 /* Read ahead list. */
 static void read_ahead_daemon(void * aux);
 struct condition read_ahead_condition;
 static struct list read_ahead_list;
+
 
 /*! The mapping between filesys sector index and cache index. */
 struct hash cache_table; 
@@ -63,6 +70,7 @@ void cache_init(void) {
                   3,
                   read_ahead_daemon,
                   NULL);*/
+    thread_create("wbd", 3, write_behind_daemon, NULL);
 }
 
 /*! Gets cache table entry from the hash table. Returns NULL if
@@ -367,10 +375,26 @@ static void read_ahead_daemon(void * aux) {
     }
 }
 
+void write_behind_daemon(void *aux) {
+    int64_t current_ticks = timer_ticks();
+
+    /* If last_flushed was never initialized */
+    /* Based on SO answer */
+    if (last_flushed == 0) {
+        last_flushed = timer_ticks();
+    }
+
+    /* If it's been more than 5 seconds since last write_behind
+     * do it again */
+    if ((current_ticks - last_flushed) >= 5 * TIMER_FREQ) {
+        write_behind();
+    }
+}
+
 /* Writes back all dirty blocks to the device.
  * Should call every x seconds from timer_tick().
  */
-void write_behind(void) {
+void write_behind() {
     int i;
 
     for (i = 0; i < CACHE_SIZE; i++) {

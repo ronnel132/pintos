@@ -230,7 +230,10 @@ void lock_acquire(struct lock *lock) {
 	struct thread *next_donee;
     enum intr_level old_level;
     ASSERT(lock != NULL);
-    ASSERT(!intr_context());
+//     ASSERT(!intr_context());
+    if (intr_context()) {
+        ASSERT(0);
+    }
     ASSERT(!lock_held_by_current_thread(lock));
 
 
