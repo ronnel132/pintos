@@ -124,6 +124,90 @@ void cache_write(block_sector_t sector_idx, void *buffer, off_t size,
 }
 
 
+/* Acquire a read lock for this cache descriptor */
+static void read_lock(struct cache_desc *cd) {
+    ASSERT(cd != NULL);
+    struct rwlock *rwl = &(cd->rwl);
+    struct lock *mutex = &(rwl->mutex); 
+    struct lock *wl = &(rwl->wl);
+
+    lock_acquire(mutex);
+    /* If no one has write lock */
+    if (wl->holder == NULL) {
+        rwl->num_readers++;
+        lock_release(mutex);
+    }
+
+    /* Else wait for writer to finish */
+    else {
+        lock_release(mutex);
+
+        lock_acquire(wl);
+        /* If we were able to get wl, writer has finished */
+        lock_acquire(mutex);
+        lock_release(wl);
+        rwl->num_readers++;
+        lock_release(mutex);
+    }
+}
+
+
+/* Release a read lock for this cache descriptor */
+static void read_unlock(struct cache_desc *cd) {
+    ASSERT(cd != NULL);
+    struct rwlock *rwl = &(cd->rwl);
+    struct lock *mutex = &(rwl->mutex); 
+
+    lock_acquire(mutex);
+    rwl->num_readers--;
+    
+    /* If 0 readers, wake up one writer */
+    if (rwl->num_readers == 0) {
+        cond_signal(&(rwl->w_cond), mutex);
+    }
+    lock_release(mutex);
+}
+
+
+
+/* Acquire a write lock for this cache descriptor */
+static void write_lock(struct cache_desc *cd) {
+    ASSERT(cd != NULL);
+    struct rwlock *rwl = &(cd->rwl);
+    struct lock *mutex = &(rwl->mutex); 
+    struct lock *wl = &(rwl->wl);
+
+    /* Wait for all readers to finish */
+    while (1) {
+        lock_acquire(mutex);
+        /* See if there are readers */
+        if (rwl->num_readers > 0) {
+            /* Wait for them to finish */
+            cond_wait(&(rwl->w_cond), mutex);
+
+            lock_release(mutex);
+        }
+
+        /* If we're here, we have the mutex and there are no readers */
+        else {
+            lock_acquire(wl);
+            lock_release(mutex);
+            return;
+        }
+    }
+}
+
+
+/* Release a write lock for this cache descriptor */
+static void write_unlock(struct cache_desc *cd) {
+    ASSERT(cd != NULL);
+    struct rwlock *rwl = &(cd->rwl);
+    struct lock *wl = &(rwl->wl);
+
+    lock_release(wl);
+}
+
+
 unsigned cache_hash(const struct hash_elem *element, void *aux UNUSED) {
     struct cache_entry *ce = hash_entry(element, struct cache_entry, elem);
     return hash_int(ce->sector_idx);
