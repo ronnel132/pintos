@@ -33,11 +33,13 @@ void *frame_evict(void) {
     while (1) {
         e = list_pop_front(&frame_queue);
         frame = list_entry(e, struct frame, q_elem);
+        /* Swap it out. First update the vm_area_struct for this page. */
+        vma = spt_get_struct(frame->thread, frame->upage); 
 
-        if (!pagedir_is_accessed(frame->thread->pagedir, frame->upage)) {
+//         if (!pagedir_is_accessed(frame->thread->pagedir, frame->upage)) {
+            /* CHANGED TO FIFO IMPLEMENTATION. */
+        if (!vma->pinned) {
             /* The frame has NOT been accessed. */
-            /* Swap it out. First update the vm_area_struct for this page. */
-            vma = spt_get_struct(frame->thread, frame->upage); 
             /* The vm_area_struct for this upage MUST be present in the
                supplemental page table for this thread. */
             ASSERT(vma != NULL);
@@ -72,7 +74,6 @@ void *frame_evict(void) {
             list_push_back(&frame_queue, &frame->q_elem);
         }
     }
-    printf("releaseing 1, after loop\n");
     lock_release(&frame_lock);
 }
 
