@@ -422,7 +422,7 @@ off_t inode_read_at(struct inode *inode, void *buffer_, off_t size, off_t offset
                 next_sector_idx = byte_to_sector(inode, 
                                 (((offset + BLOCK_SECTOR_SIZE) >> 9) << 9));  
             }
-            //read_ahead(sector_idx, next_sector_idx);
+            read_ahead(sector_idx, next_sector_idx);
         }
 
         /* Advance. */
@@ -489,7 +489,7 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
                 next_sector_idx = byte_to_sector(inode, 
                                 (((offset + BLOCK_SECTOR_SIZE) >> 9) << 9));  
             }
-            //read_ahead(sector_idx, next_sector_idx);
+            read_ahead(sector_idx, next_sector_idx);
         }
 
         /* Advance. */
