@@ -33,6 +33,9 @@ block_sector_t swap_add(void *kpage) {
 
     swap_size = block_size(swap_device);
 
+    /* Insert into the swap table. */
+    lock_acquire(&swap_lock);
+
     /* Find the first free sector within the swap partition to store the KPAGE
        contents. */
     for (i = 0; i < swap_size; i += SECTORS_PER_PAGE) {
@@ -55,8 +58,6 @@ block_sector_t swap_add(void *kpage) {
     /* Create a swap_slot entry. */
     ss = (struct swap_slot *) malloc(sizeof(struct swap_slot));
     ss->sector_ind = i;
-    /* Insert into the swap table. */
-    lock_acquire(&swap_lock);
     if (hash_insert(&swap_table, &ss->hash_elem) != NULL) {
         PANIC("Overwriting swap partition write detected.");
     }
