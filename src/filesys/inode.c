@@ -458,7 +458,7 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
         block_sector_t sector_idx = byte_to_sector(inode, offset);
         /* If there is no sector assigned to this offset, assign one. */
         if ((int) sector_idx == -1) {
-//             allocate_at_byte(&inode->data, inode->sector, offset);
+            allocate_at_byte(&inode->data, inode->sector, offset);
             /* Try again. */
             sector_idx = byte_to_sector(inode, offset);
             ASSERT((int) sector_idx != -1);
@@ -481,7 +481,7 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
         if (offset + BLOCK_SECTOR_SIZE <= inode_length(inode)) {
             block_sector_t next_sector_idx = byte_to_sector(inode, offset + BLOCK_SECTOR_SIZE);
             if (next_sector_idx == -1) {
-                allocate_at_byte(&inode->data, inode->sector, offset + BLOCK_SECTOR_SIZE);
+//                 allocate_at_byte(&inode->data, inode->sector, offset + BLOCK_SECTOR_SIZE);
             }
             //read_ahead(sector_idx, next_sector_idx);
         }
