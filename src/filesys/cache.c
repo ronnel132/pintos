@@ -341,7 +341,6 @@ static void read_ahead_daemon(void * aux) {
     struct cache_entry *next_centry;
 
     while (true) {
-        // TODO: Locks
         // TODO conditions
         // ASSERT(!list_empty(&read_ahead_list));
 
