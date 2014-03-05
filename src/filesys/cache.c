@@ -6,16 +6,15 @@
 
 
 /* Acquire a read lock for this cache descriptor */
-static void read_lock(struct cache_block *cd);
+static void read_lock(struct cache_block *cb);
 /* Release a read lock for this cache descriptor */
-static void read_unlock(struct cache_block *cd);
+static void read_unlock(struct cache_block *cb);
 
 /* Acquire a write lock for this cache descriptor */
-static void write_lock(struct cache_block *cd);
+static void write_lock(struct cache_block *cb);
 /* Release a write lock for this cache descriptor */
-static void write_unlock(struct cache_block *cd);
+static void write_unlock(struct cache_block *cb);
 
-static void cache_evict(void);
 static struct cache_entry *cache_miss(block_sector_t sector_idx);
 
 /* Prototypes for pre-emptive writing and reading functions/threads. */
@@ -53,68 +52,74 @@ void cache_init(void) {
     hand = 0;
 }
 
-/* Pick a cache entry to evict, and kick it out of the cache 
- * Using second chance strategy
- */
-static void cache_evict(void) {
-    struct cache_block *cb;
-    struct cache_entry ce;
-    struct hash_elem *elem;
-        
-    while (1) {
-        cb = &cache[hand];
-        ASSERT(cb->valid);
-        if (cb->accessed) {
-            cb->accessed = 0;
-            hand = (hand + 1) % CACHE_SIZE;
-        }
-        else {
-            cb->valid = 0;
-            ce.sector_idx = cb->sector_idx;
-            elem = hash_find(&cache_table, &ce.elem);
-            /* The cache_entry corresponding to the sector in this cache index
-               should be present in the cache_table. */
-            ASSERT(elem != NULL);
-            hash_delete(&cache_table, elem);
-
-            if (cb->dirty) {
-                block_write(fs_device, cb->sector_idx, cb->data);
-            }
-            
-            free(hash_entry(elem, struct cache_entry, elem));
-            break;
-        }
-    }
-    return;
-}
 
 /* Called in cache_read and cache_write when the desired block is not cached.
    Store it in the cache, then return its corresponding cache_entry struct. */
 static struct cache_entry *cache_miss(block_sector_t sector_idx) {
-    struct cache_entry *ce; 
+    struct cache_entry *centry; 
     struct cache_block *cblock;
 
-    ce = malloc(sizeof(struct cache_entry));
-    if (ce == NULL) {
+    /* Eviction variables */
+    struct cache_block *cb;
+    struct cache_entry ce;
+    struct hash_elem *elem;
+
+    centry = malloc(sizeof(struct cache_entry));
+    if (centry == NULL) {
         PANIC("Filesystem cache failure.");
     }
 
     if (hash_size(&cache_table) == CACHE_SIZE) {
-        cache_evict();
-    }
-    ASSERT(!cache[hand].valid);
-    ce->cache_idx = hand; 
-    hand = (hand + 1) % CACHE_SIZE;
-    ce->sector_idx = sector_idx;  
-    hash_insert(&cache_table, &ce->elem);
+        /* Pick a cache entry to evict, and kick it out of the cache 
+         * Using second chance strategy
+         */
+        while (1) {
+            cb = &cache[hand];
 
-    cblock = &cache[ce->cache_idx];
+            /* Lock this cache block */
+            write_lock(cb);
+            ASSERT(cb->valid);
+            if (cb->accessed) {
+                cb->accessed = 0;
+                hand = (hand + 1) % CACHE_SIZE;
+                write_unlock(cb);
+            }
+            else {
+                cb->valid = 0;
+                ce.sector_idx = cb->sector_idx;
+                elem = hash_find(&cache_table, &ce.elem);
+                /* The cache_entry corresponding to the sector in this cache index
+                   should be present in the cache_table. */
+                ASSERT(elem != NULL);
+                hash_delete(&cache_table, elem);
+
+                if (cb->dirty) {
+                    block_write(fs_device, cb->sector_idx, cb->data);
+                }
+                
+                free(hash_entry(elem, struct cache_entry, elem));
+                write_unlock(cb);
+                break;
+            }
+        }
+    }
+
+    ASSERT(!cache[hand].valid);
+    centry->cache_idx = hand; 
+    hand = (hand + 1) % CACHE_SIZE;
+    centry->sector_idx = sector_idx;  
+    hash_insert(&cache_table, &centry->elem);
+
+    cblock = &cache[centry->cache_idx];
+    write_lock(cblock);
+
     cblock->sector_idx = sector_idx;
     cblock->accessed = 0;
     cblock->dirty = 0;
     cblock->valid = 1;
     block_read(fs_device, sector_idx, cblock->data);
-    return ce;
+    write_unlock(cblock);
+    return centry;
 }
 
 
@@ -140,6 +145,7 @@ void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
     }
     
     cblock = &cache[stored_ce->cache_idx];
+    read_lock(cblock);
     
     if (present) {
         cblock->accessed = 1;
@@ -147,6 +153,7 @@ void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
 
     memcpy(buffer, (void *) ((off_t) cblock->data + offset), 
            (size_t) size);
+    read_unlock(cblock);
 }
 
 /*! Find the cached sector at SECTOR_IDX and write SIZE bytes starting at 
@@ -171,6 +178,7 @@ void cache_write(block_sector_t sector_idx, void *buffer, off_t size,
     }
     
     cblock = &cache[stored_ce->cache_idx];
+    write_lock(cblock);
     
     if (present) {
         cblock->accessed = 1;
@@ -179,13 +187,14 @@ void cache_write(block_sector_t sector_idx, void *buffer, off_t size,
     memcpy((void *) ((off_t) cblock->data + offset), buffer, 
            (size_t) size);
     cblock->dirty = 1;
+    write_unlock(cblock);
 }
 
 
 /* Acquire a read lock for this cache descriptor */
-static void read_lock(struct cache_block *cd) {
-    ASSERT(cd != NULL);
-    struct rwlock *rwl = &(cd->rwl);
+static void read_lock(struct cache_block *cb) {
+    ASSERT(cb != NULL);
+    struct rwlock *rwl = &(cb->rwl);
     struct lock *mutex = &(rwl->mutex); 
     struct lock *wl = &(rwl->wl);
 
@@ -207,9 +216,9 @@ static void read_lock(struct cache_block *cd) {
 
 
 /* Release a read lock for this cache descriptor */
-static void read_unlock(struct cache_block *cd) {
-    ASSERT(cd != NULL);
-    struct rwlock *rwl = &(cd->rwl);
+static void read_unlock(struct cache_block *cb) {
+    ASSERT(cb != NULL);
+    struct rwlock *rwl = &(cb->rwl);
     struct lock *mutex = &(rwl->mutex); 
 
     lock_acquire(mutex);
@@ -225,9 +234,9 @@ static void read_unlock(struct cache_block *cd) {
 
 
 /* Acquire a write lock for this cache descriptor */
-static void write_lock(struct cache_block *cd) {
-    ASSERT(cd != NULL);
-    struct rwlock *rwl = &(cd->rwl);
+static void write_lock(struct cache_block *cb) {
+    ASSERT(cb != NULL);
+    struct rwlock *rwl = &(cb->rwl);
     struct lock *mutex = &(rwl->mutex); 
     struct lock *wl = &(rwl->wl);
 
@@ -252,9 +261,9 @@ static void write_lock(struct cache_block *cd) {
 
 
 /* Release a write lock for this cache descriptor */
-static void write_unlock(struct cache_block *cd) {
-    ASSERT(cd != NULL);
-    struct rwlock *rwl = &(cd->rwl);
+static void write_unlock(struct cache_block *cb) {
+    ASSERT(cb != NULL);
+    struct rwlock *rwl = &(cb->rwl);
     struct lock *mutex = &(rwl->mutex); 
     struct lock *wl = &(rwl->wl);
     
