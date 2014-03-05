@@ -759,15 +759,19 @@ mapid_t mmap(int fd, void *addr) {
  * been unmapped.
  */
 void munmap(mapid_t mid) {
+    struct thread * cur_thread;
     struct process * pd;
     struct vm_area_struct * vma;
     struct vm_area_struct * next_vma;
     struct file * f;
-    int i;
+    int i, bytes_written;
 
-    pd = thread_current()->process_details;
+    cur_thread = thread_current();
+    pd = cur_thread->process_details;
 
     if (pd->open_mapids[mid]) {
+        lock_acquire(&filesys_lock);
+
         next_vma = pd->open_mmaps[mid].first_vm_area;
         f = next_vma->vm_file;
 
@@ -780,11 +784,22 @@ void munmap(mapid_t mid) {
             ASSERT(next_vma->vm_file == f);
             ASSERT(next_vma->ofs > vma->ofs);
 
+            /* Write dirty page to file */
+            if (pagedir_is_dirty(cur_thread->pagedir, vma->vm_start)) {
+                file_seek(f, vma->ofs);
+                bytes_written = file_write(f,
+                                           vma->vm_start,
+                                           vma->pg_read_bytes);
+                ASSERT(bytes_written == vma->pg_read_bytes);
+            }
+
             spt_remove(vma);
         }
 
         file_close(f);
         pd->open_mapids[mid] = false;
+
+        lock_release(&filesys_lock);
     }
 }
 #endif
