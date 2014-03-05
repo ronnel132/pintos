@@ -38,6 +38,9 @@ struct hash cache_table;
 /*! The actual cache itself. An array of cache_block's. */
 struct cache_block cache[CACHE_SIZE];
 
+/* Lock to protect hand pointer */
+struct lock hand_lock;
+
 /*! The clock hand index for implementing the clock policy. Corresponds to an 
     index in cache. */ 
 static int hand;
@@ -62,6 +65,9 @@ void cache_init(void) {
 
     hash_init(&cache_table, &cache_hash, &cache_less, NULL);
     hand = 0;
+
+    /* Initialize hand lock */
+    lock_init(&hand_lock);
 
     /* Initialize read_ahead and write_behind threads. */
     cond_init(&read_ahead_condition);
@@ -102,6 +108,8 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
     if (centry == NULL) {
         PANIC("Filesystem cache failure.");
     }
+    printf("----acquired\n");
+    lock_acquire(&hand_lock);
 
     if (hash_size(&cache_table) == CACHE_SIZE) {
         /* Pick a cache entry to evict, and kick it out of the cache 
@@ -112,6 +120,12 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
 
             /* Lock this cache block */
             read_lock(cb);
+
+            /* If cache block changed, retry */
+            if (cache[cache_get_entry(sector_idx)->cache_idx].sector_idx != sector_idx) {
+                return cache_miss(sector_idx);
+            }
+    printf("----here\n");
             ASSERT(cb->valid);
             if (cb->accessed) {
                 cb->accessed = 0;
@@ -136,9 +150,8 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
                 break;
             }
         }
-    }
-
     ASSERT(!cache[hand].valid);
+    }
     centry->cache_idx = hand; 
     hand = (hand + 1) % CACHE_SIZE;
     centry->sector_idx = sector_idx;  
@@ -153,6 +166,8 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
     cblock->valid = 1;
     block_read(fs_device, sector_idx, cblock->data);
     write_unlock(cblock);
+    printf("----released\n");
+    lock_release(&hand_lock);
     return centry;
 }
 
