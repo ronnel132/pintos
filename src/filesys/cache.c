@@ -111,12 +111,12 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
             cb = &cache[hand];
 
             /* Lock this cache block */
-            write_lock(cb);
+            read_lock(cb);
             ASSERT(cb->valid);
             if (cb->accessed) {
                 cb->accessed = 0;
                 hand = (hand + 1) % CACHE_SIZE;
-                write_unlock(cb);
+                read_unlock(cb);
             }
             else {
                 cb->valid = 0;
@@ -132,7 +132,7 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
                 }
                 
                 free(hash_entry(elem, struct cache_entry, elem));
-                write_unlock(cb);
+                read_unlock(cb);
                 break;
             }
         }
