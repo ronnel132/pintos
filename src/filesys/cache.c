@@ -352,7 +352,6 @@ void read_ahead(block_sector_t sector_idx, block_sector_t next_sector_idx) {
 
     if (list_size(&read_ahead_list) < 256) {
         raentry = (struct read_ahead_entry *) malloc(sizeof(struct read_ahead_entry));
-        ASSERT(raentry != NULL);
 
         if (raentry != NULL) {
             raentry->sector_idx = sector_idx;
