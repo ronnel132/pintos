@@ -701,6 +701,10 @@ mapid_t mmap(int fd, void *addr) {
     }
 
     f = file_reopen(pd->files[fd]);
+    if (pd->files[fd]->deny_write) {
+        file_deny_write(f);
+    }
+
     for (i = 0; i < num_pages; i++) {
         mapping = (struct vm_area_struct *)
                   calloc(1, sizeof(struct vm_area_struct));
@@ -722,6 +726,9 @@ mapid_t mmap(int fd, void *addr) {
         mapping->pg_read_bytes = i == num_pages - 1 ?
                                  size - (PGSIZE * (num_pages - 1)) :
                                  PGSIZE;
+
+        // TODO IS THE FOLLOWING CORRECT?:
+        mapping->writable = f->deny_write;
 
         spt_add(cur_thread, mapping);
 
