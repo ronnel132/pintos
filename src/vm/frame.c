@@ -80,6 +80,7 @@ void frame_add(struct thread *t, void *upage, void *kpage) {
     /* The frame table remains ordered by the physical address of the frame. */
     lock_acquire(&frame_lock);
     list_insert_ordered(&frame_table, &frame->elem, &frame_less, NULL);
+    list_push_back(&frame_queue, &frame->q_elem);
     lock_release(&frame_lock);
 }
 
