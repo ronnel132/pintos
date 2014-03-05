@@ -24,6 +24,20 @@ void spt_add(struct thread *t, struct vm_area_struct *vm_area) {
     list_insert_ordered(&t->spt, &vm_area->elem, &spt_less, NULL);
 }
 
+/* Returns the vm_area_struct in thread T corresponding to UPAGE. If not 
+   present, return NULL. */
+struct vm_area_struct *spt_get_struct(struct thread *t, void *upage) {
+    struct list_elem *e;
+    struct vm_area_struct *iter;
+    for (e = list_begin(&t->spt); e != list_end(&t->spt); e = list_next(e)) {
+        iter = list_entry(e, struct vm_area_struct, elem);
+        if (iter->vm_start == upage) {
+            return iter;
+        }
+    }
+    return NULL;
+}
+
 /* Removes a vm_area_struct from its supplemental page table. */
 void spt_remove(struct vm_area_struct *vm_area) {
     list_remove(&vm_area->elem);

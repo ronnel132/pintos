@@ -2,6 +2,7 @@
 #define PAGE_H
 
 #include <list.h>
+#include "devices/block.h"
 #include "filesys/off_t.h"
 #include "threads/thread.h"
 
@@ -40,6 +41,9 @@ struct vm_area_struct {
     /* Offset in the mapped file. */
     off_t ofs;
 
+    /* Sector index within the swap partition. NULL if pg_type != SWAP. */
+    block_sector_t swap_ind; 
+
     /* The type of page. */
     enum pg_type_flags pg_type;
 
@@ -47,9 +51,8 @@ struct vm_area_struct {
 };
 
 void spt_add(struct thread *t, struct vm_area_struct *vm_area);  
-
+struct vm_area_struct *spt_get_struct(struct thread *t, void *upage);
 void spt_remove(struct vm_area_struct *vm_area);
-
 bool spt_less(struct list_elem *e1, struct list_elem *e2, void *aux UNUSED);
 
 #endif

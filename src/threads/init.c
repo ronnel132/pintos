@@ -131,6 +131,7 @@ int main(void) {
 
 #ifdef VM
     list_init(&frame_table);
+    list_init(&frame_queue);
     swap_init();
 #endif
 

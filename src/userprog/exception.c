@@ -223,7 +223,7 @@ static void page_fault(struct intr_frame *f) {
                 kill(f);
             }
             /* Add the new page-frame mapping to the frame table. */
-            frame_add(t->tid, pg_round_down(fault_addr), new_page);
+            frame_add(t, pg_round_down(fault_addr), new_page);
         }
         else {
             if ((fault_addr == esp - 4) || (fault_addr == esp - 32)) {

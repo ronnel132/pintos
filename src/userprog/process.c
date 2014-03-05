@@ -566,7 +566,7 @@ static bool setup_stack(void **esp, int argc, char **argv) {
     success = install_page(upage, kpage, true);
     if (success) {
 #ifdef VM
-        frame_add(thread_current()->tid, upage, kpage);
+        frame_add(thread_current(), upage, kpage);
 
         /* First add the vm area to the supplemental page table. */
         vma = (struct vm_area_struct *) malloc(sizeof(struct vm_area_struct));
