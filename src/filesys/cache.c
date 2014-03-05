@@ -20,6 +20,12 @@ void cache_init(void) {
         cache[i].valid = 0;
         cache[i].accessed = 0;
         cache[i].dirty = 0;
+        
+        /* Init rwlock stuff */
+        lock_init(&(cache[i].rwl.wl));
+        lock_init(&(cache[i].rwl.mutex));
+        cache[i].rwl.num_readers = 0;
+        cond_init(&(cache[i].rwl.w_cond));
     }
     hash_init(&cache_table, &cache_hash, &cache_less, NULL);
     hand = 0;
@@ -154,7 +160,7 @@ void cache_write(block_sector_t sector_idx, void *buffer, off_t size,
 
 
 /* Acquire a read lock for this cache descriptor */
-static void read_lock(struct cache_desc *cd) {
+static void read_lock(struct cache_block *cd) {
     ASSERT(cd != NULL);
     struct rwlock *rwl = &(cd->rwl);
     struct lock *mutex = &(rwl->mutex); 
@@ -182,7 +188,7 @@ static void read_lock(struct cache_desc *cd) {
 
 
 /* Release a read lock for this cache descriptor */
-static void read_unlock(struct cache_desc *cd) {
+static void read_unlock(struct cache_block *cd) {
     ASSERT(cd != NULL);
     struct rwlock *rwl = &(cd->rwl);
     struct lock *mutex = &(rwl->mutex); 
@@ -200,7 +206,7 @@ static void read_unlock(struct cache_desc *cd) {
 
 
 /* Acquire a write lock for this cache descriptor */
-static void write_lock(struct cache_desc *cd) {
+static void write_lock(struct cache_block *cd) {
     ASSERT(cd != NULL);
     struct rwlock *rwl = &(cd->rwl);
     struct lock *mutex = &(rwl->mutex); 
@@ -228,7 +234,7 @@ static void write_lock(struct cache_desc *cd) {
 
 
 /* Release a write lock for this cache descriptor */
-static void write_unlock(struct cache_desc *cd) {
+static void write_unlock(struct cache_block *cd) {
     ASSERT(cd != NULL);
     struct rwlock *rwl = &(cd->rwl);
     struct lock *wl = &(rwl->wl);

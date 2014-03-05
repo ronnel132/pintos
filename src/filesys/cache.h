@@ -28,12 +28,6 @@ struct rwlock {
 
 
 
-// TODO: DUMMY, remove
-struct cache_desc {
-    struct rwlock rwl;
-};
-
-
 /*! The mapping between filesys sector index and cache index. */
 struct hash cache_table; 
 
@@ -46,6 +40,9 @@ int hand;
 
 /*! An entry in the cache array. Contains the data and relevent metadata. */
 struct cache_block {
+    /* readwrite lock */
+    struct rwlock rwl;
+
     block_sector_t sector_idx; 
     
     /* TRUE if the block currently corresponds to a sector. FALSE otherwise. */
@@ -85,13 +82,13 @@ bool cache_less(const struct hash_elem *a, const struct hash_elem *b,
 
 
 /* Acquire a read lock for this cache descriptor */
-static void read_lock(struct cache_desc *cd);
+static void read_lock(struct cache_block *cd);
 /* Release a read lock for this cache descriptor */
-static void read_unlock(struct cache_desc *cd);
+static void read_unlock(struct cache_block *cd);
 
 /* Acquire a write lock for this cache descriptor */
-static void write_lock(struct cache_desc *cd);
+static void write_lock(struct cache_block *cd);
 /* Release a write lock for this cache descriptor */
-static void write_unlock(struct cache_desc *cd);
+static void write_unlock(struct cache_block *cd);
 
 #endif /* filesys/cache.h */
