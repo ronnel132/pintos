@@ -760,27 +760,27 @@ mapid_t mmap(int fd, void *addr) {
  */
 void munmap(mapid_t mid) {
     struct process * pd;
-    struct vm_area_struct * vas;
-    struct vm_area_struct * next_vas;
+    struct vm_area_struct * vma;
+    struct vm_area_struct * next_vma;
     struct file * f;
     int i;
 
     pd = thread_current()->process_details;
 
     if (pd->open_mapids[mid]) {
-        next_vas = pd->open_mmaps[mid].first_vm_area;
-        f = next_vas->vm_file;
+        next_vma = pd->open_mmaps[mid].first_vm_area;
+        f = next_vma->vm_file;
 
         for (i = 0; i < pd->open_mmaps[mid].num_pages; i++) {
-            vas = next_vas;
-            next_vas = list_entry(list_next(&(vas->elem)),
+            vma = next_vma;
+            next_vma = list_entry(list_next(&(vma->elem)),
                                   struct vm_area_struct,
                                   elem);
 
-            ASSERT(next_vas->vm_file == f);
-            ASSERT(next_vas->ofs > vas->ofs);
+            ASSERT(next_vma->vm_file == f);
+            ASSERT(next_vma->ofs > vma->ofs);
 
-            spt_remove(vas);
+            spt_remove(vma);
         }
 
         file_close(f);
