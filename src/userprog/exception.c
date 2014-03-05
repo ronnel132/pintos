@@ -136,6 +136,7 @@ static void page_fault(struct intr_frame *f) {
     struct list_elem *e;
     struct vm_area_struct *vma;
     void *esp; /* Esp of faulting thread */
+    bool fs_lock = false;
 
     /* Obtain faulting address, the virtual address that was accessed to cause
        the fault.  It may point to code or to data.  It is not necessarily the
@@ -209,7 +210,10 @@ static void page_fault(struct intr_frame *f) {
                 /* Checking for lock holder should be atomic */
                 intr_disable();
 
-                lock_acquire(&filesys_lock);
+                if (!lock_held_by_current_thread(&filesys_lock)) {
+                    lock_acquire(&filesys_lock);
+                    fs_lock = true;
+                }
                 intr_enable();
 
                 file_seek(vma->vm_file, vma->ofs);
@@ -218,7 +222,9 @@ static void page_fault(struct intr_frame *f) {
                 bytes_read = file_read(vma->vm_file, new_page,
                                       (off_t) vma->pg_read_bytes);
 
-                lock_release(&filesys_lock);
+                if (fs_lock) {
+                    lock_release(&filesys_lock);
+                }
 
                 ASSERT(bytes_read == vma->pg_read_bytes);
                 memset(new_page + bytes_read, 0, PGSIZE - bytes_read);
