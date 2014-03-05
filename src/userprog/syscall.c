@@ -316,6 +316,10 @@ void exit(int status) {
     mapid_t mid = 0;
     int fd = 0;
 
+    if (lock_held_by_current_thread(&filesys_lock)) {
+        lock_release(&filesys_lock);
+    }
+
     cur_thread = thread_current();
     pd = cur_thread->process_details;
 
@@ -338,6 +342,7 @@ void exit(int status) {
     if (lock_held_by_current_thread(&filesys_lock)) {
         lock_release(&filesys_lock);
     }
+
     thread_current()->exit_status = status;
     thread_exit();
 }
