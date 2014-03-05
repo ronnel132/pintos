@@ -14,6 +14,7 @@ struct lock swap_lock;
 /*! Initialize the swap device. */
 void swap_init(void) {
     swap_device = block_get_role(BLOCK_SWAP);
+    lock_init(&swap_lock);
     if (swap_device == NULL) {
         PANIC("No swap device found, can't initialize the swap partition.");
     }
