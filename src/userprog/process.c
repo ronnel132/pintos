@@ -399,7 +399,6 @@ bool load(int argc, const char **argv, void (**eip) (void), void **esp) {
             break;
         }
     }
-    lock_release(&filesys_lock);
 
     /* Set up stack. */
     if (!setup_stack(esp, argc, (char **) argv))
@@ -411,6 +410,7 @@ bool load(int argc, const char **argv, void (**eip) (void), void **esp) {
     success = true;
 
 done:
+    lock_release(&filesys_lock);
     /* We arrive here whether the load is successful or not. */
     return success;
 }
