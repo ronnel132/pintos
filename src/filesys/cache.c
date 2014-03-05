@@ -18,6 +18,7 @@ void cache_init(void) {
 static void cache_evict(void) {
     struct list_elem *e;
     struct cache_entry *c;
+    // TODO: Locks
     while (1) {
         e = list_pop_front(&cache_queue);
         c = list_entry(e, struct cache_entry, q_elem);
@@ -66,7 +67,8 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
     return ce;
 }
 
-/*! Find the cached sector at SECTOR_IDX and write SIZE bytes at offset
+
+/*! Find the cached sector at SECTOR_IDX and read SIZE bytes at offset
     OFFSET. */
 void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
                 off_t offset) {
