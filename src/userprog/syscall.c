@@ -308,6 +308,30 @@ void halt (void) {
 
 /* Terminates the current user program, returning status to the kernel. */
 void exit(int status) {
+    struct thread * cur_thread;
+    struct process * pd;
+    mapid_t mid = 0;
+    int fd = 0;
+
+    cur_thread = thread_current();
+    pd = cur_thread->process_details;
+
+    /* Unmap all open mmaps */
+    while (pd->num_mapids_open > 0) {
+        if (pd->open_mapids[mid]) {
+            munmap(mid);
+        }
+        mid++;
+    }
+
+    /* Close all open files */
+    while (pd->num_files_open > 0) {
+        if (pd->open_file_descriptors[fd]) {
+            close(fd);
+        }
+        fd++;
+    }
+
     if (lock_held_by_current_thread(&filesys_lock)) {
         lock_release(&filesys_lock);
     }
@@ -696,6 +720,7 @@ mapid_t mmap(int fd, void *addr) {
         /* The map id is the index into the open_mapids array. */
         if (pd->open_mapids[mid] == false) {
             pd->open_mapids[mid] = true;
+            pd->num_mapids_open++;
             break;
         }
     }
@@ -798,6 +823,7 @@ void munmap(mapid_t mid) {
 
         file_close(f);
         pd->open_mapids[mid] = false;
+        pd->num_mapids_open--;
 
         lock_release(&filesys_lock);
     }
