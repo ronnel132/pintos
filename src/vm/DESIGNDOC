@@ -1,4 +1,4 @@
-       	       	    +---------------------------+
+                    +---------------------------+
                     |           CS 124          |
                     | PROJECT 5: VIRTUAL MEMORY |
                     |      DESIGN DOCUMENT      |
@@ -28,8 +28,8 @@ Archan Luhar     <archan@caltech.edu>
 >> preparing your submission, other than the Pintos documentation, course
 >> text, lecture notes, and course instructors.
 
-			PAGE TABLE MANAGEMENT
-			=====================
+            PAGE TABLE MANAGEMENT
+            =====================
 
 ---- DATA STRUCTURES ----
 
@@ -42,9 +42,32 @@ Archan Luhar     <archan@caltech.edu>
 >> A2: In a few paragraphs, describe your code for locating the frame,
 >> if any, that contains the data of a given page.
 
+When a user process tries to access a user virtual address, there are two 
+possibilities: the page is already in some frame, or the page is located 
+somewhere else (swap, file system, etc). The first case is handled on the
+hardware level -- the valid bit is set for the pte corresponding to this user
+virtual address, therefore the MMU can perform the tranlation to the physical
+frame which contains the page.
+
+In the second case, the page fault handler deals with finding a frame in which
+we can store the page. We do so by calling palloc_get_page with the PAL_USER 
+option, then adding a mapping from this kpage to the faulting virtual page,
+so on page_fault return the user vaddr will be valid. Sometimes we are unable
+to obtain a kpage because the user pool is full. In this case, we call the 
+function frame_evict. This evicts a page using the page eviction policy, then
+returns the kpage of this frame. Thus, we now have a kpage that we are free to
+map to the faulting user page. 
+
 >> A3: How does your code coordinate accessed and dirty bits between
 >> kernel and user virtual addresses that alias a single frame, or
 >> alternatively how do you avoid the issue?
+
+We avoid this issue by using user virtual addresses for all accesses to the 
+physical frame. Our only interaction with the kpage vaddr is to initialize
+the page (by reading in from file system or swap if needed, into the kpage),
+then setting the mapping from the user virtual address to the kernel virtual
+address with pagedir_set_page. From then on, we interact only with the user
+virtual address.
 
 ---- SYNCHRONIZATION ----
 
@@ -56,8 +79,8 @@ Archan Luhar     <archan@caltech.edu>
 >> A5: Why did you choose the data structure(s) that you did for
 >> representing virtual-to-physical mappings?
 
-		       PAGING TO AND FROM DISK
-		       =======================
+               PAGING TO AND FROM DISK
+               =======================
 
 ---- DATA STRUCTURES ----
 
@@ -85,6 +108,11 @@ Archan Luhar     <archan@caltech.edu>
 >> textbook for an explanation of the necessary conditions for
 >> deadlock.)
 
+There is a frame lock, a swap lock, and no locks for supplemental page tables
+since each is dedicated to a process.
+
+//TODO
+
 >> B6: A page fault in process P can cause another process Q's frame
 >> to be evicted.  How do you ensure that Q cannot access or modify
 >> the page during the eviction process?  How do you avoid a race
@@ -110,8 +138,13 @@ Archan Luhar     <archan@caltech.edu>
 >> where your design falls along this continuum and why you chose to
 >> design it this way.
 
-			 MEMORY MAPPED FILES
-			 ===================
+We use several locks but limit ourselves such that there aren't locks for
+every single data structure but generalized locks for systems such as those
+which manage the frames, supplemental page tables, filesystem, and swap.
+
+
+             MEMORY MAPPED FILES
+             ===================
 
 ---- DATA STRUCTURES ----
 
@@ -119,14 +152,56 @@ Archan Luhar     <archan@caltech.edu>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+* thread.h: Mapping id
+typedef int mapid_t;
+
+* thread.h: Stores a mapping's details. The first vm area struct and the
+            number of pages allocated for the file.
+struct mmap_t {
+    struct vm_area_struct * first_vm_area;
+    int num_pages;
+};
+
+* thread.h: Added to the process struct details about open
+            mappings, just like open files.
+struct process {
+    ...
+    int num_mapids_open;
+    bool open_mapids[MAX_OPEN_FILES];
+    struct mmap_t open_mmaps[MAX_OPEN_FILES];
+};
+
+
 ---- ALGORITHMS ----
 
 >> C2: Describe how memory mapped files integrate into your virtual
 >> memory subsystem.  Explain how the page fault and eviction
 >> processes differ between swap pages and other pages.
 
+Memory mapped files are just pages added to the supplemental page table
+with properties set that inform the page fault handler that the page for a
+memory address is supposed to represent the contents of a file with a certain
+offset into the file.
+
+We do not differ evicting mapped file pages and other pages. We could write
+mapped file pages to the file instead of swap as this was not exactly
+specified by the instructions. In addition the instructor said it was alright
+to evict to swap all types of pages.
+
+We could have written some heuristics and added some flags to prevent
+this extra copy pasting but it was not deemed important for this pintos
+implementation.
+
+
 >> C3: Explain how you determine whether a new file mapping overlaps
 >> any existing segment.
+
+We determine whether a new file mapping overlaps any existing segment by
+calculating the number of pages required for the mapping and going through
+each starting address for all the pages required for the mapping and making
+sure they are not already present in the supplemental page table for the
+process.
+
 
 ---- RATIONALE ----
 
@@ -137,8 +212,15 @@ Archan Luhar     <archan@caltech.edu>
 >> implementation either does or does not share much of the code for
 >> the two situations.
 
-			   SURVEY QUESTIONS
-			   ================
+The implementations are similar but the mapped executable mapping is not
+obviously writable back to memory as it doesn't get formally "munmap"ed while
+exiting as do other mappings which get written back. This is because it is
+not listed in the array of mappings for a process in the process_details.
+
+
+
+               SURVEY QUESTIONS
+               ================
 
 Answering these questions is optional, but it will help us improve the
 course in future quarters.  Feel free to tell us anything you
@@ -148,6 +230,7 @@ website.
 
 >> In your opinion, was this assignment, or any one of the three problems
 >> in it, too easy or too hard?  Did it take too long or too little time?
+Too long.
 
 >> Did you find that working on a particular part of the assignment gave
 >> you greater insight into some aspect of OS design?

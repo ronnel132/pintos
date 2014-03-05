@@ -4,6 +4,7 @@
 #include "vm/frame.h"
 #include "vm/swap.h"
 #include "threads/malloc.h"
+#include "threads/palloc.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
@@ -48,30 +49,7 @@ void *frame_evict(void) {
             ASSERT(vma->pg_type != SWAP);
             ASSERT(vma->kpage != NULL);
 
-            /* If it's a file don't swap; write back */
-//             if (vma->pg_type == FILE_SYS) {
-//                 if (pagedir_is_dirty(frame->thread->pagedir, frame->upage)) {
-//                     old_level = intr_disable();
-//                     if (!lock_held_by_current_thread(&filesys_lock)) {
-//                         fs_lock = 1;
-//                         lock_acquire(&filesys_lock);
-//                     }
-//                     intr_set_level(old_level);
-// 
-//                     ASSERT(vma->writable);
-// 
-//                     file_seek(vma->vm_file, vma->ofs);
-//                     bytes_written = file_write(vma->vm_file,
-//                                                vma->vm_start,
-//                                                vma->pg_read_bytes);
-//                     ASSERT(bytes_written == vma->pg_read_bytes);
-// 
-//                     if (fs_lock == 1) {
-//                         lock_release(&filesys_lock);
-//                     }
-//                 }
-//             }
-            if (vma->pg_type == ZERO || vma->pg_type == PMEM || vma->pg_type == FILE_SYS) {
+            if (vma->pg_type != SWAP) {
                 /* A stack page. */
                 vma->kpage = NULL;
                 vma->pg_type = SWAP;
