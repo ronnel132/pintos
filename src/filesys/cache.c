@@ -26,6 +26,7 @@ void cache_init(void) {
         lock_init(&(cache[i].rwl.mutex));
         cache[i].rwl.num_readers = 0;
         cond_init(&(cache[i].rwl.w_cond));
+        cond_init(&(cache[i].rwl.r_cond));
     }
     hash_init(&cache_table, &cache_hash, &cache_less, NULL);
     hand = 0;
@@ -76,6 +77,7 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
     if (ce == NULL) {
         PANIC("Filesystem cache failure.");
     }
+
     if (hash_size(&cache_table) == CACHE_SIZE) {
         cache_evict();
     }
@@ -175,12 +177,8 @@ static void read_lock(struct cache_block *cd) {
 
     /* Else wait for writer to finish */
     else {
-        lock_release(mutex);
-
-        lock_acquire(wl);
-        /* If we were able to get wl, writer has finished */
         lock_acquire(mutex);
-        lock_release(wl);
+        cond_wait(&(rwl->r_cond), mutex);
         rwl->num_readers++;
         lock_release(mutex);
     }
@@ -219,7 +217,6 @@ static void write_lock(struct cache_block *cd) {
         if (rwl->num_readers > 0) {
             /* Wait for them to finish */
             cond_wait(&(rwl->w_cond), mutex);
-
             lock_release(mutex);
         }
 
@@ -237,9 +234,17 @@ static void write_lock(struct cache_block *cd) {
 static void write_unlock(struct cache_block *cd) {
     ASSERT(cd != NULL);
     struct rwlock *rwl = &(cd->rwl);
+    struct lock *mutex = &(rwl->mutex); 
     struct lock *wl = &(rwl->wl);
+    
+    lock_acquire(mutex);
 
+    /* If there's any readers, let's signal them */
+    if (rwl->num_readers > 0) {
+        cond_signal(&(rwl->r_cond), mutex);
+    }
     lock_release(wl);
+    lock_release(mutex);
 }
 
 

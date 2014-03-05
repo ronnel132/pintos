@@ -19,6 +19,9 @@ struct rwlock {
     /* Writer condition variable */
     struct condition w_cond;
 
+    /* Readers condition variable */
+    struct condition r_cond;
+
     /* Mutex for small operations, like checking num_readers */
     struct lock mutex;
 
