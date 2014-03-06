@@ -142,7 +142,7 @@ int main(void) {
 #endif
 
 #ifdef VM
-    list_init(&frame_table);
+    hash_init(&frame_table, &frame_hash_func, &frame_less, NULL);
     list_init(&frame_queue);
     swap_init();
 #endif

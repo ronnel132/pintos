@@ -66,13 +66,16 @@ block_sector_t swap_add(void *kpage) {
     return i; 
 }
 
-/* Remove the swapped in page at SECTOR, and write it to BUFFER. */
+/* Remove the swapped in page at SECTOR, and write it to BUFFER.
+   If BUFFER is NULL, remove from swap table and do NOT perform write. */
 void swap_remove(block_sector_t sector, void *buffer) {
     struct hash_elem *e;
     struct swap_slot ss;
     block_sector_t i;
-    for (i = 0; i < SECTORS_PER_PAGE; i++) {
-        block_read(swap_device, sector + i, buffer + BLOCK_SECTOR_SIZE * i);
+    if (buffer != NULL) {
+        for (i = 0; i < SECTORS_PER_PAGE; i++) {
+            block_read(swap_device, sector + i, buffer + BLOCK_SECTOR_SIZE * i);
+        }
     }
     /* Remove the struct swap_slot from the swap table. */ 
     ss.sector_ind = sector; 
