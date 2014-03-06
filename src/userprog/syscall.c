@@ -56,6 +56,8 @@ extern struct list all_list;
  */
 bool valid_user_pointer(const void *ptr) {
     uint32_t *pd, *pde;
+    struct list_elem *e;
+    struct vm_area_struct *iter;
     struct thread *t = thread_current();
     void *esp = t->esp;
 
@@ -72,8 +74,11 @@ bool valid_user_pointer(const void *ptr) {
     /* Look through the vm_area stucts to see if address falls
      * in one of them
      */
-    if (spt_present(t, pg_round_down(ptr))) {
-        return true;
+    for (e = list_begin(&t->spt); e != list_end(&t->spt); e = list_next(e)) {
+        iter = list_entry(e, struct vm_area_struct, elem);
+        if (ptr < iter->vm_end && ptr > iter->vm_start) {
+            return true;
+        }
     }
 
     /* If the pointer is above esp (but in user_vaddr), it may correspond to
@@ -314,7 +319,7 @@ void exit(int status) {
     struct process * pd;
     mapid_t mid = 0;
     int fd = 0;
-
+/*
     if (lock_held_by_current_thread(&filesys_lock)) {
         lock_release(&filesys_lock);
     }
@@ -322,7 +327,7 @@ void exit(int status) {
     cur_thread = thread_current();
     pd = cur_thread->process_details;
 
-    /* Unmap all open mmaps */
+    /* Unmap all open mmaps 
     while (pd->num_mapids_open > 0) {
         if (pd->open_mapids[mid]) {
             munmap(mid);
@@ -330,14 +335,14 @@ void exit(int status) {
         mid++;
     }
 
-    /* Close all open files */
+    /* Close all open files 
     while (pd->num_files_open > 0) {
         if (pd->open_file_descriptors[fd]) {
             close(fd);
         }
         fd++;
     }
-
+*/
     if (lock_held_by_current_thread(&filesys_lock)) {
         lock_release(&filesys_lock);
     }
@@ -683,10 +688,6 @@ mapid_t mmap(int fd, void *addr) {
         return MAP_FAILED;
     }
 
-    if (!is_user_vaddr(addr)) {
-        exit(EXIT_BAD_PTR);
-    }
-
     /* LOCK filesystem while getting information about address range and
      * file.
      */
@@ -746,16 +747,7 @@ mapid_t mmap(int fd, void *addr) {
                   calloc(1, sizeof(struct vm_area_struct));
 
         mapping->vm_start = addr + i * PGSIZE;
-
-        if (!valid_user_pointer(mapping->vm_start)) {
-            exit(EXIT_BAD_PTR);
-        }
-
         mapping->vm_end = mapping->vm_start + PGSIZE - sizeof(uint8_t);
-        if (!valid_user_pointer(mapping->vm_end)) {
-            exit(EXIT_BAD_PTR);
-        }
-
         mapping->pg_type = FILE_SYS;
         mapping->vm_file = f;
         mapping->ofs = i * PGSIZE;
@@ -763,18 +755,7 @@ mapid_t mmap(int fd, void *addr) {
                                  size - (PGSIZE * (num_pages - 1)) :
                                  PGSIZE;
 
-        // TODO IS THE FOLLOWING CORRECT?:
-        // mapping->writable = f->deny_write;
-
         spt_add(cur_thread, mapping);
-
-        /* Check if the user pointers for the boundaries of the mapping are
-           valid AFTER we add to the supplemental page table, because the spt
-           checks the spt to determine if a user memory address is valid. */
-        if (!valid_user_pointer(mapping->vm_start) ||
-            !valid_user_pointer(mapping->vm_end)) {
-            exit(EXIT_BAD_PTR);
-        }
 
         if (i == 0) {
             pd->open_mmaps[mid].first_vm_area = mapping;
@@ -811,12 +792,18 @@ void munmap(mapid_t mid) {
         next_vma = pd->open_mmaps[mid].first_vm_area;
         f = next_vma->vm_file;
 
+        ASSERT(next_vma != NULL);
+        ASSERT(f != NULL);
+
         for (i = 0; i < pd->open_mmaps[mid].num_pages; i++) {
             vma = next_vma;
-            next_vma = spt_get_struct(cur_thread, vma->vm_start + PGSIZE);
+            next_vma = list_entry(list_next(&(vma->elem)),
+                                  struct vm_area_struct,
+                                  elem);
 
-            ASSERT(next_vma->vm_file == f);
-            ASSERT(next_vma->ofs > vma->ofs);
+            ASSERT(vma != NULL);
+            ASSERT(vma->vm_file != NULL);
+            ASSERT(vma->vm_file == f);
 
             /* Write dirty page to file */
             if (pagedir_is_dirty(cur_thread->pagedir, vma->vm_start)) {
@@ -827,7 +814,7 @@ void munmap(mapid_t mid) {
                 ASSERT(bytes_written == vma->pg_read_bytes);
             }
 
-            spt_remove(cur_thread, vma);
+            spt_remove(vma);
         }
 
         file_close(f);
