@@ -85,6 +85,11 @@ Archan Luhar     <archan@caltech.edu>
 >> textbook for an explanation of the necessary conditions for
 >> deadlock.)
 
+There is a frame lock, a swap lock, and no locks for supplemental page tables
+since each is dedicated to a process.
+
+//TODO
+
 >> B6: A page fault in process P can cause another process Q's frame
 >> to be evicted.  How do you ensure that Q cannot access or modify
 >> the page during the eviction process?  How do you avoid a race
