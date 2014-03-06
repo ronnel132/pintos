@@ -315,7 +315,7 @@ void exit(int status) {
     struct process * pd;
     mapid_t mid = 0;
     int fd = 0;
-/*
+
     if (lock_held_by_current_thread(&filesys_lock)) {
         lock_release(&filesys_lock);
     }
@@ -323,7 +323,7 @@ void exit(int status) {
     cur_thread = thread_current();
     pd = cur_thread->process_details;
 
-    /* Unmap all open mmaps 
+    /* Unmap all open mmaps */
     while (pd->num_mapids_open > 0) {
         if (pd->open_mapids[mid]) {
             munmap(mid);
@@ -331,14 +331,14 @@ void exit(int status) {
         mid++;
     }
 
-    /* Close all open files 
+    /* Close all open files */
     while (pd->num_files_open > 0) {
         if (pd->open_file_descriptors[fd]) {
             close(fd);
         }
         fd++;
     }
-*/
+
     if (lock_held_by_current_thread(&filesys_lock)) {
         lock_release(&filesys_lock);
     }
@@ -755,6 +755,7 @@ mapid_t mmap(int fd, void *addr) {
         mapping->pg_read_bytes = i == num_pages - 1 ?
                                  size - (PGSIZE * (num_pages - 1)) :
                                  PGSIZE;
+        mapping->writable = true;
 
         spt_add(cur_thread, mapping);
 
