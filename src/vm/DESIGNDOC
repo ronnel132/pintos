@@ -13,6 +13,7 @@ Ronnel Boettcher <ronnel@caltech.edu>
 Archan Luhar     <archan@caltech.edu>
 
 >> Specify how many late tokens you are using on this assignment:  
+0
 
 >> What is the Git repository and commit hash for your submission?
 
@@ -23,6 +24,12 @@ Archan Luhar     <archan@caltech.edu>
 
 >> If you have any preliminary comments on your submission, notes for the
 >> TAs, or extra credit, please give them here.
+A remark regarding the eviction policy: We implemented second
+chance, however, had some issues at the very last moments before
+submission. We found out that FIFO isn't too bad wall-clock wise,
+thus converted the second chance to a FIFO eviction. However,
+the second chance implementation is still there, and can be 
+enabled by commenting/uncommenting 2 lines.
 
 >> Please cite any offline or online sources you consulted while
 >> preparing your submission, other than the Pintos documentation, course
@@ -217,6 +224,9 @@ since each is dedicated to a process.
 >> to be evicted.  How do you ensure that Q cannot access or modify
 >> the page during the eviction process?  How do you avoid a race
 >> between P evicting Q's frame and Q faulting the page back in?
+
+We remove the page from that processes page directory. We use a frame lock to
+lock the replacement process.
 
 >> B7: Suppose a page fault in process P causes a page to be read from
 >> the file system or swap.  How do you ensure that a second process Q
