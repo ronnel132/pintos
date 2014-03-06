@@ -67,12 +67,12 @@ bool spt_less(struct hash_elem *e1, struct hash_elem *e2, void *aux UNUSED) {
 }
 
 /* Free the entries in T's supplemental page table. */
-void spt_free(struct thread *t) {
+void spt_free(struct hash *spt) {
     struct vm_area_struct *vma;
     struct hash_iterator i;
     struct frame f;
     
-    hash_first(&i, &t->spt);
+    hash_first(&i, spt);
     while (hash_next(&i)) {
         vma = hash_entry(hash_cur(&i), struct vm_area_struct, elem);
         if (vma->pg_type == SWAP) {
@@ -80,6 +80,7 @@ void spt_free(struct thread *t) {
         }
         else if (vma->pg_type == PMEM) {
             f.kpage = vma->kpage; 
+            palloc_free_page(vma->kpage);
             frame_table_remove(&f);
         }
         free(vma);
