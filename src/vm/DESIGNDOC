@@ -88,6 +88,104 @@ virtual address.
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+struct frame {
+    /* The kernel virtual address of the frame. */
+    void *kpage;
+    /* The virtual address of the page that currently occupies the frame at 
+       index FRAME_NUM. */
+    void *upage;
+    /* Store the pointer to the thread/process that owns this upage. */
+    struct thread *thread;
+    
+    /* The list_elem in the frame table list. */
+    struct hash_elem elem;
+
+    /* The list_elem for the frame queue for eviction policy. */
+    struct list_elem q_elem;
+};
+
+>> The frame struct keeps track of items in the frame table -- in physical 
+memory. 
+
+struct hash frame_table;
+
+>> The frame_table variable is a global hash table which stores frame struct
+types. It is used for keeping track of the state of the physical frames.
+
+struct list frame_queue;
+
+>> The frame_queue is used internally by the frame table to implement the 
+eviction policy, FIFO.
+
+enum pg_type_flags {
+    /* Page is in the file system. */
+    FILE_SYS = 001,
+    /* Page is in swap space. */
+    SWAP = 002,
+    /* Page is all zeros. */
+    ZERO = 003,
+    /* Page is in physical memory. */
+    PMEM = 004
+};
+
+>> Used internally to denote the type of page stored in a vm_area_struct.
+
+struct vm_area_struct {
+    /* Virtual memory start and end addresses. */
+    void *vm_start;
+    void *vm_end;
+
+    /* The kernel virtual address for when pg_type == PMEM. */
+    void *kpage; 
+
+    /* Is this memory area writable. */
+    bool writable;
+
+    /* Is this area pinned */
+    bool pinned;
+
+    /* Pointer to the file object of the mapped file, if any. */
+    struct file *vm_file;
+
+    /* Offset in the mapped file. */
+    off_t ofs;
+
+    uint32_t pg_read_bytes;
+
+    /* Sector index within the swap partition. NULL if pg_type != SWAP. */
+    block_sector_t swap_ind; 
+
+    /* The type of page. */
+    enum pg_type_flags pg_type;
+
+    struct hash_elem elem;
+};
+
+>> The vm_area_struct are the entries stored in the supplemental page table. 
+Each vm_area_struct keeps track of an individual page allocated by the user 
+process. 
+
+struct block *swap_device;
+
+>> The swap_device is the swap block struct returned by block_get_role() used
+to access and manipulate the swap partition. 
+
+struct hash swap_table;
+
+>> The global swap table is used for interacting with the global swap 
+partition. We use a hash table for the implementation.
+
+struct swap_slot {
+    /* The sector index of the page stored in swap. */
+    block_sector_t sector_ind; 
+
+    struct hash_elem hash_elem;
+};
+
+>> A swap_slot, stored in the swap_table. Each swap_slot corresponds to 8
+sectors, since 8 * SWAP_BLOCK_SIZE = PGSIZE. Each swap_slot in the hash
+table corresponds to a page written into swap.
+
 ---- ALGORITHMS ----
 
 >> B2: When a frame is required but none is free, some frame must be
@@ -96,6 +194,8 @@ virtual address.
 >> B3: When a process P obtains a frame that was previously used by a
 >> process Q, how do you adjust the page table (and any other data
 >> structures) to reflect the frame Q no longer has?
+
+
 
 >> B4: Explain your heuristic for deciding whether a page fault for an
 >> invalid virtual address should cause the stack to be extended into
