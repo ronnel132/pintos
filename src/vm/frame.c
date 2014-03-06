@@ -72,7 +72,6 @@ void *frame_evict(void) {
             list_push_back(&frame_queue, &frame->q_elem);
         }
     }
-    printf("releaseing 1, after loop\n");
     lock_release(&frame_lock);
 }
 
