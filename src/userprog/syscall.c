@@ -289,7 +289,7 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             if ((!valid_user_pointer(arg1)) || (!valid_user_pointer(arg2))) {
                 exit(EXIT_BAD_PTR);
             }
-            mmap(*((int *)arg1), *((void **)arg2)); 
+            f->eax = mmap(*((int *)arg1), *((void **)arg2)); 
             break;
 
         case SYS_MUNMAP:
