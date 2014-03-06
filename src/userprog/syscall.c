@@ -716,18 +716,26 @@ mapid_t mmap(int fd, void *addr) {
         num_pages++;
     }
 
-
     /* Get process struct to reopen file for mapping */
     cur_thread = thread_current();
     pd = cur_thread->process_details;
 
-    /* If there are no available mapids */
+
+    /* Check that all addresses are available in supplemental page table. */
+    for (i = 0; i < num_pages; i++) {
+        if (spt_present(cur_thread, addr + i * PGSIZE) {
+            lock_release(&filesys_lock);
+            return MAP_FAILED;
+        }
+    }
+
+    /* Check that there are available mapids open */
     if (pd->num_mapids_open >= MAX_OPEN_FILES) {
         lock_release(&filesys_lock);
         return MAP_FAILED;
     }
 
-    /* Search for first available file descriptor */
+    /* Search for first available mapid */
     for (mid = 0; mid < MAX_OPEN_FILES; mid++) {
         /* The map id is the index into the open_mapids array. */
         if (pd->open_mapids[mid] == false) {
@@ -737,11 +745,8 @@ mapid_t mmap(int fd, void *addr) {
         }
     }
 
+    /* Get file and add mappings for each page */
     f = file_reopen(pd->files[fd]);
-    // if (pd->files[fd]->deny_write) {
-    //     file_deny_write(f);
-    // }
-
     for (i = 0; i < num_pages; i++) {
         mapping = (struct vm_area_struct *)
                   calloc(1, sizeof(struct vm_area_struct));
@@ -797,9 +802,7 @@ void munmap(mapid_t mid) {
 
         for (i = 0; i < pd->open_mmaps[mid].num_pages; i++) {
             vma = next_vma;
-            next_vma = list_entry(list_next(&(vma->elem)),
-                                  struct vm_area_struct,
-                                  elem);
+            next_vma = spt_get_struct(cur_thread, vma->vm_start + PGSIZE);
 
             ASSERT(vma != NULL);
             ASSERT(vma->vm_file != NULL);
@@ -814,7 +817,7 @@ void munmap(mapid_t mid) {
                 ASSERT(bytes_written == vma->pg_read_bytes);
             }
 
-            spt_remove(vma);
+            spt_remove(cur_thread, vma);
         }
 
         file_close(f);
