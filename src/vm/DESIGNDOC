@@ -108,6 +108,11 @@ virtual address.
 >> textbook for an explanation of the necessary conditions for
 >> deadlock.)
 
+There is a frame lock, a swap lock, and no locks for supplemental page tables
+since each is dedicated to a process.
+
+//TODO
+
 >> B6: A page fault in process P can cause another process Q's frame
 >> to be evicted.  How do you ensure that Q cannot access or modify
 >> the page during the eviction process?  How do you avoid a race
@@ -132,6 +137,11 @@ virtual address.
 >> possibility for deadlock but allows for high parallelism.  Explain
 >> where your design falls along this continuum and why you chose to
 >> design it this way.
+
+We use several locks but limit ourselves such that there aren't locks for
+every single data structure but generalized locks for systems such as those
+which manage the frames, supplemental page tables, filesystem, and swap.
+
 
              MEMORY MAPPED FILES
              ===================
