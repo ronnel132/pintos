@@ -42,9 +42,32 @@ Archan Luhar     <archan@caltech.edu>
 >> A2: In a few paragraphs, describe your code for locating the frame,
 >> if any, that contains the data of a given page.
 
+When a user process tries to access a user virtual address, there are two 
+possibilities: the page is already in some frame, or the page is located 
+somewhere else (swap, file system, etc). The first case is handled on the
+hardware level -- the valid bit is set for the pte corresponding to this user
+virtual address, therefore the MMU can perform the tranlation to the physical
+frame which contains the page.
+
+In the second case, the page fault handler deals with finding a frame in which
+we can store the page. We do so by calling palloc_get_page with the PAL_USER 
+option, then adding a mapping from this kpage to the faulting virtual page,
+so on page_fault return the user vaddr will be valid. Sometimes we are unable
+to obtain a kpage because the user pool is full. In this case, we call the 
+function frame_evict. This evicts a page using the page eviction policy, then
+returns the kpage of this frame. Thus, we now have a kpage that we are free to
+map to the faulting user page. 
+
 >> A3: How does your code coordinate accessed and dirty bits between
 >> kernel and user virtual addresses that alias a single frame, or
 >> alternatively how do you avoid the issue?
+
+We avoid this issue by using user virtual addresses for all accesses to the 
+physical frame. Our only interaction with the kpage vaddr is to initialize
+the page (by reading in from file system or swap if needed, into the kpage),
+then setting the mapping from the user virtual address to the kernel virtual
+address with pagedir_set_page. From then on, we interact only with the user
+virtual address.
 
 ---- SYNCHRONIZATION ----
 
