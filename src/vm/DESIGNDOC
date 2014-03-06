@@ -241,6 +241,28 @@ frame.
 >> B4: Explain your heuristic for deciding whether a page fault for an
 >> invalid virtual address should cause the stack to be extended into
 >> the page that faulted.
+There are 3 cases when the stack needs to be extended:
+
+When a push happens. In this case, the faulting address will
+be 4 bytes above the esp (as described in the spec). If this happens, 
+the a new frame will be acquired and mapped into the appropriate
+user page.
+
+When a pusha happens. In this case, the faulting address will
+be 32 bytes above the esp (as described in the spec). If this happens, 
+the a new frame will be acquired and mapped into the appropriate
+user page.
+
+When the faulting address is above ESP, but still is_valid_user_addr(). 
+This could happen in the following scenario: a user program statically allocates
+(in the stack) a very large array. What that does, is that it 
+just subtracts the array size from ESP, but it the size is
+large enough, it can make ESP "fall into" a different (probably unallocated)
+page. Moreover, it can also happen that there could be a few unallocated
+pages between ESP and where the beginning of the stack is 
+(if we're statically allocating a very large array).
+So we also check for that, and we map the appropriate page (even
+if it falls above ESP).
 
 ---- SYNCHRONIZATION ----
 
@@ -374,7 +396,7 @@ website.
 
 >> In your opinion, was this assignment, or any one of the three problems
 >> in it, too easy or too hard?  Did it take too long or too little time?
-Too long.
+Too little.
 
 >> Did you find that working on a particular part of the assignment gave
 >> you greater insight into some aspect of OS design?
