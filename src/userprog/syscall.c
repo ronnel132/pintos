@@ -71,15 +71,8 @@ bool valid_user_pointer(const void *ptr) {
         return false;
     }
 
-    /* Look through the vm_area stucts to see if address falls
-     * in one of them
-     */
-    for (e = list_begin(&t->spt); e != list_end(&t->spt); e = list_next(e)) {
-        iter = list_entry(e, struct vm_area_struct, elem);
-        if (ptr < iter->vm_end && ptr > iter->vm_start) {
-            return true;
-        }
-    }
+    /* Check if page in supplemental page table */
+    spt_present(t, pg_round_down(ptr));
 
     /* If the pointer is above esp (but in user_vaddr), it may correspond to
      * a part of the stack that would be later loaded lazily on a pagefault.
@@ -723,7 +716,7 @@ mapid_t mmap(int fd, void *addr) {
 
     /* Check that all addresses are available in supplemental page table. */
     for (i = 0; i < num_pages; i++) {
-        if (spt_present(cur_thread, addr + i * PGSIZE) {
+        if (spt_present(cur_thread, addr + i * PGSIZE)) {
             lock_release(&filesys_lock);
             return MAP_FAILED;
         }
