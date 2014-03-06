@@ -459,11 +459,10 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
         /* TODO: sector_idx = merge conflict third parameter "true"? */
         block_sector_t sector_idx = byte_to_sector(inode, offset);
         /* If there is no sector assigned to this offset, assign one. */
-        if ((int) sector_idx == -1) {
+        while ((int) sector_idx == -1) {
             tmp = allocate_at_byte(&inode->data, inode->sector, offset);
             /* Try again. */
             sector_idx = byte_to_sector(inode, offset);
-            ASSERT((int) sector_idx != -1);
         }
         int sector_ofs = offset % BLOCK_SECTOR_SIZE;
 
