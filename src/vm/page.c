@@ -1,5 +1,4 @@
 #include <debug.h>
-#include <list.h>
 #include "threads/malloc.h"
 #include "threads/thread.h"
 #include "vm/page.h"

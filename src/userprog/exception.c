@@ -178,7 +178,6 @@ static void page_fault(struct intr_frame *f) {
 //         kill(f);
 //     }
 
-    
     if (!user) {
         esp = t->esp;
     }
@@ -236,21 +235,20 @@ static void page_fault(struct intr_frame *f) {
                 memset(new_page, 0, PGSIZE);
             }
             else if (vma->pg_type == SWAP) {
-                ASSERT(vma->swap_ind != NULL);
                 /* Read in from swap into the new page. */
                 swap_remove(vma->swap_ind, new_page);
                 vma->swap_ind = NULL;
                 vma->pg_type = PMEM;
             }
 
-            if (!pagedir_set_page(t->pagedir, pg_round_down(fault_addr),
-                             new_page, vma->writable)) {
-                kill(f);
-            }
             /* Record the new kpage in the vm_area_struct. */
             vma->kpage = new_page;
             /* Add the new page-frame mapping to the frame table. */
             frame_add(t, pg_round_down(fault_addr), new_page);
+            if (!pagedir_set_page(t->pagedir, pg_round_down(fault_addr),
+                             new_page, vma->writable)) {
+                kill(f);
+            }
         }
         else {
             if ((fault_addr == esp - 4) || (fault_addr == esp - 32)) {
