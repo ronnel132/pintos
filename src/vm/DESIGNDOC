@@ -115,6 +115,11 @@ since each is dedicated to a process.
 >> where your design falls along this continuum and why you chose to
 >> design it this way.
 
+We use several locks but limit ourselves such that there aren't locks for
+every single data structure but generalized locks for systems such as those
+which manage the frames, supplemental page tables, filesystem, and swap.
+
+
              MEMORY MAPPED FILES
              ===================
 
