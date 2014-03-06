@@ -7,6 +7,8 @@
 #include "threads/thread.h"
 #include "threads/synch.h"
 
+/* Max size of read ahead list */
+#define MAX_RA_LIST 256
 
 /* Acquire a read lock for this cache descriptor */
 static void read_lock(struct cache_block *cb);
@@ -376,7 +378,7 @@ void read_ahead(block_sector_t sector_idx, block_sector_t next_sector_idx) {
     ASSERT(next_sector_idx != -1);
 
     lock_acquire(&ra_lock);
-    if (list_size(&read_ahead_list) < 256) {
+    if (list_size(&read_ahead_list) <= MAX_RA_LIST) {
         raentry = (struct read_ahead_entry *) malloc(sizeof(struct read_ahead_entry));
 
         if (raentry != NULL) {
