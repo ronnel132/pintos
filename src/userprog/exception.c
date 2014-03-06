@@ -147,10 +147,6 @@ static void page_fault(struct intr_frame *f) {
        [IA32-v3a] 5.15 "Interrupt 14--Page Fault Exception (#PF)". */
     asm ("movl %%cr2, %0" : "=r" (fault_addr));
 
-//     printf("pagefault_start\n");
-//     printf("%d\n", f->esp);
-
-
     /* Turn interrupts back on (they were only off so that we could
        be assured of reading CR2 before it changed). */
     intr_enable();
@@ -169,14 +165,6 @@ static void page_fault(struct intr_frame *f) {
      * If not this will freak out, but there's not much else we could do here
      * anyway, so it's OK
      */
-//     if (!user) {
-//         printf("page fault at %p: %s error %s page in %s context.\n",
-//            fault_addr,
-//            not_present ? "not present" : "rights violation",
-//            write ? "writing" : "reading",
-//            user ? "user" : "kernel");
-//         kill(f);
-//     }
 
     if (!user) {
         esp = t->esp;
@@ -185,14 +173,17 @@ static void page_fault(struct intr_frame *f) {
         esp = f->esp;
     }
 
+    /* If faulted due to page not present */
     if (not_present) {
         /* Iterate through the current thread's supplemental page table to 
            find if the faulting address is valid. */
 
         found_valid = spt_present(t, pg_round_down(fault_addr));
 
+        /* If it's in our suplemental page table */
         if (found_valid) {
             vma = spt_get_struct(t, pg_round_down(fault_addr));
+            vma->pinned = true;
             new_page = palloc_get_page(PAL_USER); 
             if (new_page == NULL) {
                 new_page = frame_evict();
@@ -205,6 +196,7 @@ static void page_fault(struct intr_frame *f) {
                 /* Checking for lock holder should be atomic */
                 intr_disable();
 
+                /* Only lock if we don't already have this lock */
                 if (!lock_held_by_current_thread(&filesys_lock)) {
                     lock_acquire(&filesys_lock);
                     fs_lock = true;
@@ -245,6 +237,7 @@ static void page_fault(struct intr_frame *f) {
             }
         }
         else {
+            /* Handling stack extension */
             if ((fault_addr == esp - 4) || (fault_addr == esp - 32)) {
                 /* Check for stack overflow */
                 if (fault_addr < STACK_MIN) {
@@ -271,7 +264,7 @@ static void page_fault(struct intr_frame *f) {
                 vma->kpage = new_page;
                 vma->pg_read_bytes = NULL;
                 vma->writable = true;
-                vma->pinned = false;
+                vma->pinned = true;
                 vma->vm_file = NULL;
                 vma->ofs = NULL;
                 vma->swap_ind = NULL;
@@ -281,6 +274,7 @@ static void page_fault(struct intr_frame *f) {
 
                 frame_add(t, pg_round_down(fault_addr), new_page);
             }
+            /* Other case of stack extension */
             else if (fault_addr >= esp) {
                 new_page = palloc_get_page(PAL_ZERO | PAL_USER);
                 if (new_page == NULL) {
@@ -301,7 +295,7 @@ static void page_fault(struct intr_frame *f) {
                 vma->kpage = new_page;
                 vma->pg_read_bytes = NULL;
                 vma->writable = true;
-                vma->pinned = false;
+                vma->pinned = true;
                 vma->vm_file = NULL;
                 vma->ofs = NULL;
                 vma->swap_ind = NULL;
@@ -314,24 +308,12 @@ static void page_fault(struct intr_frame *f) {
             
             /* Else is probably an invalid access */
             else {
-//                 printf("Page fault at %p: %s error %s page in %s context.\n",
-//                        fault_addr,
-//                        not_present ? "not present" : "rights violation",
-//                        write ? "writing" : "reading",
-//                        user ? "user" : "kernel");
-//                 kill(f);
                 exit(-1);
             }
         }
     }
     /* Rights violation */
     else {
-//         printf("Page fault at %p: %s error %s page in %s context.\n",
-//                fault_addr,
-//                not_present ? "not present" : "rights violation",
-//                write ? "writing" : "reading",
-//                user ? "user" : "kernel");
-//         kill(f);
         exit(-1);
     }
 
@@ -347,6 +329,6 @@ static void page_fault(struct intr_frame *f) {
     kill(f);
 
 #endif
-//     printf("pagefault_end\n");
+    vma->pinned = false;
 }
 

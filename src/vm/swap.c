@@ -98,6 +98,7 @@ unsigned swap_hash_func(const struct hash_elem *element, void *aux UNUSED) {
     return hash_int((int) ss->sector_ind);
 }
 
+/* Less function used to compare hash elements */
 bool swap_hash_less(const struct hash_elem *a, const struct hash_elem *b,
                     void *aux UNUSED) {
     struct swap_slot *ssa, *ssb; 
