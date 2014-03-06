@@ -202,7 +202,18 @@ table corresponds to a page written into swap.
 >> process Q, how do you adjust the page table (and any other data
 >> structures) to reflect the frame Q no longer has?
 
+The most common way this type of situation will occur is when Q's frame is
+evicted by the eviction policy. When this occurs, the frame struct in the 
+frame table which stores the mapping from the kpage to the virtual address
+and Q's thread struct is removed. Also, the vm_area_struct corresponding to
+the virtual address previously in the page is changed to denote that it has
+been moved to swap. This is done by altering the pg_type field and setting
+the swap_ind to be the index of the page storedin swap. 
 
+With these tasks completed, the process P can now add its page to the frame.
+It does so by simply creating an entry in the frame table, mapping P's thread
+struct and virtual page to the kpage which corresponds to this physical 
+frame. 
 
 >> B4: Explain your heuristic for deciding whether a page fault for an
 >> invalid virtual address should cause the stack to be extended into
