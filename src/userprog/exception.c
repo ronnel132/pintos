@@ -192,6 +192,7 @@ static void page_fault(struct intr_frame *f) {
         found_valid = spt_present(t, pg_round_down(fault_addr));
 
         if (found_valid) {
+            vma = spt_get_struct(t, pg_round_down(fault_addr));
             new_page = palloc_get_page(PAL_USER); 
             if (new_page == NULL) {
                 new_page = frame_evict();
