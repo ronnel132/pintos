@@ -72,7 +72,9 @@ bool valid_user_pointer(const void *ptr) {
     }
 
     /* Check if page in supplemental page table */
-    spt_present(t, pg_round_down(ptr));
+    if (!spt_present(t, pg_round_down(ptr))) {
+        return false;
+    }
 
     /* If the pointer is above esp (but in user_vaddr), it may correspond to
      * a part of the stack that would be later loaded lazily on a pagefault.
