@@ -193,6 +193,7 @@ static void page_fault(struct intr_frame *f) {
 
         if (found_valid) {
             vma = spt_get_struct(t, pg_round_down(fault_addr));
+            vma->pinned = true;
             new_page = palloc_get_page(PAL_USER); 
             if (new_page == NULL) {
                 new_page = frame_evict();
@@ -271,7 +272,7 @@ static void page_fault(struct intr_frame *f) {
                 vma->kpage = new_page;
                 vma->pg_read_bytes = NULL;
                 vma->writable = true;
-                vma->pinned = false;
+                vma->pinned = true;
                 vma->vm_file = NULL;
                 vma->ofs = NULL;
                 vma->swap_ind = NULL;
@@ -301,7 +302,7 @@ static void page_fault(struct intr_frame *f) {
                 vma->kpage = new_page;
                 vma->pg_read_bytes = NULL;
                 vma->writable = true;
-                vma->pinned = false;
+                vma->pinned = true;
                 vma->vm_file = NULL;
                 vma->ofs = NULL;
                 vma->swap_ind = NULL;
@@ -348,5 +349,6 @@ static void page_fault(struct intr_frame *f) {
 
 #endif
 //     printf("pagefault_end\n");
+    vma->pinned = false;
 }
 
