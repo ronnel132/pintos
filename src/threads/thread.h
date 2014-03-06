@@ -7,6 +7,7 @@
 #define THREADS_THREAD_H
 
 #include <debug.h>
+#include <hash.h>
 #include <list.h>
 #include <stdint.h>
 #include "devices/timer.h"
@@ -178,7 +179,7 @@ struct thread {
 
 #ifdef VM
     /* Each thread has a supplemental page table (SPT). */
-    struct list spt; 
+    struct hash spt; 
 #endif
 
     /*! Owned by thread.c. */

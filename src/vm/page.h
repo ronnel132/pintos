@@ -47,12 +47,14 @@ struct vm_area_struct {
     /* The type of page. */
     enum pg_type_flags pg_type;
 
-    struct list_elem elem;
+    struct hash_elem elem;
 };
 
 void spt_add(struct thread *t, struct vm_area_struct *vm_area);  
 struct vm_area_struct *spt_get_struct(struct thread *t, void *upage);
-void spt_remove(struct vm_area_struct *vm_area);
-bool spt_less(struct list_elem *e1, struct list_elem *e2, void *aux UNUSED);
+void spt_remove(struct thread *t, struct vm_area_struct *vm_area);
+bool spt_present(struct thread *t, void *upage);
+unsigned spt_hash_func(const struct hash_elem *element, void *aux UNUSED); 
+bool spt_less(struct hash_elem *e1, struct hash_elem *e2, void *aux UNUSED);
 
 #endif

@@ -56,8 +56,6 @@ extern struct list all_list;
  */
 bool valid_user_pointer(const void *ptr) {
     uint32_t *pd, *pde;
-    struct list_elem *e;
-    struct vm_area_struct *iter;
     struct thread *t = thread_current();
     void *esp = t->esp;
 
@@ -74,11 +72,8 @@ bool valid_user_pointer(const void *ptr) {
     /* Look through the vm_area stucts to see if address falls
      * in one of them
      */
-    for (e = list_begin(&t->spt); e != list_end(&t->spt); e = list_next(e)) {
-        iter = list_entry(e, struct vm_area_struct, elem);
-        if (ptr < iter->vm_end && ptr > iter->vm_start) {
-            return true;
-        }
+    if (spt_present(t, pg_round_down(ptr))) {
+        return true;
     }
 
     /* If the pointer is above esp (but in user_vaddr), it may correspond to
@@ -818,9 +813,7 @@ void munmap(mapid_t mid) {
 
         for (i = 0; i < pd->open_mmaps[mid].num_pages; i++) {
             vma = next_vma;
-            next_vma = list_entry(list_next(&(vma->elem)),
-                                  struct vm_area_struct,
-                                  elem);
+            next_vma = spt_get_struct(cur_thread, vma->vm_start + PGSIZE);
 
             ASSERT(next_vma->vm_file == f);
             ASSERT(next_vma->ofs > vma->ofs);
@@ -834,7 +827,7 @@ void munmap(mapid_t mid) {
                 ASSERT(bytes_written == vma->pg_read_bytes);
             }
 
-            spt_remove(vma);
+            spt_remove(cur_thread, vma);
         }
 
         file_close(f);
