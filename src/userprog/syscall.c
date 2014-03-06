@@ -21,6 +21,7 @@
 #include "threads/malloc.h"
 #include <list.h>
 #include "vm/page.h"
+#include "vm/frame.h"
 
 /* Frees a page */
 extern void palloc_free_page (void *);
@@ -346,6 +347,9 @@ void exit(int status) {
     if (lock_held_by_current_thread(&frame_lock)) {
         lock_release(&filesys_lock);
     }
+
+    /* Free the supplemental page table. */
+//     spt_free(&cur_thread->spt);
 
     thread_current()->exit_status = status;
     thread_exit();
