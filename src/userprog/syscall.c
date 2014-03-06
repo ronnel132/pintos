@@ -61,6 +61,11 @@ bool valid_user_pointer(const void *ptr) {
     struct thread *t = thread_current();
     void *esp = t->esp;
 
+    /* Check if page in supplemental page table */
+    if (spt_present(t, pg_round_down(ptr))) {
+        return true;
+    }
+
     /* Special case for esp, must be in pagedir */
     pd = active_pd();
     pde = pd + pd_no(esp);
@@ -71,10 +76,6 @@ bool valid_user_pointer(const void *ptr) {
         return false;
     }
 
-    /* Check if page in supplemental page table */
-    if (!spt_present(t, pg_round_down(ptr))) {
-        return false;
-    }
 
     /* If the pointer is above esp (but in user_vaddr), it may correspond to
      * a part of the stack that would be later loaded lazily on a pagefault.
