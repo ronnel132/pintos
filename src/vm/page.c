@@ -8,17 +8,10 @@
 
 /* Add a vm_area_struct to the thread's supplemental page table. */
 void spt_add(struct thread *t, struct vm_area_struct *vm_area) {
+    /* Assert validity of start and end addresses. */
     ASSERT(vm_area->vm_start < vm_area->vm_end);
 
-    /* FOR DEBUGGING PURPOSES. */
-    /* Assert that the vm_area's virtual memory block doesn't overlap with any
-       other blocks in the supplemental page table. */
-//     for (e = list_begin(&t->spt); e != list_end(&t->spt); e = list_next(e)) {
-//         iter = list_entry(e, struct vm_area_struct, elem);
-//         ASSERT(vm_area->vm_start > iter->vm_end || 
-//                vm_area->vm_end < iter->vm_start);
-//     }
-
+    /* PANIC if overlapping memory when inserting into table. */
     if (hash_insert(&t->spt, &vm_area->elem) != NULL) {
         PANIC("Overlapping vm_area_structs detected.");
     }
