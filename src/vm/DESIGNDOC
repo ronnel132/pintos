@@ -272,9 +272,14 @@ if it falls above ESP).
 >> deadlock.)
 
 There is a frame lock, a swap lock, and no locks for supplemental page tables
-since each is dedicated to a process.
-
-//TODO
+since each is dedicated to a process. The frame lock is a global lock on the 
+frame table, such that no two processes can add or remove things from the 
+frame lock at once. There is also a lock on the swap partition, since this too
+is global. This avoids situations in which two processes try to write their
+pages to the same sector within the swap partition at the same time. Lastly,
+the supplemental page table is per process, and since processes do not interact
+with other process' supplemental page tables, synchronization issues should
+not occur.
 
 >> B6: A page fault in process P can cause another process Q's frame
 >> to be evicted.  How do you ensure that Q cannot access or modify
@@ -289,11 +294,25 @@ lock the replacement process.
 >> cannot interfere by e.g. attempting to evict the frame while it is
 >> still being read in?
 
+When we are adding P's pages into the frame table after a page fault, there is
+a flag "pinned" in the vm_area_struct for the page that is set to TRUE. When
+this pinned flag is set, the contents of that frame cannot be paged out. The 
+pinned flag is set to FALSE after process P has successfully paged in its 
+pages into the kpages. 
+_
 >> B8: Explain how you handle access to paged-out pages that occur
 >> during system calls.  Do you use page faults to bring in pages (as
 >> in user programs), or do you have a mechanism for "locking" frames
 >> into physical memory, or do you use some other design?  How do you
 >> gracefully handle attempted accesses to invalid virtual addresses?
+
+When we have paged out pages that occur during system calls, this is handled
+by our page fault handler. In the page fault handler, we bring in the page
+from swap if it is there, or from the file system -- or if the page consists
+of all zeros, we simply allocate a new frame and fill it with 0s. We do have
+a mechanism for "locking" frames into physical memory -- we have a pinned 
+flag in the vm_area_struct. If an invalid virtual address is passed in, 
+we simply return exit(-1). 
 
 ---- RATIONALE ----
 
