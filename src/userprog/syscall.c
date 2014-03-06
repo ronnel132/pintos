@@ -73,7 +73,6 @@ bool valid_user_pointer(const void *ptr) {
 
     /* If we have messed up esp */
     if (*pde == 0) {
-//     printf("here!\n\n");
         return false;
     }
 
@@ -82,22 +81,11 @@ bool valid_user_pointer(const void *ptr) {
      * a part of the stack that would be later loaded lazily on a pagefault.
      * So this should be considered a good pointer.
      */
-
-     if (is_user_vaddr(ptr) && ptr >= esp) {
+    if (is_user_vaddr(ptr) && ptr >= esp) {
         return true;
-     }
-
-
-    
-
-//     printf("%d\n", is_user_vaddr(ptr));
-//     printf("%d\n", *pde);
-//     printf("%p\n", esp);
-//     printf("%d\b", (*(void **) ptr < esp));
-//     printf("===========\n");
+    }
 
     /* If we're here, this isn't a valid address */
-//     printf("here!\n\n");
     return false;
 }
 
@@ -143,8 +131,6 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
     /* Store esp in thread struct */
     thread_current()->esp = esp;
 
-//     printf("syscall!\n");
-
     /* Check validity of syscall_nr */
     if (!valid_user_pointer(esp)) {
         exit(EXIT_BAD_PTR);
@@ -152,9 +138,6 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
 
     /* Extract syscall numbers and arguments */
     int syscall_nr = *((int *)f->esp);
-//     printf("%d\n", syscall_nr);
-
-
 
     void *arg1 = (void *) ((int *)(f->esp + 4));
     void *arg2 = (void *) ((int *)(f->esp + 8));
@@ -224,8 +207,6 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             if ((!valid_user_pointer(arg1)) ||
                 (!valid_user_pointer(arg2)) ||
                 (!valid_user_pointer(arg3))) {
-//                     printf("syscall check failed\n");
-
                 exit(EXIT_BAD_PTR);
             }
             f->eax = read(*((int *) arg1),
@@ -234,25 +215,9 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             break;
 
         case SYS_WRITE:
-//             if ((!valid_user_pointer(arg1))) {
-//                 exit(EXIT_BAD_PTR);
-//             }
-// 
-//             if    (!valid_user_pointer(arg2)&& (* (int *) arg1 > 1)) {
-//                 exit(EXIT_BAD_PTR);
-//             }
-// 
-//             if    (!valid_user_pointer(arg3)) {
-//                 exit(EXIT_BAD_PTR);
-//             }
-        
-//             printf("trying to write()\n");
-
             if ((!valid_user_pointer(arg1)) ||
                 (!valid_user_pointer(arg2)) ||
                 (!valid_user_pointer(arg3))) {
-//                     printf("syscall check failed\n");
-
                 exit(EXIT_BAD_PTR);
             }
 
@@ -298,7 +263,7 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
 
         default:
             /* Yeah, we're not that nice */
-            exit(-1);
+            exit(EXIT_FAILURE);
     }
 }
 
@@ -593,7 +558,6 @@ int write(int fd, const void *buffer, unsigned size) {
     int bytes_written = -1;
 
     if (!valid_user_pointer(buffer) || !valid_user_pointer(buffer + size)) {
-//         printf("here!\n\n");
         exit(EXIT_BAD_PTR);
     }
 
@@ -720,7 +684,6 @@ mapid_t mmap(int fd, void *addr) {
     cur_thread = thread_current();
     pd = cur_thread->process_details;
 
-
     /* Check that all addresses are available in supplemental page table. */
     for (i = 0; i < num_pages; i++) {
         if (spt_present(cur_thread, addr + i * PGSIZE)) {
@@ -748,9 +711,16 @@ mapid_t mmap(int fd, void *addr) {
     /* Get file and add mappings for each page */
     f = file_reopen(pd->files[fd]);
     for (i = 0; i < num_pages; i++) {
+        /* Allocate memory */
         mapping = (struct vm_area_struct *)
                   calloc(1, sizeof(struct vm_area_struct));
+        if (mapping == NULL) {
+            exit(EXIT_FAILURE);
+        }
 
+        /* Set the mapping page's address, type to FILE_SYS, file, offsets,
+         * and the number of bytes that are readable/valid for the file.
+         */
         mapping->vm_start = addr + i * PGSIZE;
         mapping->vm_end = mapping->vm_start + PGSIZE - sizeof(uint8_t);
         mapping->pg_type = FILE_SYS;
@@ -761,17 +731,19 @@ mapid_t mmap(int fd, void *addr) {
                                  PGSIZE;
         mapping->writable = true;
 
+        /* Add to the supplemental page table */
         spt_add(cur_thread, mapping);
 
+        /* Set the first mapping in the thread's process_details for
+         * the right mapping id.
+         */
         if (i == 0) {
             pd->open_mmaps[mid].first_vm_area = mapping;
             pd->open_mmaps[mid].num_pages = num_pages;
         }
     }
 
-    /* UNLOCK filesystem while done getting information about address range
-     * and file.
-     */
+    /* UNLOCK filesystem when done mapping and before returning. */
     lock_release(&filesys_lock);
 
     return mid;
@@ -789,18 +761,25 @@ void munmap(mapid_t mid) {
     struct file * f;
     int i, bytes_written;
 
+    /* Get current thread struct and the process struct. */
     cur_thread = thread_current();
     pd = cur_thread->process_details;
 
+    /* If the mapping id (mid) is valid, i.e. the mapping exists. */
     if (pd->open_mapids[mid]) {
         lock_acquire(&filesys_lock);
 
+        /* Set up the iteration over all pages mapped */
         next_vma = pd->open_mmaps[mid].first_vm_area;
         f = next_vma->vm_file;
 
+        /* The mapping shouldn't be NULL and neither should the file that's
+         * mapped.
+         */
         ASSERT(next_vma != NULL);
         ASSERT(f != NULL);
 
+        /* Iterate over all pages mapped. */
         for (i = 0; i < pd->open_mmaps[mid].num_pages; i++) {
             vma = next_vma;
             next_vma = spt_get_struct(cur_thread, vma->vm_start + PGSIZE);
@@ -818,9 +797,11 @@ void munmap(mapid_t mid) {
                 ASSERT(bytes_written == vma->pg_read_bytes);
             }
 
+            /* Remove from the supplemental page table current page mapped. */
             spt_remove(cur_thread, vma);
         }
 
+        /* Close file and open up mapping id. */
         file_close(f);
         pd->open_mapids[mid] = false;
         pd->num_mapids_open--;
