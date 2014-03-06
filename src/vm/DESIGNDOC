@@ -125,6 +125,9 @@ since each is dedicated to a process.
 >> the page during the eviction process?  How do you avoid a race
 >> between P evicting Q's frame and Q faulting the page back in?
 
+We remove the page from that processes page directory. We use a frame lock to
+lock the replacement process.
+
 >> B7: Suppose a page fault in process P causes a page to be read from
 >> the file system or swap.  How do you ensure that a second process Q
 >> cannot interfere by e.g. attempting to evict the frame while it is
