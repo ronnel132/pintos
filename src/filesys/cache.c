@@ -34,6 +34,8 @@ static struct list read_ahead_list;
 /* Read ahead list lock */
 struct lock ra_lock;
 
+/* Hashtable lock */
+struct lock ht_lock;
 
 /*! The mapping between filesys sector index and cache index. */
 struct hash cache_table; 
@@ -75,6 +77,9 @@ void cache_init(void) {
     /* Initialize ra lock */
     lock_init(&ra_lock);
 
+    /* Initialize ht lock */
+    lock_init(&ht_lock);
+
     /* Initialize read_ahead and write_behind threads. */
     cond_init(&read_ahead_condition);
     list_init(&read_ahead_list);
@@ -91,11 +96,20 @@ void cache_init(void) {
 static struct cache_entry * cache_get_entry(block_sector_t sector_idx) {
     struct cache_entry ce; 
     struct hash_elem *e;
+    struct cache_entry *tmp;
 
+    lock_acquire(&ht_lock);
     ce.sector_idx = sector_idx;
     e = hash_find(&cache_table, &ce.elem);
-    return e == NULL ? NULL : hash_entry(e, struct cache_entry,
-                                                  elem);
+    if (e == NULL) {
+        lock_release(&ht_lock);
+        return NULL;
+    }
+    else {
+        tmp = hash_entry(e, struct cache_entry, elem);
+        lock_release(&ht_lock);
+        return tmp;
+    }
 }
 
 
@@ -141,12 +155,14 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
             }
             else {
                 cb->valid = 0;
+                lock_acquire(&ht_lock);
                 ce.sector_idx = cb->sector_idx;
                 elem = hash_find(&cache_table, &ce.elem);
                 /* The cache_entry corresponding to the sector in this cache index
                    should be present in the cache_table. */
                 ASSERT(elem != NULL);
                 hash_delete(&cache_table, elem);
+                lock_release(&ht_lock);
 
                 if (cb->dirty) {
                     block_write(fs_device, cb->sector_idx, cb->data);
@@ -161,8 +177,11 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
     }
     centry->cache_idx = hand; 
     hand = (hand + 1) % CACHE_SIZE;
+    
+    lock_acquire(&ht_lock);
     centry->sector_idx = sector_idx;  
     hash_insert(&cache_table, &centry->elem);
+    lock_release(&ht_lock);
 
     cblock = &cache[centry->cache_idx];
     write_lock(cblock);
