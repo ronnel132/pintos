@@ -80,6 +80,7 @@ virtual address.
 
 >> A4: When two user processes both need a new frame at the same time,
 >> how are races avoided?
+
 A frame_lock is needed to be acquired any time a process
 wants to modify/read the frame queue. Hence, there can't
 be a race between two processes when dealing with frames.
@@ -88,6 +89,11 @@ be a race between two processes when dealing with frames.
 
 >> A5: Why did you choose the data structure(s) that you did for
 >> representing virtual-to-physical mappings?
+
+The hash table is both memory and and time efficient. We originally used a
+linked list, but noticed that tests were performing very slowly. We changed
+swap table, frame table and supplemental page tables to use the hash table
+implementation.
 
                PAGING TO AND FROM DISK
                =======================
