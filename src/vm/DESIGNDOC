@@ -8,15 +8,15 @@
 
 >> Fill in the names and email addresses of your group members.
 
-FirstName LastName <email@domain.example>
-FirstName LastName <email@domain.example>
-FirstName LastName <email@domain.example>
+Aleksander Bello <abello@caltech.edu>
+Ronnel Boettcher <ronnel@caltech.edu>
+Archan Luhar     <archan@caltech.edu>
 
 >> Specify how many late tokens you are using on this assignment:  
 
 >> What is the Git repository and commit hash for your submission?
 
-   Repository URL:  
+   Repository URL:  /cs/courses/cs124/teams/pintos-bbl
    commit ...
 
 ---- PRELIMINARIES ----
