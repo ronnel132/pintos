@@ -80,6 +80,9 @@ virtual address.
 
 >> A4: When two user processes both need a new frame at the same time,
 >> how are races avoided?
+A frame_lock is needed to be acquired any time a process
+wants to modify/read the frame queue. Hence, there can't
+be a race between two processes when dealing with frames.
 
 ---- RATIONALE ----
 
@@ -197,6 +200,26 @@ table corresponds to a page written into swap.
 
 >> B2: When a frame is required but none is free, some frame must be
 >> evicted.  Describe your code for choosing a frame to evict.
+As mentioned above, we first implemented a second chance policy.
+The reasons for this are that it's a simple algorithm, while
+providing decent performance/page fault rate. The way the 
+algorithm works is the following:
+Frames are held in a queue, and any time we have to evict, we
+examine the first frame in the queue. If it's accessed bit is
+set, we unset it (set it to 0), and put it in the back of the 
+queue. Then we do the same thing for the next frame, until we
+find a frame that's on the head of the queue but its access bit
+isn't set: that's the frame that we evict. Note that this 
+algorithm, in the worst case degrades to a FIFO (if every page's
+access bit is set, then it's gonna dequeue/enqueue each frame, 
+until it gets back to the first one, then kick that out (assuming
+that one hasn't been accessed in the meantime)).
+
+We also tried a FIFO startegy, and ended up submiting that
+instead. The main reason is that we were having some subtle 
+issues close to the deadline, and just did FIFO instead. However,
+if one desired to switch to Second Chance, only two lines need to be
+changed (one commented out, the other uncommented).
 
 >> B3: When a process P obtains a frame that was previously used by a
 >> process Q, how do you adjust the page table (and any other data
