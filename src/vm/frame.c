@@ -1,8 +1,10 @@
 #include <debug.h>
+#include <hash.h>
 #include "filesys/file.h"
 #include "vm/frame.h"
 #include "vm/swap.h"
 #include "threads/malloc.h"
+#include "threads/palloc.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
@@ -42,30 +44,7 @@ void *frame_evict(void) {
             ASSERT(vma->pg_type != SWAP);
             ASSERT(vma->kpage != NULL);
 
-            /* If it's a file don't swap; write back */
-//             if (vma->pg_type == FILE_SYS) {
-//                 if (pagedir_is_dirty(frame->thread->pagedir, frame->upage)) {
-//                     old_level = intr_disable();
-//                     if (!lock_held_by_current_thread(&filesys_lock)) {
-//                         fs_lock = 1;
-//                         lock_acquire(&filesys_lock);
-//                     }
-//                     intr_set_level(old_level);
-// 
-//                     ASSERT(vma->writable);
-// 
-//                     file_seek(vma->vm_file, vma->ofs);
-//                     bytes_written = file_write(vma->vm_file,
-//                                                vma->vm_start,
-//                                                vma->pg_read_bytes);
-//                     ASSERT(bytes_written == vma->pg_read_bytes);
-// 
-//                     if (fs_lock == 1) {
-//                         lock_release(&filesys_lock);
-//                     }
-//                 }
-//             }
-            if (vma->pg_type == ZERO || vma->pg_type == PMEM || vma->pg_type == FILE_SYS) {
+            if (vma->pg_type != SWAP) {
                 /* A stack page. */
                 vma->kpage = NULL;
                 vma->pg_type = SWAP;
@@ -99,8 +78,13 @@ void *frame_evict(void) {
 
 /* Remove the frame from the frame table. */
 void frame_table_remove(struct frame *frame) {
-    list_remove(&frame->elem); 
-    free(frame);
+    struct frame *f;
+    struct hash_elem *entry;
+    entry = hash_delete(&frame_table, &frame->elem);
+    if (entry != NULL) {
+        f = hash_entry(entry, struct frame, elem);
+        free(f);
+    }
 }
 
 /* Add a frame to the frame table. Keep track of the upage, kpage, and the 
@@ -119,25 +103,31 @@ void frame_add(struct thread *t, void *upage, void *kpage) {
 
     /* The frame table remains ordered by the physical address of the frame. */
     lock_acquire(&frame_lock);
-    list_insert_ordered(&frame_table, &frame->elem, &frame_less, NULL);
+    hash_insert(&frame_table, &frame->elem);
     list_push_back(&frame_queue, &frame->q_elem);
     lock_release(&frame_lock);
 }
 
 /* The function used for ordered inserts into the frame table. We order the 
    frame table list by physical address. */
-bool frame_less(const struct list_elem *elem1, const struct list_elem *elem2, 
+bool frame_less(const struct hash_elem *elem1, const struct hash_elem *elem2, 
                 void *aux UNUSED) {
     struct frame *f1, *f2;
     uintptr_t paddr1, paddr2; 
 
-    f1 = list_entry(elem1, struct frame, elem);
-    f2 = list_entry(elem2, struct frame, elem);
+    f1 = hash_entry(elem1, struct frame, elem);
+    f2 = hash_entry(elem2, struct frame, elem);
 
     /* Compute the physical addresses of each frame's kernel virtual
        address. */
     paddr1 = vtop(f1->kpage);
     paddr2 = vtop(f2->kpage);
    
-    return paddr1 <= paddr2;
+    return paddr1 < paddr2;
+}
+
+unsigned frame_hash_func(const struct hash_elem *element, void *aux UNUSED) {
+    struct frame *frame;
+    frame = hash_entry(element, struct frame, elem);
+    return hash_int((int) frame->kpage);
 }

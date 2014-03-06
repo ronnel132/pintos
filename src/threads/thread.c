@@ -396,7 +396,7 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
     /* Initialize the supplemental page table. */
     /* TODO: Are there any issues initializing the list here? */
 #ifdef VM
-    list_init(&t->spt);
+    hash_init(&t->spt, &spt_hash_func, &spt_less, NULL);
 #endif
 
 #ifdef USERPROG

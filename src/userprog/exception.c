@@ -189,16 +189,10 @@ static void page_fault(struct intr_frame *f) {
         /* Iterate through the current thread's supplemental page table to 
            find if the faulting address is valid. */
 
-        found_valid = false;
-        for (e = list_begin(&t->spt); e != list_end(&t->spt);
-             e = list_next(e)) {
-             vma = list_entry(e, struct vm_area_struct, elem);
-             if (fault_addr >= vma->vm_start && fault_addr <= vma->vm_end) {
-                found_valid = true;   
-                break;
-             }
-        }
+        found_valid = spt_present(t, pg_round_down(fault_addr));
+
         if (found_valid) {
+            vma = spt_get_struct(t, pg_round_down(fault_addr));
             new_page = palloc_get_page(PAL_USER); 
             if (new_page == NULL) {
                 new_page = frame_evict();
