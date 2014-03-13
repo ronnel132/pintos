@@ -1,14 +1,57 @@
-#include <string.h>
 #include "filesys/cache.h"
 #include "filesys/filesys.h"
 #include "threads/malloc.h"
 
-static void cache_evict(void);
-static struct cache_entry *cache_miss(block_sector_t sector_idx);
+static off_t cache_evict(void);
+static struct *cache_entry cache_miss(block_sector_t sector_idx);
 
 /*! Initialize the buffer cache by malloc'ing the space it needs. */
-void cache_init(void) {
+static void cache_init(void) {
+    cache = malloc(BLOCK_SECTOR_SIZE * CACHE_SIZE);
     hash_init(&cache_table, &cache_hash, &cache_less, NULL);
+}
+
+/*! Find the cached sector at SECTOR_IDX and write SIZE bytes at offset
+    OFFSET. */
+void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
+                off_t offset) {
+    struct cache_entry ce; 
+    struct cache_entry *stored_ce;
+
+    ASSERT(offset + size <= BLOCK_SECTOR_SIZE);
+
+    ce.sector_idx = sector_idx;
+    stored_ce = hash_find(&cache_table, &ce.elem); 
+    if (stored_ce == NULL) {
+        stored_ce = cache_miss(sector_idx);
+    }
+    else {
+        stored_ce->accessed = 1;
+    }
+
+    memcpy(buffer, stored_ce->data + (void *) offset, (size_t) size);
+}
+
+/*! Find the cached sector at SECTOR_IDX and write SIZE bytes starting at 
+    OFFSET from BUFFER to the cached sector. */
+void cache_write(block_sector_t sector_idx, void *buffer, off_t size,
+                 off_t offset) {
+    struct cache_entry ce;
+    struct cache_entry *stored_ce;
+
+    ASSERT(offset + size <= BLOCK_SECTOR_SIZE); 
+
+    ce.sector_idx = sector_idx;
+    stored_ce = hash_find(&cache_table, &ce.elem);
+    if (stored_ce == NULL) {
+        stored_ce = cache_miss(sector_idx);
+    } 
+    else {
+        stored_ce->accessed = 1;
+    }
+
+    memcpy(stored_ce->data + (void *) offset, buffer, (size_t) size);
+    stored_ce->dirty = 1;
 }
 
 static void cache_evict(void) {
@@ -39,58 +82,6 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
     hash_insert(&cache_table, &ce->elem);
     return ce;
 }
-
-/*! Find the cached sector at SECTOR_IDX and write SIZE bytes at offset
-    OFFSET. */
-void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
-                off_t offset) {
-    struct cache_entry ce; 
-    struct hash_elem *helem;
-    struct cache_entry *stored_ce;
-
-    ASSERT(offset + size <= BLOCK_SECTOR_SIZE);
-
-    ce.sector_idx = sector_idx;
-    helem = hash_find(&cache_table, &ce.elem);
-    stored_ce = helem == NULL ? NULL : hash_entry(helem, struct cache_entry,
-                                                  elem);
-    if (stored_ce == NULL) {
-        stored_ce = cache_miss(sector_idx);
-    }
-    else {
-        stored_ce->accessed = 1;
-    }
-
-    memcpy(buffer, (void *) ((uint32_t) stored_ce->data + (uint32_t) offset), 
-           (size_t) size);
-}
-
-/*! Find the cached sector at SECTOR_IDX and write SIZE bytes starting at 
-    OFFSET from BUFFER to the cached sector. */
-void cache_write(block_sector_t sector_idx, void *buffer, off_t size,
-                 off_t offset) {
-    struct cache_entry ce;
-    struct hash_elem *helem;
-    struct cache_entry *stored_ce;
-
-    ASSERT(offset + size <= BLOCK_SECTOR_SIZE); 
-
-    ce.sector_idx = sector_idx;
-    helem = hash_find(&cache_table, &ce.elem);
-    stored_ce = helem == NULL ? NULL : hash_entry(helem, struct cache_entry,
-                                                  elem);
-    if (stored_ce == NULL) {
-        stored_ce = cache_miss(sector_idx);
-    } 
-    else {
-        stored_ce->accessed = 1;
-    }
-
-    memcpy((void *) ((uint32_t) stored_ce->data + (uint32_t) offset), buffer, 
-           (size_t) size);
-    stored_ce->dirty = 1;
-}
-
 
 unsigned cache_hash(const struct hash_elem *element, void *aux UNUSED) {
     struct cache_entry *ce = hash_entry(element, struct cache_entry, elem);
