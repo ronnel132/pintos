@@ -174,7 +174,6 @@ void inode_remove(struct inode *inode) {
 off_t inode_read_at(struct inode *inode, void *buffer_, off_t size, off_t offset) {
     uint8_t *buffer = buffer_;
     off_t bytes_read = 0;
-    uint8_t *bounce = NULL;
 
     while (size > 0) {
         /* Disk sector to read, starting byte offset within sector. */
@@ -198,7 +197,6 @@ off_t inode_read_at(struct inode *inode, void *buffer_, off_t size, off_t offset
         offset += chunk_size;
         bytes_read += chunk_size;
     }
-    free(bounce);
 
     return bytes_read;
 }
@@ -211,7 +209,6 @@ off_t inode_read_at(struct inode *inode, void *buffer_, off_t size, off_t offset
 off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t offset) {
     const uint8_t *buffer = buffer_;
     off_t bytes_written = 0;
-    uint8_t *bounce = NULL;
 
     if (inode->deny_write_cnt)
         return 0;
@@ -239,7 +236,6 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
         offset += chunk_size;
         bytes_written += chunk_size;
     }
-    free(bounce);
 
     return bytes_written;
 }

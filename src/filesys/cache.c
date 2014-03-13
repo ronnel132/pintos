@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdio.h>
 #include "filesys/cache.h"
 #include "filesys/filesys.h"
 #include "threads/malloc.h"
@@ -34,7 +35,8 @@ static void cache_evict(void) {
             if (c->dirty) {
                 block_write(fs_device, c->sector_idx, c->data); 
             }
-
+            
+            hash_delete(&cache_table, &c->elem);
             free(c->data);
             free(c);
             break;
@@ -60,10 +62,12 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
     if (ce->data == NULL) {
         PANIC("Filesystem cache failure.");
     }
+    ce->sector_idx = sector_idx;
     block_read(fs_device, sector_idx, ce->data);
     ce->accessed = 0;
     ce->dirty = 0;
     hash_insert(&cache_table, &ce->elem);
+    list_push_back(&cache_queue, &ce->q_elem);
     return ce;
 }
 
