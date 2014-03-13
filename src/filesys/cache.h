@@ -1,3 +1,6 @@
+#ifndef FILESYS_CACHE_H
+#define FILESYS_CACHE_H
+
 #include <hash.h>
 #include <list.h>
 #include <stdlib.h>
@@ -41,3 +44,4 @@ unsigned cache_hash(const struct hash_elem *element, void *aux);
 bool cache_less(const struct hash_elem *a, const struct hash_elem *b, 
                 void *aux);
 
+#endif /* filesys/cache.h */

@@ -3,6 +3,7 @@
 #include <debug.h>
 #include <round.h>
 #include <string.h>
+#include "filesys/cache.h"
 #include "filesys/filesys.h"
 #include "filesys/free-map.h"
 #include "threads/malloc.h"
