@@ -12,27 +12,40 @@
 /*! The mapping between filesys sector index and cache index. */
 struct hash cache_table; 
 
-/*! A queue of the element in the cache. Used for evicting */
-struct list cache_queue;
+/*! The actual cache itself. An array of cache_block's. */
+struct cache_block *cache;
 
-/*! An entry in the filesystem buffer cache. */
-struct cache_entry {
-    /* The sector in the filesys block the cached block corresponds to. */
-    block_sector_t sector_idx;
+/*! The clock hand index for implementing the clock policy. Corresponds to an 
+    index in cache. */ 
+int hand;
 
-    void *data;
+/*! An entry in the cache array. Contains the data and relevent metadata. */
+struct cache_block {
+    block_sector_t sector_idx; 
     
+    /* TRUE if the block currently corresponds to a sector. FALSE otherwise. */
+    bool valid;
+
     /* Has this cached block been accessed? */
     bool accessed;
 
     /* Has this cached block been written to? */
     bool dirty;
+    
+    uint8_t data[BLOCK_SECTOR_SIZE];
+};
+
+/*! A mapping between sector index and cache index for quick accesses to 
+    cached data (stored in a hash table). */
+struct cache_entry {
+    /* The sector in the filesys block the cached block corresponds to. */
+    block_sector_t sector_idx;
+
+    /* The index of this sector in the cache. */
+    int cache_idx;
 
     /*! The element stored in the hash table for the buffer cache. */
     struct hash_elem elem;
-
-    /*! The linked list queue pointer. */
-    struct list_elem q_elem;
 }; 
 
 void cache_init(void); 
