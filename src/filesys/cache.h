@@ -26,18 +26,6 @@ struct rwlock {
     int num_readers;
 };
 
-
-
-/*! The mapping between filesys sector index and cache index. */
-struct hash cache_table; 
-
-/*! The actual cache itself. An array of cache_block's. */
-struct cache_block *cache;
-
-/*! The clock hand index for implementing the clock policy. Corresponds to an 
-    index in cache. */ 
-int hand;
-
 /*! An entry in the cache array. Contains the data and relevent metadata. */
 struct cache_block {
     /* readwrite lock */
@@ -78,17 +66,5 @@ void cache_write(block_sector_t sector_idx, void *buffer, off_t size,
 unsigned cache_hash(const struct hash_elem *element, void *aux);
 bool cache_less(const struct hash_elem *a, const struct hash_elem *b, 
                 void *aux);
-
-
-
-/* Acquire a read lock for this cache descriptor */
-static void read_lock(struct cache_block *cd);
-/* Release a read lock for this cache descriptor */
-static void read_unlock(struct cache_block *cd);
-
-/* Acquire a write lock for this cache descriptor */
-static void write_lock(struct cache_block *cd);
-/* Release a write lock for this cache descriptor */
-static void write_unlock(struct cache_block *cd);
 
 #endif /* filesys/cache.h */
