@@ -3,6 +3,8 @@
 #include "filesys/cache.h"
 #include "filesys/filesys.h"
 #include "threads/malloc.h"
+#include "threads/thread.h"
+#include "threads/synch.h"
 
 
 /* Acquire a read lock for this cache descriptor */
@@ -20,6 +22,8 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx);
 /* Prototypes for pre-emptive writing and reading functions/threads. */
 static void read_ahead(void);
 static void write_behind(void);
+struct condition read_ahead_cond;
+struct condition write_behind_cond;
 
 /*! The mapping between filesys sector index and cache index. */
 struct hash cache_table; 
@@ -48,8 +52,15 @@ void cache_init(void) {
         cond_init(&(cache[i].rwl.w_cond));
         cond_init(&(cache[i].rwl.r_cond));
     }
+
     hash_init(&cache_table, &cache_hash, &cache_less, NULL);
     hand = 0;
+
+    /* Initialize read_ahead and write_behind threads. */
+    cond_init(&read_ahead_cond);
+    cond_init(&write_behind_cond);
+    //ASSERT(thread_create("read_ahead", PRI_DEFAULT, &read_ahead, NULL) != TID_ERROR);
+    //ASSERT(thread_create("write_behind", PRI_DEFAULT, &write_behind, NULL) != TID_ERROR);
 }
 
 
@@ -292,10 +303,36 @@ bool cache_less(const struct hash_elem *a, const struct hash_elem *b,
 
 
 
+// TODO
 static void read_ahead(void) {
+    int i;
+    struct lock *mutex;
 
+    while (true) {
+        /*cond_wait(&read_ahead_cond, &mutex); */
+
+        for (i = 0; i < CACHE_SIZE; i++) {
+            /* Lock this cache block */
+            /*read_lock(&(cache[i]));
+            ASSERT(cb->valid);
+            if (cache[i].valid && cb->accessed) {
+                /* TODO
+                block_sector_t next_sector_idx = next_sector(c)
+
+
+                cache_miss(next_sector_idx);
+                read_unlock(&(cache[i]));
+            }*/
+        }
+    }
 }
 
 static void write_behind(void) {
+    int i;
+    struct lock *mutex;
 
+    while (true) {
+        /*cond_wait(&read_ahead_cond, &mutex);*/
+        // TODO
+    }
 }

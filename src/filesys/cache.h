@@ -36,7 +36,7 @@ struct cache_block {
 
     block_sector_t sector_idx; 
     
-    /* TRUE if the block currently corresponds to a sector. FALSE otherwise. */
+    /* TRUE if block currently corresponds to a sector. FALSE otherwise. */
     bool valid;
 
     /* Has this cached block been accessed? */
