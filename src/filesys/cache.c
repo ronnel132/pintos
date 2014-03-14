@@ -63,6 +63,19 @@ void cache_init(void) {
     //ASSERT(thread_create("write_behind", PRI_DEFAULT, &write_behind, NULL) != TID_ERROR);
 }
 
+/*! Gets cache table entry from the hash table. Returns NULL if
+ *  sector is not in present in the hash table.
+ */
+static struct cache_entry * cache_get_entry(block_sector_t sector_idx) {
+    struct cache_entry ce; 
+    struct hash_elem *e;
+
+    ce.sector_idx = sector_idx;
+    e = hash_find(&cache_table, &ce.elem);
+    return e == NULL ? NULL : hash_entry(e, struct cache_entry,
+                                                  elem);
+}
+
 
 /* Called in cache_read and cache_write when the desired block is not cached.
    Store it in the cache, then return its corresponding cache_entry struct. */
@@ -138,19 +151,14 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
     OFFSET. */
 void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
                 off_t offset) {
-    struct cache_entry ce; 
-    struct hash_elem *e;
     struct cache_entry *stored_ce;
     struct cache_block *cblock;
+    bool present;
 
     ASSERT(offset + size <= BLOCK_SECTOR_SIZE);
 
-    ce.sector_idx = sector_idx;
-    e = hash_find(&cache_table, &ce.elem);
-    stored_ce = e == NULL ? NULL : hash_entry(e, struct cache_entry,
-                                                  elem);
-    bool present = stored_ce != NULL;
-
+    stored_ce = cache_get_entry(sector_idx);
+    present = stored_ce != NULL;
     if (!present) {
         stored_ce = cache_miss(sector_idx);
     }
@@ -171,19 +179,14 @@ void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
     OFFSET from BUFFER to the cached sector. */
 void cache_write(block_sector_t sector_idx, void *buffer, off_t size,
                  off_t offset) {
-    struct cache_entry ce;
-    struct hash_elem *e;
     struct cache_entry *stored_ce;
     struct cache_block *cblock;
+    bool present;
 
     ASSERT(offset + size <= BLOCK_SECTOR_SIZE); 
 
-    ce.sector_idx = sector_idx;
-    e = hash_find(&cache_table, &ce.elem);
-    stored_ce = e == NULL ? NULL : hash_entry(e, struct cache_entry,
-                                                  elem);
-    bool present = stored_ce != NULL;
-
+    stored_ce = cache_get_entry(sector_idx);
+    present = stored_ce != NULL;
     if (!present) {
         stored_ce = cache_miss(sector_idx);
     }
