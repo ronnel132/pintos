@@ -172,12 +172,14 @@ void inode_remove(struct inode *inode) {
    Returns the number of bytes actually read, which may be less
    than SIZE if an error occurs or end of file is reached. */
 off_t inode_read_at(struct inode *inode, void *buffer_, off_t size, off_t offset) {
+    block_sector_t sector_idx;
+    block_sector_t next_sector_idx;
     uint8_t *buffer = buffer_;
     off_t bytes_read = 0;
 
     while (size > 0) {
         /* Disk sector to read, starting byte offset within sector. */
-        block_sector_t sector_idx = byte_to_sector (inode, offset);
+        sector_idx = byte_to_sector (inode, offset);
         int sector_ofs = offset % BLOCK_SECTOR_SIZE;
 
         /* Bytes left in inode, bytes left in sector, lesser of the two. */
@@ -190,6 +192,11 @@ off_t inode_read_at(struct inode *inode, void *buffer_, off_t size, off_t offset
         if (chunk_size <= 0) {
             break;
         }
+
+        next_sector_idx = offset + BLOCK_SECTOR_SIZE > inode_length(inode) ?
+                          sector_idx :
+                          byte_to_sector(inode, offset);
+
         cache_read(sector_idx, buffer + bytes_read, chunk_size, sector_ofs);  
       
         /* Advance. */
@@ -207,6 +214,8 @@ off_t inode_read_at(struct inode *inode, void *buffer_, off_t size, off_t offset
     (Normally a write at end of file would extend the inode, but
     growth is not yet implemented.) */
 off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t offset) {
+    block_sector_t sector_idx;
+    block_sector_t next_sector_idx;
     const uint8_t *buffer = buffer_;
     off_t bytes_written = 0;
 
@@ -215,7 +224,7 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
 
     while (size > 0) {
         /* Sector to write, starting byte offset within sector. */
-        block_sector_t sector_idx = byte_to_sector(inode, offset);
+        sector_idx = byte_to_sector(inode, offset);
         int sector_ofs = offset % BLOCK_SECTOR_SIZE;
 
         /* Bytes left in inode, bytes left in sector, lesser of the two. */
@@ -229,7 +238,11 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
             break;
         }
 
-        cache_write(sector_idx, buffer + bytes_written, chunk_size, sector_ofs);
+        next_sector_idx = offset + BLOCK_SECTOR_SIZE > inode_length(inode) ?
+                          sector_idx :
+                          byte_to_sector(inode, offset);
+
+        cache_write(sector_idx, buffer + bytes_written, chunk_size, sector_ofs, next_sector_idx);
 
         /* Advance. */
         size -= chunk_size;

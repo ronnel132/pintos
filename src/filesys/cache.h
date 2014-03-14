@@ -35,6 +35,7 @@ struct cache_block {
     struct rwlock rwl;
 
     block_sector_t sector_idx; 
+    block_sector_t next_sector_idx;
     
     /* TRUE if block currently corresponds to a sector. FALSE otherwise. */
     bool valid;

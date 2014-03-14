@@ -150,7 +150,7 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
 /*! Find the cached sector at SECTOR_IDX and read SIZE bytes at offset
     OFFSET. */
 void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
-                off_t offset) {
+                off_t offset, block_sector_t next_sector_idx) {
     struct cache_entry *stored_ce;
     struct cache_block *cblock;
     bool present;
@@ -165,6 +165,7 @@ void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
     
     cblock = &cache[stored_ce->cache_idx];
     read_lock(cblock);
+    cblock->next_sector_idx = next_sector_idx;
     
     if (present) {
         cblock->accessed = 1;
@@ -178,7 +179,7 @@ void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
 /*! Find the cached sector at SECTOR_IDX and write SIZE bytes starting at 
     OFFSET from BUFFER to the cached sector. */
 void cache_write(block_sector_t sector_idx, void *buffer, off_t size,
-                 off_t offset) {
+                 off_t offset, block_sector_t next_sector_idx) {
     struct cache_entry *stored_ce;
     struct cache_block *cblock;
     bool present;
@@ -193,6 +194,7 @@ void cache_write(block_sector_t sector_idx, void *buffer, off_t size,
     
     cblock = &cache[stored_ce->cache_idx];
     write_lock(cblock);
+    cblock->next_sector_idx = next_sector_idx;
     
     if (present) {
         cblock->accessed = 1;
