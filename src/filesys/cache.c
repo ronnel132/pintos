@@ -29,7 +29,6 @@ void cache_init(void) {
  * Using second chance strategy
  */
 static void cache_evict(void) {
-    printf("In evict\n");
     struct cache_block *cb;
     struct cache_entry ce;
     struct hash_elem *elem; 
@@ -64,9 +63,8 @@ static void cache_evict(void) {
 /* Called in cache_read and cache_write when the desired block is not cached.
    Store it in the cache, then return its corresponding cache_entry struct. */
 static struct cache_entry *cache_miss(block_sector_t sector_idx) {
-    printf("HERE\n");
     struct cache_entry *ce; 
-    struct cache_block cblock;
+    struct cache_block *cblock;
 
     ce = malloc(sizeof(struct cache_entry));
     if (ce == NULL) {
@@ -81,12 +79,12 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
     ce->sector_idx = sector_idx;  
     hash_insert(&cache_table, &ce->elem);
 
-    cblock = cache[ce->cache_idx];
-    cblock.sector_idx = sector_idx;
-    cblock.accessed = 0;
-    cblock.dirty = 0;
-    cblock.valid = 1;
-    block_read(fs_device, sector_idx, cblock.data);
+    cblock = &cache[ce->cache_idx];
+    cblock->sector_idx = sector_idx;
+    cblock->accessed = 0;
+    cblock->dirty = 0;
+    cblock->valid = 1;
+    block_read(fs_device, sector_idx, cblock->data);
     return ce;
 }
 
@@ -95,11 +93,10 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
     OFFSET. */
 void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
                 off_t offset) {
-    printf("In read\n");
     struct cache_entry ce; 
     struct hash_elem *e;
     struct cache_entry *stored_ce;
-    struct cache_block cblock;
+    struct cache_block *cblock;
 
     ASSERT(offset + size <= BLOCK_SECTOR_SIZE);
 
@@ -113,13 +110,13 @@ void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
         stored_ce = cache_miss(sector_idx);
     }
     
-    cblock = cache[stored_ce->cache_idx];
+    cblock = &cache[stored_ce->cache_idx];
     
     if (present) {
-        cblock.accessed = 1;
+        cblock->accessed = 1;
     }
 
-    memcpy(buffer, (void *) ((off_t) cblock.data + offset), 
+    memcpy(buffer, (void *) ((off_t) cblock->data + offset), 
            (size_t) size);
 }
 
@@ -127,11 +124,10 @@ void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
     OFFSET from BUFFER to the cached sector. */
 void cache_write(block_sector_t sector_idx, void *buffer, off_t size,
                  off_t offset) {
-    printf("In write\n");
     struct cache_entry ce;
     struct hash_elem *e;
     struct cache_entry *stored_ce;
-    struct cache_block cblock;
+    struct cache_block *cblock;
 
     ASSERT(offset + size <= BLOCK_SECTOR_SIZE); 
 
@@ -145,15 +141,15 @@ void cache_write(block_sector_t sector_idx, void *buffer, off_t size,
         stored_ce = cache_miss(sector_idx);
     }
     
-    cblock = cache[stored_ce->cache_idx];
+    cblock = &cache[stored_ce->cache_idx];
     
     if (present) {
-        cblock.accessed = 1;
+        cblock->accessed = 1;
     }
 
-    memcpy((void *) ((off_t) cblock.data + offset), buffer, 
+    memcpy((void *) ((off_t) cblock->data + offset), buffer, 
            (size_t) size);
-    cblock.dirty = 1;
+    cblock->dirty = 1;
 }
 
 
