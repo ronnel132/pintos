@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdio.h>
+#include <list.h>
 #include "filesys/cache.h"
 #include "filesys/filesys.h"
 #include "threads/malloc.h"
@@ -19,11 +20,8 @@ static void write_unlock(struct cache_block *cb);
 
 static struct cache_entry *cache_miss(block_sector_t sector_idx);
 
-/* Prototypes for pre-emptive writing and reading functions/threads. */
-static void read_ahead(void);
-static void write_behind(void);
-struct condition read_ahead_cond;
-struct condition write_behind_cond;
+/* Read ahead list. */
+static struct list read_ahead_list;
 
 /*! The mapping between filesys sector index and cache index. */
 struct hash cache_table; 
@@ -57,8 +55,7 @@ void cache_init(void) {
     hand = 0;
 
     /* Initialize read_ahead and write_behind threads. */
-    cond_init(&read_ahead_cond);
-    cond_init(&write_behind_cond);
+    list_init(&read_ahead_list);
     //ASSERT(thread_create("read_ahead", PRI_DEFAULT, &read_ahead, NULL) != TID_ERROR);
     //ASSERT(thread_create("write_behind", PRI_DEFAULT, &write_behind, NULL) != TID_ERROR);
 }
@@ -150,7 +147,7 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
 /*! Find the cached sector at SECTOR_IDX and read SIZE bytes at offset
     OFFSET. */
 void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
-                off_t offset, block_sector_t next_sector_idx) {
+                off_t offset) {
     struct cache_entry *stored_ce;
     struct cache_block *cblock;
     bool present;
@@ -165,7 +162,6 @@ void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
     
     cblock = &cache[stored_ce->cache_idx];
     read_lock(cblock);
-    cblock->next_sector_idx = next_sector_idx;
     
     if (present) {
         cblock->accessed = 1;
@@ -178,8 +174,8 @@ void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
 
 /*! Find the cached sector at SECTOR_IDX and write SIZE bytes starting at 
     OFFSET from BUFFER to the cached sector. */
-void cache_write(block_sector_t sector_idx, void *buffer, off_t size,
-                 off_t offset, block_sector_t next_sector_idx) {
+void cache_write(block_sector_t sector_idx, const void *buffer, off_t size,
+                 off_t offset) {
     struct cache_entry *stored_ce;
     struct cache_block *cblock;
     bool present;
@@ -194,7 +190,6 @@ void cache_write(block_sector_t sector_idx, void *buffer, off_t size,
     
     cblock = &cache[stored_ce->cache_idx];
     write_lock(cblock);
-    cblock->next_sector_idx = next_sector_idx;
     
     if (present) {
         cblock->accessed = 1;
@@ -309,35 +304,21 @@ bool cache_less(const struct hash_elem *a, const struct hash_elem *b,
 
 
 // TODO
-static void read_ahead(void) {
-    int i;
-    struct lock *mutex;
-
-    while (true) {
-        /*cond_wait(&read_ahead_cond, &mutex); */
-
-        for (i = 0; i < CACHE_SIZE; i++) {
-            /* Lock this cache block */
-            /*read_lock(&(cache[i]));
-            ASSERT(cb->valid);
-            if (cache[i].valid && cb->accessed) {
-                /* TODO
-                block_sector_t next_sector_idx = next_sector(c)
-
-
-                cache_miss(next_sector_idx);
-                read_unlock(&(cache[i]));
-            }*/
-        }
-    }
+void read_ahead(block_sector_t sector_idx) {
+    struct read_ahead_entry *raentry = malloc(sizeof(struct read_ahead_entry));
+    raentry->sector_idx = sector_idx;
+    list_push_back(&read_ahead_list, &raentry->elem);
 }
 
-static void write_behind(void) {
+/* Writes back all dirty blocks to the device.
+ * Should call every x seconds from timer_tick().
+ */
+void write_behind(void) {
     int i;
-    struct lock *mutex;
 
-    while (true) {
-        /*cond_wait(&read_ahead_cond, &mutex);*/
-        // TODO
+    for (i = 0; i < CACHE_SIZE; i++) {
+        if (cache[i].valid && cache[i].dirty) {
+            block_write(fs_device, cache[i].sector_idx, cache[i].data);
+        }
     }
 }

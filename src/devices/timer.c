@@ -12,6 +12,7 @@
 #include "threads/interrupt.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
+#include "filesys/cache.h"
   
 #if TIMER_FREQ < 19
 #error 8254 timer requires TIMER_FREQ >= 19
@@ -68,6 +69,12 @@ void timer_calibrate(void) {
 int64_t timer_ticks(void) {
     enum intr_level old_level = intr_disable();
     int64_t t = ticks;
+
+    /* Call write behind every five seconds. */
+    if (ticks % (5 * TIMER_FREQ) == 0) {
+        write_behind();
+    }
+
     intr_set_level(old_level);
     return t;
 }

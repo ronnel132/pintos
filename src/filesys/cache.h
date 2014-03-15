@@ -35,7 +35,6 @@ struct cache_block {
     struct rwlock rwl;
 
     block_sector_t sector_idx; 
-    block_sector_t next_sector_idx;
     
     /* TRUE if block currently corresponds to a sector. FALSE otherwise. */
     bool valid;
@@ -60,15 +59,28 @@ struct cache_entry {
 
     /*! The element stored in the hash table for the buffer cache. */
     struct hash_elem elem;
+};
+
+/*! An entry for read ahead list. */
+struct read_ahead_entry {
+    /* The sector in the filesys block the block corresponds to. */
+    block_sector_t sector_idx;
+
+    /*! The element stored in the list for read ahead. */
+    struct list_elem elem;
 }; 
 
 void cache_init(void); 
 void cache_read(block_sector_t sector_idx, void *buffer, off_t size, 
-                off_t offset, block_sector_t next_sector_idx);
-void cache_write(block_sector_t sector_idx, void *buffer, off_t size,
-                 off_t offset, block_sector_t next_sector_idx);
+                off_t offset);
+void cache_write(block_sector_t sector_idx, const void *buffer, off_t size,
+                 off_t offset);
 unsigned cache_hash(const struct hash_elem *element, void *aux);
 bool cache_less(const struct hash_elem *a, const struct hash_elem *b, 
                 void *aux);
+
+
+void read_ahead(block_sector_t sector_idx);
+void write_behind(void);
 
 #endif /* filesys/cache.h */
