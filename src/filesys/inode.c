@@ -80,7 +80,7 @@ static block_sector_t allocate_sector(bool index_block) {
                 sector_empty[i] = 0;
             }
         }
-        block_write(fs_device, sector, sector_empty);
+        cache_write(sector, sector_empty, BLOCK_SECTOR_SIZE, 0);
         return sector;
     } 
     return -1;
@@ -108,7 +108,7 @@ static bool allocate_at_byte(struct inode_disk *disk_inode,
                 /* Store this change on the in-memory inode. */
                 disk_inode->blocks[block_idx] = sector;
                 /* Store this change on the on-disk inode. */
-                block_write(fs_device, inode_sect, disk_inode);
+                cache_write(inode_sect, disk_inode, BLOCK_SECTOR_SIZE, 0);
                 return true;
             }
         }
@@ -119,14 +119,14 @@ static bool allocate_at_byte(struct inode_disk *disk_inode,
 
         if (disk_inode->blocks[INDIRECT_IDX] != -1) {
             /* Read the singly indirect block into the tmp block. */
-            block_read(fs_device, disk_inode->blocks[INDIRECT_IDX], tmp_block); 
+            cache_read(disk_inode->blocks[INDIRECT_IDX], tmp_block, 
+                       BLOCK_SECTOR_SIZE, 0);
 
             if (tmp_block[block_idx] == -1) {
                 sector = allocate_sector(false);
                 if ((int) sector != -1) {
                     tmp_block[block_idx] = sector;
-                    block_write(fs_device, disk_inode->blocks[INDIRECT_IDX],
-                                tmp_block);
+                    cache_write(inode_sect, disk_inode, BLOCK_SECTOR_SIZE, 0);
                     return true;
                 }
             }
@@ -135,7 +135,7 @@ static bool allocate_at_byte(struct inode_disk *disk_inode,
             sector = allocate_sector(true);
             if ((int) sector != -1) {
                 disk_inode->blocks[INDIRECT_IDX] = sector;
-                block_write(fs_device, inode_sect, disk_inode);
+                cache_write(inode_sect, disk_inode, BLOCK_SECTOR_SIZE, 0);
                 /* Call recursively after allocating the necessary index
                    block -- effectively, "try again" to get the sector. */
                 return allocate_at_byte(disk_inode, inode_sect, pos);
@@ -149,12 +149,12 @@ static bool allocate_at_byte(struct inode_disk *disk_inode,
 
         if (disk_inode->blocks[DBL_INDIRECT_IDX] != -1) {
             /* Read the first doubly indirect block into the tmp block. */
-            block_read(fs_device, disk_inode->blocks[DBL_INDIRECT_IDX],
-                       tmp_block);
+            cache_read(disk_inode->blocks[DBL_INDIRECT_IDX], tmp_block, 
+                       BLOCK_SECTOR_SIZE, 0);
             /* Check if the sector pointer in the block directory is valid. */
             if (tmp_block[block_idx] != -1) {
                 sector_idx = tmp_block[block_idx];
-                block_read(fs_device, sector_idx, tmp_block);  
+                cache_read(sector_idx, tmp_block, BLOCK_SECTOR_SIZE, 0);
                 /* Calculate the index of within the second doubly indirect 
                    block. */
                 block_idx = ((pos - DBL_INDIRECT_LOWER) % BYTES_PER_DBL_IDX) /
@@ -163,16 +163,15 @@ static bool allocate_at_byte(struct inode_disk *disk_inode,
                 if (tmp_block[block_idx] == -1) {
                     sector = allocate_sector(false);
                     tmp_block[block_idx] = sector;
-                    block_write(fs_device, sector_idx, tmp_block); 
+                    cache_write(sector_idx, tmp_block, BLOCK_SECTOR_SIZE, 0);
                 }
             }
             else {
                 sector = allocate_sector(true);
                 if (sector != 1) {
                     tmp_block[block_idx] = sector;
-                    block_write(fs_device,
-                                disk_inode->blocks[DBL_INDIRECT_IDX], 
-                                tmp_block);
+                    cache_write(disk_inode->blocks[DBL_INDIRECT_IDX],
+                                tmp_block, BLOCK_SECTOR_SIZE, 0);
                     /* Retry. */
                     return allocate_at_byte(disk_inode, inode_sect, pos);
                 }
@@ -182,7 +181,7 @@ static bool allocate_at_byte(struct inode_disk *disk_inode,
             sector = allocate_sector(true);
             if ((int) sector != -1) {
                 disk_inode->blocks[DBL_INDIRECT_IDX] = sector;
-                block_write(fs_device, inode_sect, disk_inode);
+                cache_write(inode_sect, disk_inode, BLOCK_SECTOR_SIZE, 0);
                 /* Retry. */
                 return allocate_at_byte(disk_inode, inode_sect, pos);
             }
@@ -217,7 +216,8 @@ static block_sector_t byte_to_sector(const struct inode *inode, off_t pos) {
         block_idx = (pos - INDIRECT_LOWER) / BLOCK_SECTOR_SIZE;
         if (inode->data.blocks[INDIRECT_IDX] != -1) {
             /* Read the singly indirect block into the tmp block. */
-            block_read(fs_device, inode->data.blocks[INDIRECT_IDX], tmp_block); 
+            cache_read(inode->data.blocks[INDIRECT_IDX], tmp_block, 
+                       BLOCK_SECTOR_SIZE, 0);
 
             if (tmp_block[block_idx] != -1) {
                 return tmp_block[block_idx];
@@ -233,12 +233,12 @@ static block_sector_t byte_to_sector(const struct inode *inode, off_t pos) {
 
         if (inode->data.blocks[DBL_INDIRECT_IDX] != -1) {
             /* Read the first doubly indirect block into the tmp block. */
-            block_read(fs_device, inode->data.blocks[DBL_INDIRECT_IDX],
-                       tmp_block);
+            cache_read(inode->data.blocks[DBL_INDIRECT_IDX], tmp_block, 
+                       BLOCK_SECTOR_SIZE, 0);
             /* Check if the sector pointer in the block directory is valid. */
             if (tmp_block[block_idx] != -1) {
                 sector_idx = tmp_block[block_idx];
-                block_read(fs_device, sector_idx, tmp_block);  
+                cache_read(sector_idx, tmp_block, BLOCK_SECTOR_SIZE, 0);
                 /* Calculate the index of within the second doubly indirect 
                    block. */
                 block_idx = ((pos - DBL_INDIRECT_LOWER) % BYTES_PER_DBL_IDX) /
@@ -294,7 +294,7 @@ bool inode_create(block_sector_t sector, off_t length) {
                 goto fail;
             }
         }
-        block_write(fs_device, sector, disk_inode);
+        cache_write(sector, disk_inode, BLOCK_SECTOR_SIZE, 0);
         return true; 
     }
 fail:
@@ -329,7 +329,7 @@ struct inode * inode_open(block_sector_t sector) {
     inode->open_cnt = 1;
     inode->deny_write_cnt = 0;
     inode->removed = false;
-    block_read(fs_device, inode->sector, &inode->data);
+    cache_read(inode->sector, &inode->data, BLOCK_SECTOR_SIZE, 0);
     return inode;
 }
 
@@ -449,7 +449,7 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
     /* Extend the file if needed. */
     if (offset + size > inode_length(inode)) {
         inode->data.length = offset + size;
-        block_write(fs_device, inode->sector, &inode->data);
+        cache_write(inode->sector, &inode->data, BLOCK_SECTOR_SIZE, 0);
     }
 
     while (size > 0) {
