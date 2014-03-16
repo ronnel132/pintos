@@ -75,6 +75,11 @@ static block_sector_t allocate_sector(bool index_block) {
                 sector_empty[i] = -1;   
             } 
         }
+        else {
+            for (i = 0; i < IDX_PER_SECTOR; i++) {
+                sector_empty[i] = 0;
+            }
+        }
         block_write(fs_device, sector, sector_empty);
         return sector;
     } 
@@ -409,17 +414,17 @@ off_t inode_read_at(struct inode *inode, void *buffer_, off_t size, off_t offset
 
         cache_read(sector_idx, buffer + bytes_read, chunk_size, sector_ofs);  
 
-        if (offset + BLOCK_SECTOR_SIZE <= inode_length(inode)) {
-            block_sector_t next_sector_idx = byte_to_sector(inode, offset + 
-                                                            BLOCK_SECTOR_SIZE);
-            if ((int) next_sector_idx == -1) {
-                allocate_at_byte(&inode->data, inode->sector, offset + 
-                                 BLOCK_SECTOR_SIZE);
-                next_sector_idx = byte_to_sector(inode, offset + 
-                                                 BLOCK_SECTOR_SIZE); 
-            }
-            read_ahead(sector_idx, next_sector_idx);
-        }
+        //if (offset + BLOCK_SECTOR_SIZE <= inode_length(inode)) {
+        //    block_sector_t next_sector_idx = byte_to_sector(inode, offset + 
+        //                                                    BLOCK_SECTOR_SIZE);
+         //   if ((int) next_sector_idx == -1) {
+        //        allocate_at_byte(&inode->data, inode->sector, offset + 
+         //                        BLOCK_SECTOR_SIZE);
+         //       next_sector_idx = byte_to_sector(inode, offset + 
+         //                                        BLOCK_SECTOR_SIZE); 
+         //   }
+         //   read_ahead(sector_idx, next_sector_idx);
+       // }
       
 
         /* Advance. */
@@ -476,17 +481,17 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
 
         cache_write(sector_idx, buffer + bytes_written, chunk_size, sector_ofs);
 
-        if (offset + BLOCK_SECTOR_SIZE <= inode_length(inode)) {
-            block_sector_t next_sector_idx = byte_to_sector(inode, offset + 
-                                                            BLOCK_SECTOR_SIZE);
-            if ((int) next_sector_idx == -1) {
-                allocate_at_byte(&inode->data, inode->sector, offset + 
-                                 BLOCK_SECTOR_SIZE);
-                next_sector_idx = byte_to_sector(inode, offset +
-                                                 BLOCK_SECTOR_SIZE);
-            }
-            read_ahead(sector_idx, next_sector_idx);
-        }
+        //if (offset + BLOCK_SECTOR_SIZE <= inode_length(inode)) {
+         //   block_sector_t next_sector_idx = byte_to_sector(inode, offset + 
+         //                                                   BLOCK_SECTOR_SIZE);
+         //   if ((int) next_sector_idx == -1) {
+          //      allocate_at_byte(&inode->data, inode->sector, offset + 
+          //                       BLOCK_SECTOR_SIZE);
+          //      next_sector_idx = byte_to_sector(inode, offset +
+          //                                       BLOCK_SECTOR_SIZE);
+          //  }
+          //  read_ahead(sector_idx, next_sector_idx);
+        //}
 
         /* Advance. */
         size -= chunk_size;
