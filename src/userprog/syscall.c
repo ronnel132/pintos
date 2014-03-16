@@ -310,13 +310,7 @@ bool create(const char *file, unsigned initial_size) {
 
     /* Validate user pointer and then create file. */
     if (valid_user_pointer(file)) {
-        /* Lock the file system while creating the file */
-        lock_acquire(&filesys_lock);
-
         status = filesys_create(file, initial_size);
-
-        /* Release the file system lock. */
-        lock_release(&filesys_lock);
     } else {
         /* If user pointer is invalid, exit. */
         exit(EXIT_BAD_PTR);
@@ -332,9 +326,7 @@ bool remove(const char *file) {
     
     /* Validate user pointer and then remove file. */
     if (valid_user_pointer(file)) {
-        lock_acquire(&filesys_lock);
         status = filesys_remove(file);
-        lock_release(&filesys_lock);
     } else {
         exit(EXIT_BAD_PTR);
     }
@@ -353,7 +345,6 @@ int open(const char *file) {
 
     /* Validate user pointer and then open file. */
     if (valid_user_pointer(file)) {
-        lock_acquire(&filesys_lock);
 
         /* Open the file and get the file struct from the filesystem. */
         opened_file = filesys_open(file);
@@ -388,7 +379,6 @@ int open(const char *file) {
             }
         }
 
-        lock_release(&filesys_lock);
     } else {
         exit(EXIT_BAD_PTR);
     }
@@ -401,12 +391,10 @@ int open(const char *file) {
 int filesize(int fd) {
     int size = -1;
 
-    lock_acquire(&filesys_lock);
     /* If file is indeed open, return length */
     if (file_is_open(fd)) {
         size = file_length(get_file_struct(fd));
     }
-    lock_release(&filesys_lock);
 
     return size;
 }
@@ -441,11 +429,9 @@ int read(int fd, void *buffer, unsigned size) {
             /* If the file descriptor is not stdout, read the file using
              * the filesystem.
              */
-            lock_acquire(&filesys_lock);
             if (file_is_open(fd)) {
                 bytes_read = file_read(get_file_struct(fd), buffer, size);
             }
-            lock_release(&filesys_lock);
         }
     } else {
         exit(EXIT_BAD_PTR);
@@ -470,11 +456,9 @@ int write(int fd, const void *buffer, unsigned size) {
             putbuf((const char *) buffer, (size_t) size);
         } else if (fd != STDIN_FILENO) {
             /* If file is not stdin, write to file in the filesystem */
-            lock_acquire(&filesys_lock);
             if (file_is_open(fd)) {
                 bytes_written = file_write(get_file_struct(fd), buffer, size);
             }
-            lock_release(&filesys_lock);
         }
     } else {
         exit(EXIT_BAD_PTR);
@@ -488,11 +472,9 @@ int write(int fd, const void *buffer, unsigned size) {
  * is the file's start.)
  */
 void seek(int fd, unsigned position) {
-    lock_acquire(&filesys_lock);
     if (file_is_open(fd)) {
         file_seek(get_file_struct(fd), position);
     }
-    lock_release(&filesys_lock);
 }
 
 /* Returns the position of the next byte to be read or written in open file
@@ -501,11 +483,9 @@ void seek(int fd, unsigned position) {
 unsigned tell(int fd) {
     unsigned pos = 0;
 
-    lock_acquire(&filesys_lock);
     if (file_is_open(fd)) {
         pos = file_tell(get_file_struct(fd));
     }
-    lock_release(&filesys_lock);
 
     return pos;
 }
@@ -518,7 +498,6 @@ void close(int fd) {
 
     struct thread * cur_thread = thread_current();
 
-    lock_acquire(&filesys_lock);
     if (file_is_open(fd)) {
         /* If file is opened by this process */
 
@@ -536,5 +515,4 @@ void close(int fd) {
         /* Decrement the variable of number of files that are open */
         cur_thread->process_details->num_files_open--;
     }
-    lock_release(&filesys_lock);
 }
