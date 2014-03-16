@@ -392,7 +392,7 @@ void write_behind_daemon(void *aux) {
 }
 
 /* Writes back all dirty blocks to the device.
- * Should call every x seconds from timer_tick().
+ * Should call every x seconds from write_behind_daemon().
  */
 void write_behind() {
     int i;
