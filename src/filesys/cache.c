@@ -21,6 +21,8 @@ static void write_unlock(struct cache_block *cb);
 static struct cache_entry *cache_miss(block_sector_t sector_idx);
 
 /* Read ahead list. */
+static void read_ahead_daemon(void * aux);
+struct condition read_ahead_condition;
 static struct list read_ahead_list;
 
 /*! The mapping between filesys sector index and cache index. */
@@ -55,9 +57,12 @@ void cache_init(void) {
     hand = 0;
 
     /* Initialize read_ahead and write_behind threads. */
+    cond_init(&read_ahead_condition);
     list_init(&read_ahead_list);
-    //ASSERT(thread_create("read_ahead", PRI_DEFAULT, &read_ahead, NULL) != TID_ERROR);
-    //ASSERT(thread_create("write_behind", PRI_DEFAULT, &write_behind, NULL) != TID_ERROR);
+    thread_create("rad",
+                  3,
+                  read_ahead_daemon,
+                  NULL);
 }
 
 /*! Gets cache table entry from the hash table. Returns NULL if
@@ -304,10 +309,57 @@ bool cache_less(const struct hash_elem *a, const struct hash_elem *b,
 
 
 // TODO
-void read_ahead(block_sector_t sector_idx) {
-    struct read_ahead_entry *raentry = malloc(sizeof(struct read_ahead_entry));
-    raentry->sector_idx = sector_idx;
-    list_push_back(&read_ahead_list, &raentry->elem);
+void read_ahead(block_sector_t sector_idx, block_sector_t next_sector_idx) {
+    struct read_ahead_entry *raentry;
+
+    raentry = (struct read_ahead_entry *) malloc(sizeof(struct read_ahead_entry));
+    ASSERT(raentry != NULL);
+
+    if (raentry != NULL) {
+        raentry->sector_idx = sector_idx;
+        raentry->next_sector_idx = next_sector_idx;
+        list_push_back(&read_ahead_list, &raentry->elem);
+    }
+}
+
+static void read_ahead_daemon(void * aux) {
+    struct read_ahead_entry *raentry;
+    struct cache_entry *centry;
+    struct cache_entry *next_centry;
+
+    while (true) {
+        // TODO conditions
+        // ASSERT(!list_empty(&read_ahead_list));
+
+        // stupid thread yielding for now
+        if (!list_empty(&read_ahead_list)) {
+            raentry = list_entry(list_pop_front(&read_ahead_list),
+                                 struct read_ahead_entry,
+                                 elem);
+            ASSERT(raentry != NULL);
+
+            centry = cache_get_entry(raentry->sector_idx);
+
+            if (centry != NULL) {
+                if (cache[centry->cache_idx].accessed) {
+                    next_centry = cache_get_entry(raentry->next_sector_idx);
+                    if (next_centry == NULL) {
+                        cache_miss(raentry->next_sector_idx);
+                    }
+                    free(raentry);
+                }
+                else {
+                    list_push_back(&read_ahead_list, &raentry->elem);
+                }
+            }
+            else {
+                free(raentry);
+            }
+        }
+        else {
+            thread_yield();
+        }
+    }
 }
 
 /* Writes back all dirty blocks to the device.

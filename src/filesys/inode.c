@@ -409,7 +409,7 @@ off_t inode_read_at(struct inode *inode, void *buffer_, off_t size, off_t offset
         cache_read(sector_idx, buffer + bytes_read, chunk_size, sector_ofs);  
 
         if (offset + BLOCK_SECTOR_SIZE <= inode_length(inode)) {
-            read_ahead(byte_to_sector(inode, offset + BLOCK_SECTOR_SIZE));
+            read_ahead(sector_idx, byte_to_sector(inode, offset + BLOCK_SECTOR_SIZE));
         }
       
         /* Advance. */
@@ -465,7 +465,7 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
         cache_write(sector_idx, buffer + bytes_written, chunk_size, sector_ofs);
 
         if (offset + BLOCK_SECTOR_SIZE <= inode_length(inode)) {
-            read_ahead(byte_to_sector(inode, offset + BLOCK_SECTOR_SIZE));
+            read_ahead(sector_idx, byte_to_sector(inode, offset + BLOCK_SECTOR_SIZE));
         }
 
         /* Advance. */
