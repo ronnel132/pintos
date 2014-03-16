@@ -312,6 +312,9 @@ bool cache_less(const struct hash_elem *a, const struct hash_elem *b,
 void read_ahead(block_sector_t sector_idx, block_sector_t next_sector_idx) {
     struct read_ahead_entry *raentry;
 
+    ASSERT(sector_idx != -1);
+    ASSERT(next_sector_idx != -1);
+
     raentry = (struct read_ahead_entry *) malloc(sizeof(struct read_ahead_entry));
     ASSERT(raentry != NULL);
 
