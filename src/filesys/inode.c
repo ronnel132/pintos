@@ -25,10 +25,10 @@
 /*! First byte addressable by the indirect block. */
 #define INDIRECT_LOWER DIRECT_UPPER
 /*! The byte after the last byte addressable by the indirect block. */
-#define INDIRECT_UPPER (INDIRECT_UPPER + IDX_PER_SECTOR * BLOCK_SECTOR_SIZE)
+#define INDIRECT_UPPER (INDIRECT_LOWER + (IDX_PER_SECTOR * BLOCK_SECTOR_SIZE))
 /*! Number of bytes addressable by a single index within the 1st level of
     the doubly indexed index blocks. */
-#define BYTES_PER_DBL_IDX (IDX_PER_SECTOR * BLOCK_SECTOR_SIZE);
+#define BYTES_PER_DBL_IDX (IDX_PER_SECTOR * BLOCK_SECTOR_SIZE)
 /*! First byte addressable by the doubly indirect block. */
 #define DBL_INDIRECT_LOWER INDIRECT_UPPER
 /*! The byte after the last byte addressable by the doubly indirect block. */
@@ -66,7 +66,7 @@ struct inode {
 static block_sector_t allocate_sector(bool index_block) {
     int i;
     block_sector_t sector; 
-    if (freemap_allocate(1, &sector)) {
+    if (free_map_allocate(1, &sector)) {
         int sector_empty[IDX_PER_SECTOR];
         if (index_block) {
             /* Fill the sector_empty buffer with -1's, representing a file
@@ -84,13 +84,13 @@ static block_sector_t allocate_sector(bool index_block) {
 /*! Allocates all necessary sectors to ensure that the file for DISK_INODE is
     addressable at offset POS. INODE_SECT is the sector where DISK_INODE is 
     stored. */
-static bool allocate_at_byte(const struct inode_disk *disk_inode, 
+static bool allocate_at_byte(struct inode_disk *disk_inode, 
                              block_sector_t inode_sect, off_t pos) {
     int tmp_block[IDX_PER_SECTOR];
     int block_idx;
     block_sector_t sector, sector_idx;
 
-    ASSERT(inode != NULL);
+    ASSERT(disk_inode != NULL);
 
     /* In the direct blocks. */
     if (pos < DIRECT_UPPER) {
@@ -99,7 +99,7 @@ static bool allocate_at_byte(const struct inode_disk *disk_inode,
         
         if (disk_inode->blocks[block_idx] == -1) {
             sector = allocate_sector(false);
-            if (sector != -1) {
+            if ((int) sector != -1) {
                 /* Store this change on the in-memory inode. */
                 disk_inode->blocks[block_idx] = sector;
                 /* Store this change on the on-disk inode. */
@@ -118,7 +118,7 @@ static bool allocate_at_byte(const struct inode_disk *disk_inode,
 
             if (tmp_block[block_idx] == -1) {
                 sector = allocate_sector(false);
-                if (sector != -1) {
+                if ((int) sector != -1) {
                     tmp_block[block_idx] = sector;
                     block_write(fs_device, disk_inode->blocks[INDIRECT_IDX],
                                 tmp_block);
@@ -128,7 +128,7 @@ static bool allocate_at_byte(const struct inode_disk *disk_inode,
         }
         else {
             sector = allocate_sector(true);
-            if (sector != -1) {
+            if ((int) sector != -1) {
                 disk_inode->blocks[INDIRECT_IDX] = sector;
                 block_write(fs_device, inode_sect, disk_inode);
                 /* Call recursively after allocating the necessary index
@@ -175,7 +175,7 @@ static bool allocate_at_byte(const struct inode_disk *disk_inode,
         }
         else {
             sector = allocate_sector(true);
-            if (sector != -1) {
+            if ((int) sector != -1) {
                 disk_inode->blocks[DBL_INDIRECT_IDX] = sector;
                 block_write(fs_device, inode_sect, disk_inode);
                 /* Retry. */
@@ -194,7 +194,7 @@ static bool allocate_at_byte(const struct inode_disk *disk_inode,
 static block_sector_t byte_to_sector(const struct inode *inode, off_t pos) {
     int tmp_block[IDX_PER_SECTOR];
     int block_idx;
-    block_sector_t sector, sector_idx;
+    block_sector_t sector_idx;
 
     ASSERT(inode != NULL);
 
@@ -282,7 +282,7 @@ bool inode_create(block_sector_t sector, off_t length) {
         size_t sectors = bytes_to_sectors(length);
         disk_inode->length = length;
         disk_inode->magic = INODE_MAGIC;
-        for (i = 0; i < sectors; i += BLOCK_SECTOR_SIZE) {
+        for (i = 0; i < (int) sectors; i += BLOCK_SECTOR_SIZE) {
             if (!allocate_at_byte(disk_inode, sector, i)) {
                 free(disk_inode);
                 goto fail;
@@ -379,10 +379,20 @@ void inode_remove(struct inode *inode) {
 off_t inode_read_at(struct inode *inode, void *buffer_, off_t size, off_t offset) {
     uint8_t *buffer = buffer_;
     off_t bytes_read = 0;
-
+    
     while (size > 0) {
         /* Disk sector to read, starting byte offset within sector. */
         block_sector_t sector_idx = byte_to_sector(inode, offset);
+        if ((int) sector_idx == -1) {
+            if (offset < inode_length(inode)) {
+                allocate_at_byte(&inode->data, inode->sector, offset);
+                sector_idx = byte_to_sector(inode, offset); 
+                ASSERT((int) sector_idx != -1);
+            }
+            else {
+                return bytes_read;
+            }
+        }
         int sector_ofs = offset % BLOCK_SECTOR_SIZE;
 
         /* Bytes left in inode, bytes left in sector, lesser of the two. */
@@ -427,6 +437,18 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
         /* Sector to write, starting byte offset within sector. */
         /* TODO: sector_idx = merge conflict third parameter "true"? */
         block_sector_t sector_idx = byte_to_sector(inode, offset);
+        /* If there is no sector assigned to this offset, assign one. */
+        if ((int) sector_idx == -1) {
+            allocate_at_byte(&inode->data, inode->sector, offset);
+            /* Extend the file if needed. */
+            if (offset > inode_length(inode)) {
+                inode->data.length = offset;
+                block_write(fs_device, inode->sector, &inode->data);
+            }
+            /* Try again. */
+            sector_idx = byte_to_sector(inode, offset);
+            ASSERT((int) sector_idx != -1);
+        }
         int sector_ofs = offset % BLOCK_SECTOR_SIZE;
 
         /* Bytes left in inode, bytes left in sector, lesser of the two. */
