@@ -17,7 +17,7 @@
 /*! Number of direct blocks in the index structure. */
 #define DIRECT_BLOCKS (IDX_BLOCKS - 2)
 /*! Index of the indirect block in the on-disk inode blocks array. */
-#define INDIRECT_IDX (IDX_BLOCKS - 3)
+#define INDIRECT_IDX (IDX_BLOCKS - 2)
 /*! Index of the doubly indirect block in the on-disk inode blocks array. */
 #define DBL_INDIRECT_IDX (INDIRECT_IDX + 1)
 /*! The byte after the last byte addressable by the direct blocks. */
@@ -210,7 +210,6 @@ static block_sector_t byte_to_sector(const struct inode *inode, off_t pos) {
     /* In the singly indirect blocks. */
     else if (pos >= INDIRECT_LOWER && pos < INDIRECT_UPPER) {
         block_idx = (pos - INDIRECT_LOWER) / BLOCK_SECTOR_SIZE;
-
         if (inode->data.blocks[INDIRECT_IDX] != -1) {
             /* Read the singly indirect block into the tmp block. */
             block_read(fs_device, inode->data.blocks[INDIRECT_IDX], tmp_block); 
@@ -218,6 +217,8 @@ static block_sector_t byte_to_sector(const struct inode *inode, off_t pos) {
             if (tmp_block[block_idx] != -1) {
                 return tmp_block[block_idx];
             }
+        }
+        else {
         }
     } 
     /* In the doubly indirect blocks. */
@@ -429,9 +430,16 @@ off_t inode_read_at(struct inode *inode, void *buffer_, off_t size, off_t offset
 off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t offset) {
     const uint8_t *buffer = buffer_;
     off_t bytes_written = 0;
+    off_t original_size = size;
 
     if (inode->deny_write_cnt)
         return 0;
+    
+    /* Extend the file if needed. */
+    if (offset + size > inode_length(inode)) {
+        inode->data.length = offset + size;
+        block_write(fs_device, inode->sector, &inode->data);
+    }
 
     while (size > 0) {
         /* Sector to write, starting byte offset within sector. */
@@ -440,11 +448,6 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
         /* If there is no sector assigned to this offset, assign one. */
         if ((int) sector_idx == -1) {
             allocate_at_byte(&inode->data, inode->sector, offset);
-            /* Extend the file if needed. */
-            if (offset > inode_length(inode)) {
-                inode->data.length = offset;
-                block_write(fs_device, inode->sector, &inode->data);
-            }
             /* Try again. */
             sector_idx = byte_to_sector(inode, offset);
             ASSERT((int) sector_idx != -1);
