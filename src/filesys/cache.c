@@ -59,10 +59,10 @@ void cache_init(void) {
     /* Initialize read_ahead and write_behind threads. */
     cond_init(&read_ahead_condition);
     list_init(&read_ahead_list);
-    thread_create("rad",
+    /*thread_create("rad",
                   3,
                   read_ahead_daemon,
-                  NULL);
+                  NULL);*/
 }
 
 /*! Gets cache table entry from the hash table. Returns NULL if
@@ -315,13 +315,15 @@ void read_ahead(block_sector_t sector_idx, block_sector_t next_sector_idx) {
     ASSERT(sector_idx != -1);
     ASSERT(next_sector_idx != -1);
 
-    raentry = (struct read_ahead_entry *) malloc(sizeof(struct read_ahead_entry));
-    ASSERT(raentry != NULL);
+    if (list_size(&read_ahead_list) < 256) {
+        raentry = (struct read_ahead_entry *) malloc(sizeof(struct read_ahead_entry));
+        ASSERT(raentry != NULL);
 
-    if (raentry != NULL) {
-        raentry->sector_idx = sector_idx;
-        raentry->next_sector_idx = next_sector_idx;
-        list_push_back(&read_ahead_list, &raentry->elem);
+        if (raentry != NULL) {
+            raentry->sector_idx = sector_idx;
+            raentry->next_sector_idx = next_sector_idx;
+            list_push_back(&read_ahead_list, &raentry->elem);
+        }
     }
 }
 
