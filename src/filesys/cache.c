@@ -175,6 +175,12 @@ void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
     
     cblock = &cache[stored_ce->cache_idx];
     read_lock(cblock);
+
+    /* If that cache block has changed, retry */
+    if (cache[cache_get_entry(sector_idx)->cache_idx].sector_idx != sector_idx) {
+        cache_read(sector_idx, buffer, size, offset);
+        return;
+    }
     
     if (present) {
         cblock->accessed = 1;
@@ -203,6 +209,12 @@ void cache_write(block_sector_t sector_idx, const void *buffer, off_t size,
     
     cblock = &cache[stored_ce->cache_idx];
     write_lock(cblock);
+
+    /* If that cache block has changed, retry */
+    if (cache[cache_get_entry(sector_idx)->cache_idx].sector_idx != sector_idx) {
+        cache_write(sector_idx, buffer, size, offset);
+        return;
+    }
     
     if (present) {
         cblock->accessed = 1;
@@ -341,7 +353,6 @@ static void read_ahead_daemon(void * aux) {
     struct cache_entry *next_centry;
 
     while (true) {
-        // TODO: Locks
         // TODO conditions
         // ASSERT(!list_empty(&read_ahead_list));
 
