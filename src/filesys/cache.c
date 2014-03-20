@@ -348,7 +348,6 @@ static void _cache_write(block_sector_t sector_idx, const void *buffer, off_t si
     if (cache[cache_get_entry(sector_idx)->cache_idx].sector_idx != sector_idx) {
         *error = 1;
         write_unlock(cblock);
-        lock_release(&ht_lock);
         return;
     }
     
