@@ -453,6 +453,7 @@ void write_behind() {
         if (cache[i].valid && cache[i].dirty) {
             block_write(fs_device, cache[i].sector_idx, cache[i].data);
         }
+        cache[i].dirty = 0;
         read_unlock(&cache[i]);
     }
 }
