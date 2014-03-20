@@ -301,13 +301,13 @@ static void _cache_read(block_sector_t sector_idx, void *buffer, off_t size,
         lock_release(&ht_lock);
         return;
     }
+    lock_release(&ht_lock);
     
     cblock->accessed = 1;
 
     memcpy(buffer, (void *) ((off_t) cblock->data + offset), 
            (size_t) size);
     stored_ce->pinned = false;
-    lock_release(&ht_lock);
     read_unlock(cblock);
 }
 
@@ -361,6 +361,7 @@ static void _cache_write(block_sector_t sector_idx, const void *buffer, off_t si
         lock_release(&ht_lock);
         return;
     }
+    lock_release(&ht_lock);
     
     cblock->accessed = 1;
 
@@ -368,7 +369,6 @@ static void _cache_write(block_sector_t sector_idx, const void *buffer, off_t si
            (size_t) size);
     cblock->dirty = 1;
     stored_ce->pinned = false;
-    lock_release(&ht_lock);
     write_unlock(cblock);
 }
 
