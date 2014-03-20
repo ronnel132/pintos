@@ -234,7 +234,10 @@ void lock_acquire(struct lock *lock) {
     if (intr_context()) {
         ASSERT(0);
     }
-    ASSERT(!lock_held_by_current_thread(lock));
+//     ASSERT(!lock_held_by_current_thread(lock));
+    if(lock_held_by_current_thread(lock)) {
+        ASSERT(0);
+    }
 
 
     /* Only do this if we aren't using MLFQS option. */

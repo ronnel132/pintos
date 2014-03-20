@@ -318,7 +318,6 @@ bool load(int argc, const char **argv, void (**eip) (void), void **esp) {
         goto done;
     process_activate();
     
-    lock_acquire(&filesys_lock);
     /* Open executable file, named argv[0]. */
     file = filesys_open(argv[0]);
     if (file == NULL) {
@@ -395,7 +394,6 @@ bool load(int argc, const char **argv, void (**eip) (void), void **esp) {
             break;
         }
     }
-    lock_release(&filesys_lock);
 
     /* Set up stack. */
     if (!setup_stack(esp, argc, (char **) argv))

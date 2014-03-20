@@ -27,6 +27,8 @@ static void _cache_write(block_sector_t sector_idx, const void *buffer, off_t si
 
 static struct cache_entry *cache_miss(block_sector_t sector_idx);
 
+static struct cache_entry * cache_get_entry(block_sector_t sector_idx);
+
 /* Write-back daemon */
 static void write_behind_daemon(void * aux);
 
@@ -91,17 +93,22 @@ void cache_init(void) {
     /* Initialize read_ahead and write_behind threads. */
     cond_init(&ra_cond);
     list_init(&read_ahead_list);
-    thread_create("rad",
-                  0,
-                  read_ahead_daemon,
-                  NULL);
+
+//TODO: Reenable
+
+//     thread_create("rad",
+//                   0,
+//                   read_ahead_daemon,
+//                   NULL);
     thread_create("wbd", 0, write_behind_daemon, NULL);
 }
 
 void cache_evict() {
     struct cache_block *cb;
     struct cache_entry ce;
+    struct cache_entry *tmp;
     struct hash_elem *elem;
+    bool locked = false;
 
     /* Pick a cache entry to evict, and kick it out of the cache 
      * Using second chance strategy
@@ -119,8 +126,22 @@ void cache_evict() {
             write_unlock(cb);
         }
         else {
-            cb->valid = 0;
-            lock_acquire(&ht_lock);
+
+            if (!lock_held_by_current_thread(&ht_lock)) {
+                lock_acquire(&ht_lock);
+                locked = true;
+            }
+            
+            tmp = cache_get_entry(cb->sector_idx); 
+            if (tmp->pinned) {
+                write_unlock(cb);
+                hand = (hand + 1) % CACHE_SIZE;
+                if (locked) {
+                    lock_release(&ht_lock);
+                }
+                continue;
+            }
+
             ce.sector_idx = cb->sector_idx;
             elem = hash_find(&cache_table, &ce.elem);
             /* The cache_entry corresponding to the sector in this cache index
@@ -129,14 +150,23 @@ void cache_evict() {
             if (elem == NULL) {
                 ASSERT(0);
             }
-            hash_delete(&cache_table, elem);
-            lock_release(&ht_lock);
 
+            cb->valid = 0;
+            hash_delete(&cache_table, elem);
+
+            if (locked) {
+                lock_release(&ht_lock);
+            }
+
+            /* If dirty, write it back */
             if (cb->dirty) {
                 block_write(fs_device, cb->sector_idx, cb->data);
+                cb->dirty = 0;
             }
             
+            // TODO: Double check this
             free(hash_entry(elem, struct cache_entry, elem));
+
             write_unlock(cb);
             break;
         }
@@ -151,17 +181,25 @@ static struct cache_entry * cache_get_entry(block_sector_t sector_idx) {
     struct cache_entry ce; 
     struct hash_elem *e;
     struct cache_entry *tmp;
+    bool locked = false;
 
-    lock_acquire(&ht_lock);
+    if (!lock_held_by_current_thread(&ht_lock)) {
+        lock_acquire(&ht_lock);
+        locked = true;
+    }
     ce.sector_idx = sector_idx;
     e = hash_find(&cache_table, &ce.elem);
     if (e == NULL) {
-        lock_release(&ht_lock);
+        if (locked) {
+            lock_release(&ht_lock);
+        }
         return NULL;
     }
     else {
         tmp = hash_entry(e, struct cache_entry, elem);
-        lock_release(&ht_lock);
+        if (locked) {
+            lock_release(&ht_lock);
+        }
         return tmp;
     }
 }
@@ -172,6 +210,7 @@ static struct cache_entry * cache_get_entry(block_sector_t sector_idx) {
 static struct cache_entry *cache_miss(block_sector_t sector_idx) {
     struct cache_entry *centry; 
     struct cache_block *cblock;
+    bool locked = false;
 
 
     centry = malloc(sizeof(struct cache_entry));
@@ -187,10 +226,17 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
     hand = (hand + 1) % CACHE_SIZE;
     lock_release(&hand_lock);
     
-    lock_acquire(&ht_lock);
+    if (!lock_held_by_current_thread(&ht_lock)) {
+        lock_acquire(&ht_lock);
+        locked = true;
+    }
     centry->sector_idx = sector_idx;  
+    centry->pinned = false;  
     hash_insert(&cache_table, &centry->elem);
-    lock_release(&ht_lock);
+
+    if (locked) {
+        lock_release(&ht_lock);
+    }
 
     cblock = &cache[centry->cache_idx];
     write_lock(cblock);
@@ -212,7 +258,8 @@ void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
 
     /* Retry if error flag was set */
     while (cache_error) {
-        printf("====retrying\n");
+        printf("===retrying\n");
+        cache_error = 0;
         _cache_read(sector_idx, buffer, size, offset, &cache_error);
     }
 }
@@ -222,32 +269,44 @@ void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
 static void _cache_read(block_sector_t sector_idx, void *buffer, off_t size,
                 off_t offset, int *error) {
     struct cache_entry *stored_ce;
+    block_sector_t stored_cache_idx;
     struct cache_block *cblock;
-    bool present;
 
     ASSERT(offset + size <= BLOCK_SECTOR_SIZE);
 
+    lock_acquire(&ht_lock);
     stored_ce = cache_get_entry(sector_idx);
-    present = stored_ce != NULL;
-    if (!present) {
-        stored_ce = cache_miss(sector_idx);
-    }
     
-    cblock = &cache[stored_ce->cache_idx];
+    if (stored_ce != NULL) {
+        stored_ce->pinned = true;
+        stored_cache_idx = stored_ce->cache_idx;
+    }
+    else {
+        stored_ce = cache_miss(sector_idx);
+        stored_ce->pinned = true;
+        stored_cache_idx = stored_ce->cache_idx;
+    }
+
+
+    cblock = &cache[stored_cache_idx];
     read_lock(cblock);
+    
 
     /* If that cache block has changed, abort */
-    if (cache[cache_get_entry(sector_idx)->cache_idx].sector_idx != sector_idx) {
+    if (cblock->sector_idx != sector_idx) {
         *error = 1; 
+        read_unlock(cblock);
+        stored_ce->pinned = false;
+        lock_release(&ht_lock);
         return;
     }
     
-    if (present) {
-        cblock->accessed = 1;
-    }
+    cblock->accessed = 1;
 
     memcpy(buffer, (void *) ((off_t) cblock->data + offset), 
            (size_t) size);
+    lock_release(&ht_lock);
+    stored_ce->pinned = false;
     read_unlock(cblock);
 }
 
@@ -260,6 +319,8 @@ void cache_write(block_sector_t sector_idx, const void *buffer, off_t size,
 
     /* Retry if error flag was set */
     while (cache_error) {
+        printf("===retrying write\n");
+        cache_error = 0;
         _cache_write(sector_idx, buffer, size, offset, &cache_error);
     }
 }
@@ -286,6 +347,7 @@ static void _cache_write(block_sector_t sector_idx, const void *buffer, off_t si
     /* If that cache block has changed, abort */
     if (cache[cache_get_entry(sector_idx)->cache_idx].sector_idx != sector_idx) {
         *error = 1;
+        write_unlock(cblock);
         return;
     }
     
@@ -316,7 +378,6 @@ static void read_lock(struct cache_block *cb) {
 
     /* Else wait for writer to finish */
     else {
-        lock_acquire(mutex);
         cond_wait(&(rwl->r_cond), mutex);
         rwl->num_readers++;
         lock_release(mutex);
@@ -452,18 +513,21 @@ static void read_ahead_daemon(void * aux) {
 }
 
 void write_behind_daemon(void *aux) {
-    int64_t current_ticks = timer_ticks();
+    while (1) {
+        int64_t current_ticks = timer_ticks();
 
-    /* If last_flushed was never initialized */
-    /* This trick was based on a SO answer */
-    if (last_flushed == 0) {
-        last_flushed = timer_ticks();
-    }
+        /* If last_flushed was never initialized */
+        /* This trick was based on a SO answer */
+        if (last_flushed == 0) {
+            last_flushed = timer_ticks();
+        }
 
-    /* If it's been more than 5 seconds since last write_behind
-     * do it again */
-    if ((current_ticks - last_flushed) >= 5 * TIMER_FREQ) {
-        write_behind();
+        /* If it's been more than 5 seconds since last write_behind
+         * do it again */
+        if ((current_ticks - last_flushed) >= 5 * TIMER_FREQ) {
+            write_behind();
+        }
+        timer_msleep(5000);
     }
 }
 

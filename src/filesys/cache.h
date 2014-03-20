@@ -57,6 +57,8 @@ struct cache_entry {
     /* The index of this sector in the cache. */
     int cache_idx;
 
+    bool pinned;
+
     /*! The element stored in the hash table for the buffer cache. */
     struct hash_elem elem;
 };
