@@ -486,6 +486,7 @@ bool remove(const char *file) {
     struct inode * opened_inode;
     struct inode * temp_inode;
     struct dir * cur_dir;
+    struct dir * temp_dir;
 
     /* Validate user pointer and then open file. */
     if (file == NULL || !valid_user_pointer(file)) {
@@ -553,7 +554,22 @@ bool remove(const char *file) {
                                 status = false;
                             }
                             else {
-                                status = dir_remove(cur_dir, name);
+                                if (inode_isdir(opened_inode)) {
+                                    temp_dir = dir_open(opened_inode);
+                                    if (dir_empty(temp_dir)) {
+                                        dir_close(temp_dir);
+                                        status = dir_remove(cur_dir, name);
+                                        break;
+                                    }
+                                    else {
+                                        dir_close(temp_dir);
+                                        status = false;
+                                        break;
+                                    }
+                                }
+                                else {
+                                    status = dir_remove(cur_dir, name);
+                                }
                             }
                             break;
                         }

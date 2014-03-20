@@ -33,7 +33,7 @@ void filesys_init(bool format) {
         do_format();
 
     free_map_open();
-    
+
     /* Set the current directory for the current running thread (main) to the 
        root directory. */
     thread_current()->cwd = dir_open_root();

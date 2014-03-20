@@ -97,6 +97,20 @@ static bool lookup(const struct dir *dir, const char *name,
     return false;
 }
 
+/*! Returns TRUE if the directory is empty. False otherwise. */
+bool dir_empty(const struct dir *dir) {
+    struct dir_entry e;
+    size_t ofs;
+
+    for (ofs = 0; inode_read_at(dir->inode, &e, sizeof(e), ofs) == sizeof(e);
+         ofs += sizeof(e)) {
+        if (e.in_use) {
+            return false;
+        }
+    }
+    return true;
+}
+
 /*! Searches DIR for a file with the given NAME and returns true if one exists,
     false otherwise.  On success, sets *INODE to an inode for the file,
     otherwise to a null pointer.  The caller must close *INODE. */
