@@ -310,7 +310,10 @@ void lock_release(struct lock *lock) {
 
     ASSERT(!intr_context());
     ASSERT(lock != NULL);
-    ASSERT(lock_held_by_current_thread(lock));
+//     ASSERT(lock_held_by_current_thread(lock));
+    if(!lock_held_by_current_thread(lock)) {
+        ASSERT(0);
+    }
     
     /* If MLFQS option is not enabled, use priority donation. */
     if (!get_thread_mlfqs()) {

@@ -30,7 +30,7 @@ static last_flushed = 0;
 
 /* Read ahead list. */
 static void read_ahead_daemon(void * aux);
-struct condition read_ahead_condition;
+struct condition ra_cond;
 static struct list read_ahead_list;
 
 /* Read ahead list lock */
@@ -68,6 +68,7 @@ void cache_init(void) {
         cache[i].rwl.num_readers = 0;
         cond_init(&(cache[i].rwl.w_cond));
         cond_init(&(cache[i].rwl.r_cond));
+        cond_init(&ra_cond);
     }
 
     hash_init(&cache_table, &cache_hash, &cache_less, NULL);
@@ -83,7 +84,7 @@ void cache_init(void) {
     lock_init(&ht_lock);
 
     /* Initialize read_ahead and write_behind threads. */
-    cond_init(&read_ahead_condition);
+    cond_init(&ra_cond);
     list_init(&read_ahead_list);
     thread_create("rad",
                   3,
@@ -119,7 +120,10 @@ void cache_evict() {
             elem = hash_find(&cache_table, &ce.elem);
             /* The cache_entry corresponding to the sector in this cache index
                should be present in the cache_table. */
-            ASSERT(elem != NULL);
+//             ASSERT(elem != NULL);
+            if (elem == NULL) {
+                ASSERT(0);
+            }
             hash_delete(&cache_table, elem);
             lock_release(&ht_lock);
 
@@ -382,6 +386,7 @@ void read_ahead(block_sector_t sector_idx) {
         if (raentry != NULL) {
             raentry->sector_idx = sector_idx;
             list_push_back(&read_ahead_list, &raentry->elem);
+            cond_signal(&ra_cond, &ra_lock);
         }
     }
     lock_release(&ra_lock);
@@ -393,11 +398,10 @@ static void read_ahead_daemon(void * aux) {
     struct cache_entry *next_centry;
 
     while (true) {
-        // TODO conditions
         // ASSERT(!list_empty(&read_ahead_list));
 
-        // stupid thread yielding for now
         lock_acquire(&ra_lock);
+        cond_wait(&ra_cond, &ra_lock);
         if (!list_empty(&read_ahead_list)) {
             /* Pop first read_ahead entry */
             raentry = list_entry(list_pop_front(&read_ahead_list),
@@ -410,19 +414,12 @@ static void read_ahead_daemon(void * aux) {
 
             /* If we don't have this in cache, load it */
             if (centry == NULL) {
-
+                cache_miss(raentry->sector_idx);
             }
 
-            /* Else just free the read_ahead entry */
-            else {
-                free(raentry);
-            }
-            lock_release(&ra_lock);
+            free(raentry);
         }
-        else {
-            lock_release(&ra_lock);
-            thread_yield();
-        }
+        lock_release(&ra_lock);
     }
 }
 
