@@ -164,9 +164,20 @@ void cache_evict() {
                 block_write(fs_device, cb->sector_idx, cb->data);
                 cb->dirty = 0;
             }
+
+            locked = false;
+
+            if (!lock_held_by_current_thread(&ht_lock)) {
+                lock_acquire(&ht_lock);
+                locked = true;
+            }
             
             // TODO: Double check this
             free(hash_entry(elem, struct cache_entry, elem));
+
+            if (locked) {
+                lock_release(&ht_lock);
+            }
 
             write_unlock(cb);
             break;
@@ -220,18 +231,28 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
     }
 
     lock_acquire(&hand_lock);
+    if (!lock_held_by_current_thread(&ht_lock)) {
+        lock_acquire(&ht_lock);
+        locked = true;
+    }
+
     if (hash_size(&cache_table) == CACHE_SIZE) {
+        if (locked) {
+            lock_release(&ht_lock);
+        }
         cache_evict();
     }
     centry->cache_idx = hand; 
     hand = (hand + 1) % CACHE_SIZE;
     
+    centry->sector_idx = sector_idx;  
+    centry->pinned = false;  
+    
+    locked = false;
     if (!lock_held_by_current_thread(&ht_lock)) {
         lock_acquire(&ht_lock);
         locked = true;
     }
-    centry->sector_idx = sector_idx;  
-    centry->pinned = false;  
     hash_insert(&cache_table, &centry->elem);
 
     if (locked) {
