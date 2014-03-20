@@ -389,6 +389,9 @@ tid_t thread_create(const char *name, int priority, thread_func *function,
     
     t->process_details->parent_id = thread_current()->tid;
 
+    /* Set the cwd to its parent's cwd */
+    t->cwd = thread_current()->cwd;
+
     t->child_loaded_sema = palloc_get_page(PAL_ZERO);
     if (t->child_loaded_sema == NULL) {
         return TID_ERROR;
