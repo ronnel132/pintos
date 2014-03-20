@@ -550,15 +550,28 @@ void close(int fd) {
     if (is_open(fd)) {
         /* If file is opened by this process */
 
-        /* Close the file using the filesystem. */
-        file_close(get_file_struct(fd));
+        if (cur_thread->process_details->fd_is_dir[fd]) {
+            /* Close the directory using the filesystem. */
+            dir_close(get_dir_struct(fd));
+
+            /* Set the dir pointer at the file descriptor index in the
+             * directories array to NULL.
+             */
+            thread_current()->process_details->directories[fd] = NULL;
+        }
+        else {
+            /* Close the file using the filesystem. */
+            file_close(get_file_struct(fd));
+
+            /* Set the file pointer at the file descriptor index in the files
+             * array to NULL.
+             */
+            thread_current()->process_details->files[fd] = NULL;
+        }
 
         /* Update the process_details struct.
-         * Set the file pointer at the file descriptor index in the files
-         * array to NULL.
          * Specify that the filedescriptor is now available.
          */
-        thread_current()->process_details->files[fd] = NULL;
         thread_current()->process_details->open_file_descriptors[fd] = false;
 
         /* Decrement the variable of number of files that are open */
