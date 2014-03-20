@@ -109,6 +109,7 @@ void cache_evict() {
     struct cache_entry *tmp;
     struct hash_elem *elem;
     bool locked = false;
+    ASSERT(lock_held_by_current_thread(&hand_lock));
 
     /* Pick a cache entry to evict, and kick it out of the cache 
      * Using second chance strategy
@@ -177,7 +178,7 @@ void cache_evict() {
 /*! Gets cache table entry from the hash table. Returns NULL if
  *  sector is not in present in the hash table.
  */
-static struct cache_entry * cache_get_entry(block_sector_t sector_idx) {
+static struct cache_entry *cache_get_entry(block_sector_t sector_idx) {
     struct cache_entry ce; 
     struct hash_elem *e;
     struct cache_entry *tmp;
@@ -224,7 +225,6 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
     }
     centry->cache_idx = hand; 
     hand = (hand + 1) % CACHE_SIZE;
-    lock_release(&hand_lock);
     
     if (!lock_held_by_current_thread(&ht_lock)) {
         lock_acquire(&ht_lock);
@@ -246,6 +246,7 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
     cblock->dirty = 0;
     cblock->valid = 1;
     block_read(fs_device, sector_idx, cblock->data);
+    lock_release(&hand_lock);
     write_unlock(cblock);
     return centry;
 }
@@ -332,32 +333,38 @@ static void _cache_write(block_sector_t sector_idx, const void *buffer, off_t si
     struct cache_entry *stored_ce;
     struct cache_block *cblock;
     bool present;
+    block_sector_t stored_cache_idx;
 
     ASSERT(offset + size <= BLOCK_SECTOR_SIZE); 
+    lock_acquire(&ht_lock);
 
     stored_ce = cache_get_entry(sector_idx);
-    present = stored_ce != NULL;
-    if (!present) {
+    if (stored_ce != NULL) {
+        stored_ce->pinned = true;
+        stored_cache_idx = stored_ce->cache_idx;
+    }
+    else {
         stored_ce = cache_miss(sector_idx);
+        stored_ce->pinned = true;
+        stored_cache_idx = stored_ce->cache_idx;
     }
     
-    cblock = &cache[stored_ce->cache_idx];
+    cblock = &cache[stored_cache_idx];
     write_lock(cblock);
 
     /* If that cache block has changed, abort */
-    if (cache[cache_get_entry(sector_idx)->cache_idx].sector_idx != sector_idx) {
+    if (cache[stored_cache_idx].sector_idx != sector_idx) {
         *error = 1;
         write_unlock(cblock);
         return;
     }
     
-    if (present) {
-        cblock->accessed = 1;
-    }
+    cblock->accessed = 1;
 
     memcpy((void *) ((off_t) cblock->data + offset), buffer, 
            (size_t) size);
     cblock->dirty = 1;
+    lock_release(&ht_lock);
     write_unlock(cblock);
 }
 
