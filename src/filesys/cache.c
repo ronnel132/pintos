@@ -109,6 +109,7 @@ void cache_evict() {
     struct cache_entry *tmp;
     struct hash_elem *elem;
     bool locked = false;
+    ASSERT(lock_held_by_current_thread(&hand_lock));
 
     /* Pick a cache entry to evict, and kick it out of the cache 
      * Using second chance strategy
