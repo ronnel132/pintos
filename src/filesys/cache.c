@@ -97,7 +97,6 @@ void cache_init(void) {
     cond_init(&ra_cond);
     list_init(&read_ahead_list);
 
-//TODO: Reenable
 
     thread_create("rad",
                   0,
