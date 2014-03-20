@@ -65,7 +65,6 @@ struct cache_entry {
 struct read_ahead_entry {
     /* The sector in the filesys block the block corresponds to. */
     block_sector_t sector_idx;
-    block_sector_t next_sector_idx;
 
     /*! The element stored in the list for read ahead. */
     struct list_elem elem;
@@ -81,7 +80,7 @@ bool cache_less(const struct hash_elem *a, const struct hash_elem *b,
                 void *aux);
 
 
-void read_ahead(block_sector_t sector_idx, block_sector_t next_sector_idx);
+void read_ahead(block_sector_t sector_idx);
 void write_behind(void);
 
 #endif /* filesys/cache.h */

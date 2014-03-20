@@ -92,6 +92,49 @@ void cache_init(void) {
     thread_create("wbd", 3, write_behind_daemon, NULL);
 }
 
+void cache_evict() {
+    struct cache_block *cb;
+    struct cache_entry ce;
+    struct hash_elem *elem;
+
+    /* Pick a cache entry to evict, and kick it out of the cache 
+     * Using second chance strategy
+     */
+    while (1) {
+        cb = &cache[hand];
+
+        /* Lock this cache block */
+        write_lock(cb);
+
+        ASSERT(cb->valid);
+        if (cb->accessed) {
+            cb->accessed = 0;
+            hand = (hand + 1) % CACHE_SIZE;
+            write_unlock(cb);
+        }
+        else {
+            cb->valid = 0;
+            lock_acquire(&ht_lock);
+            ce.sector_idx = cb->sector_idx;
+            elem = hash_find(&cache_table, &ce.elem);
+            /* The cache_entry corresponding to the sector in this cache index
+               should be present in the cache_table. */
+            ASSERT(elem != NULL);
+            hash_delete(&cache_table, elem);
+            lock_release(&ht_lock);
+
+            if (cb->dirty) {
+                block_write(fs_device, cb->sector_idx, cb->data);
+            }
+            
+            free(hash_entry(elem, struct cache_entry, elem));
+            write_unlock(cb);
+            break;
+        }
+    }
+    ASSERT(!cache[hand].valid);
+}
+
 /*! Gets cache table entry from the hash table. Returns NULL if
  *  sector is not in present in the hash table.
  */
@@ -121,64 +164,19 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
     struct cache_entry *centry; 
     struct cache_block *cblock;
 
-    /* Eviction variables */
-    struct cache_block *cb;
-    struct cache_entry ce;
-    struct hash_elem *elem;
-
-    block_sector_t tmp_sector;
 
     centry = malloc(sizeof(struct cache_entry));
     if (centry == NULL) {
         PANIC("Filesystem cache failure.");
     }
+
     lock_acquire(&hand_lock);
-
     if (hash_size(&cache_table) == CACHE_SIZE) {
-        /* Pick a cache entry to evict, and kick it out of the cache 
-         * Using second chance strategy
-         */
-        while (1) {
-            tmp_sector = cache[hand].sector_idx;
-            cb = &cache[hand];
-
-            /* Lock this cache block */
-            read_lock(cb);
-
-            /* If cache block changed, retry */
-            if (cb->sector_idx != tmp_sector) {
-                return cache_miss(sector_idx);
-            }
-            ASSERT(cb->valid);
-            if (cb->accessed) {
-                cb->accessed = 0;
-                hand = (hand + 1) % CACHE_SIZE;
-                read_unlock(cb);
-            }
-            else {
-                cb->valid = 0;
-                lock_acquire(&ht_lock);
-                ce.sector_idx = cb->sector_idx;
-                elem = hash_find(&cache_table, &ce.elem);
-                /* The cache_entry corresponding to the sector in this cache index
-                   should be present in the cache_table. */
-                ASSERT(elem != NULL);
-                hash_delete(&cache_table, elem);
-                lock_release(&ht_lock);
-
-                if (cb->dirty) {
-                    block_write(fs_device, cb->sector_idx, cb->data);
-                }
-                
-                free(hash_entry(elem, struct cache_entry, elem));
-                read_unlock(cb);
-                break;
-            }
-        }
-    ASSERT(!cache[hand].valid);
+        cache_evict();
     }
     centry->cache_idx = hand; 
     hand = (hand + 1) % CACHE_SIZE;
+    lock_release(&hand_lock);
     
     lock_acquire(&ht_lock);
     centry->sector_idx = sector_idx;  
@@ -194,7 +192,6 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
     cblock->valid = 1;
     block_read(fs_device, sector_idx, cblock->data);
     write_unlock(cblock);
-    lock_release(&hand_lock);
     return centry;
 }
 
@@ -373,11 +370,10 @@ bool cache_less(const struct hash_elem *a, const struct hash_elem *b,
 
 
 // TODO
-void read_ahead(block_sector_t sector_idx, block_sector_t next_sector_idx) {
+void read_ahead(block_sector_t sector_idx) {
     struct read_ahead_entry *raentry;
 
     ASSERT(sector_idx != -1);
-    ASSERT(next_sector_idx != -1);
 
     lock_acquire(&ra_lock);
     if (list_size(&read_ahead_list) <= MAX_RA_LIST) {
@@ -385,7 +381,6 @@ void read_ahead(block_sector_t sector_idx, block_sector_t next_sector_idx) {
 
         if (raentry != NULL) {
             raentry->sector_idx = sector_idx;
-            raentry->next_sector_idx = next_sector_idx;
             list_push_back(&read_ahead_list, &raentry->elem);
         }
     }
@@ -404,25 +399,21 @@ static void read_ahead_daemon(void * aux) {
         // stupid thread yielding for now
         lock_acquire(&ra_lock);
         if (!list_empty(&read_ahead_list)) {
+            /* Pop first read_ahead entry */
             raentry = list_entry(list_pop_front(&read_ahead_list),
                                  struct read_ahead_entry,
                                  elem);
             ASSERT(raentry != NULL);
 
+            /* Check to see if it's already in cache */
             centry = cache_get_entry(raentry->sector_idx);
 
-            if (centry != NULL) {
-                if (cache[centry->cache_idx].accessed) {
-                    next_centry = cache_get_entry(raentry->next_sector_idx);
-                    if (next_centry == NULL) {
-                        cache_miss(raentry->next_sector_idx);
-                    }
-                    free(raentry);
-                }
-                else {
-                    list_push_back(&read_ahead_list, &raentry->elem);
-                }
+            /* If we don't have this in cache, load it */
+            if (centry == NULL) {
+
             }
+
+            /* Else just free the read_ahead entry */
             else {
                 free(raentry);
             }
