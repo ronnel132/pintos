@@ -280,7 +280,7 @@ void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
 
     /* Retry if error flag was set */
     while (cache_error) {
-        printf("===retrying\n");
+//         printf("===retrying\n");
         cache_error = 0;
         _cache_read(sector_idx, buffer, size, offset, &cache_error);
     }
@@ -341,7 +341,7 @@ void cache_write(block_sector_t sector_idx, const void *buffer, off_t size,
 
     /* Retry if error flag was set */
     while (cache_error) {
-        printf("===retrying write\n");
+//         printf("===retrying write\n");
         cache_error = 0;
         _cache_write(sector_idx, buffer, size, offset, &cache_error);
     }
