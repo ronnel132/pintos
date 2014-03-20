@@ -49,8 +49,6 @@ struct process {
     tid_t parent_id;
     struct file * exec_file;
     
-    /* The process current directory. */
-    struct dir *cwd;
 
     int num_files_open;
     bool open_file_descriptors[MAX_OPEN_FILES];
@@ -147,6 +145,9 @@ struct thread {
   
     /* Process information */
     struct process * process_details;
+
+    /* The process current directory. */
+    struct dir *cwd;
 
     /*! Owned by userprog/process.c. */
     /**@{*/
