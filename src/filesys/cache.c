@@ -87,10 +87,10 @@ void cache_init(void) {
     cond_init(&ra_cond);
     list_init(&read_ahead_list);
     thread_create("rad",
-                  3,
+                  0,
                   read_ahead_daemon,
                   NULL);
-    thread_create("wbd", 3, write_behind_daemon, NULL);
+    thread_create("wbd", 0, write_behind_daemon, NULL);
 }
 
 void cache_evict() {
@@ -222,6 +222,7 @@ void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
     /* If that cache block has changed, retry */
     if (cache[cache_get_entry(sector_idx)->cache_idx].sector_idx != sector_idx) {
         read_unlock(cblock);
+        printf("------ recursing\n");
         cache_read(sector_idx, buffer, size, offset);
         return;
     }

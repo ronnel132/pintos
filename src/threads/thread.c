@@ -530,7 +530,11 @@ struct thread * thread_current(void) {
     if (!is_thread(t)) {
         ASSERT(0);
     }
-    ASSERT(t->status == THREAD_RUNNING);
+//     ASSERT(t->status == THREAD_RUNNING);
+    if(t->status != THREAD_RUNNING) {
+        printf("-----------%d\n", t->status);
+        ASSERT(0);
+    }
 
     return t;
 }
