@@ -516,3 +516,54 @@ void close(int fd) {
         cur_thread->process_details->num_files_open--;
     }
 }
+
+/* Changes the current working directory of the process to dir, which may be
+ * relative or absolute. Returns true if successful, false on failure.
+ */
+bool chdir(const char *dir) {
+    return false;
+    //strlcat(thread_current()->process_details->cwd, dir, READDIR_MAX_LEN + 1);
+}
+
+/* Creates the directory named dir, which may be relative or absolute.
+ * Returns true if successful, false on failure. Fails if dir already
+ * exists or if any directory name in dir, besides the last, does not
+ * already exist. That is, mkdir("/a/b/c") succeeds only if /a/b already
+ * exists and /a/b/c does not.
+ */
+bool mkdir(const char *dir) {
+    return false;
+}
+
+/* Reads a directory entry from file descriptor fd, which must represent a
+ * directory. If successful, stores the null-terminated file name in name,
+ * which must have room for READDIR_MAX_LEN + 1 bytes, and returns true. If
+ * no entries are left in the directory, returns false.
+ *
+ * . and .. should not be returned by readdir.
+ *
+ * If the directory changes while it is open, then it is acceptable for some
+ * entries not to be read at all or to be read multiple times. Otherwise,
+ * each directory entry should be read once, in any order.
+ *
+ * READDIR_MAX_LEN is defined in lib/user/syscall.h. If your file system
+ * supports longer file names than the basic file system, you should
+ * increase this value from the default of 14.
+ */
+bool readdir(int fd, char *name) {
+    return false;
+}
+
+/* Returns true if fd represents a directory, false if it represents an
+ * ordinary file.
+ */
+bool isdir (int fd) {
+    return false;
+}
+
+/* Returns the inode number of the inode associated with fd, which may
+ * represent an ordinary file or a directory.
+ */
+int inumber(int fd) {
+    return false;
+}

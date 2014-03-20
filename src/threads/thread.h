@@ -38,12 +38,16 @@ typedef int pid_t;
 /*! A process can have a max of 128 open files */
 #define MAX_OPEN_FILES 128
 
+/*! Maximum characters in a filename written by readdir(). */
+#define READDIR_MAX_LEN 14
+
 
 /*! Process struct used by the kernel to keep track of process specific
     information as opposed to thread specific information. */
 
 struct process {
     tid_t parent_id;
+    char cwd[READDIR_MAX_LEN];
     struct file * exec_file;
     int num_files_open;
     bool open_file_descriptors[MAX_OPEN_FILES];
