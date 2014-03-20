@@ -95,6 +95,9 @@ static bool allocate_at_byte(struct inode_disk *disk_inode,
     int block_idx;
     block_sector_t sector, sector_idx;
 
+    /* Cache error */
+    int cache_error;
+
     ASSERT(disk_inode != NULL);
 
     /* In the direct blocks. */

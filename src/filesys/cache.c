@@ -20,6 +20,11 @@ static void write_lock(struct cache_block *cb);
 /* Release a write lock for this cache descriptor */
 static void write_unlock(struct cache_block *cb);
 
+static void _cache_read(block_sector_t sector_idx, void *buffer, off_t size, 
+                off_t offset, int *error);
+static void _cache_write(block_sector_t sector_idx, const void *buffer, off_t size,
+                off_t offset, int *error);
+
 static struct cache_entry *cache_miss(block_sector_t sector_idx);
 
 /* Write-back daemon */
@@ -199,11 +204,23 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
     return centry;
 }
 
+/* Wrapper around _cache_read to retry for errors */
+void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
+                off_t offset) {
+    int cache_error = 0;
+    _cache_read(sector_idx, buffer, size, offset, &cache_error);
+
+    /* Retry if error flag was set */
+    while (cache_error) {
+        printf("====retrying\n");
+        _cache_read(sector_idx, buffer, size, offset, &cache_error);
+    }
+}
 
 /*! Find the cached sector at SECTOR_IDX and read SIZE bytes at offset
     OFFSET. */
-void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
-                off_t offset) {
+static void _cache_read(block_sector_t sector_idx, void *buffer, off_t size,
+                off_t offset, int *error) {
     struct cache_entry *stored_ce;
     struct cache_block *cblock;
     bool present;
@@ -219,11 +236,9 @@ void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
     cblock = &cache[stored_ce->cache_idx];
     read_lock(cblock);
 
-    /* If that cache block has changed, retry */
+    /* If that cache block has changed, abort */
     if (cache[cache_get_entry(sector_idx)->cache_idx].sector_idx != sector_idx) {
-        read_unlock(cblock);
-        printf("------ recursing\n");
-        cache_read(sector_idx, buffer, size, offset);
+        *error = 1; 
         return;
     }
     
@@ -236,10 +251,23 @@ void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
     read_unlock(cblock);
 }
 
+
+/* Wrapper around _cache_write to retry for errors */
+void cache_write(block_sector_t sector_idx, const void *buffer, off_t size,
+                off_t offset) {
+    int cache_error = 0;
+    _cache_write(sector_idx, buffer, size, offset, &cache_error);
+
+    /* Retry if error flag was set */
+    while (cache_error) {
+        _cache_write(sector_idx, buffer, size, offset, &cache_error);
+    }
+}
+
 /*! Find the cached sector at SECTOR_IDX and write SIZE bytes starting at 
     OFFSET from BUFFER to the cached sector. */
-void cache_write(block_sector_t sector_idx, const void *buffer, off_t size,
-                 off_t offset) {
+static void _cache_write(block_sector_t sector_idx, const void *buffer, off_t size,
+                 off_t offset, int *error) {
     struct cache_entry *stored_ce;
     struct cache_block *cblock;
     bool present;
@@ -255,10 +283,9 @@ void cache_write(block_sector_t sector_idx, const void *buffer, off_t size,
     cblock = &cache[stored_ce->cache_idx];
     write_lock(cblock);
 
-    /* If that cache block has changed, retry */
+    /* If that cache block has changed, abort */
     if (cache[cache_get_entry(sector_idx)->cache_idx].sector_idx != sector_idx) {
-        write_unlock(cblock);
-        cache_write(sector_idx, buffer, size, offset);
+        *error = 1;
         return;
     }
     
