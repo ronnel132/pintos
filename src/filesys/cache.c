@@ -550,7 +550,6 @@ static void read_ahead_daemon(void * aux) {
 }
 
 void write_behind_daemon(void *aux) {
-// TODO: No need for last_flushed trick if we sleep 5s
     while (1) {
         if (wbd_stop = true) {
             exit(-1);
