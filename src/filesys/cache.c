@@ -100,7 +100,7 @@ void cache_init(void) {
 //                   0,
 //                   read_ahead_daemon,
 //                   NULL);
-    thread_create("wbd", 0, write_behind_daemon, NULL);
+//     thread_create("wbd", 0, write_behind_daemon, NULL);
 }
 
 void cache_evict() {
@@ -524,6 +524,7 @@ static void read_ahead_daemon(void * aux) {
 }
 
 void write_behind_daemon(void *aux) {
+// TODO: No need for last_flushed trick if we sleep 5s
     while (1) {
         int64_t current_ticks = timer_ticks();
 
