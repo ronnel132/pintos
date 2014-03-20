@@ -30,7 +30,7 @@ void filesys_init(bool format) {
     
     /* Set the current directory for the current running thread (main) to the 
        root directory. */
-    thread_current()->cur_dir = dir_open_root();
+    thread_current()->process_details->cwd = dir_open_root();
 }
 
 /*! Shuts down the file system module, writing any unwritten data to disk. */

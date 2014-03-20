@@ -47,8 +47,11 @@ typedef int pid_t;
 
 struct process {
     tid_t parent_id;
-    char cwd[READDIR_MAX_LEN];
     struct file * exec_file;
+    
+    /* The process current directory. */
+    struct dir *cwd;
+
     int num_files_open;
     bool open_file_descriptors[MAX_OPEN_FILES];
     struct file * files[MAX_OPEN_FILES];
@@ -161,9 +164,6 @@ struct thread {
     /* This will be 1 if there's a child load error, otherwise undefined */
     int child_loaded_error;
 #endif
-    
-    /* The thread's current directory. */
-    struct dir *cur_dir;
 
     /*! Owned by thread.c. */
     /**@{*/

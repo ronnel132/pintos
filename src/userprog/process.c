@@ -166,6 +166,10 @@ static void start_process(void *raw_args_) {
          e = list_next(e)) {
         iter = list_entry(e, struct thread, allelem);
         if (iter->tid == thread_current()->process_details->parent_id) {
+            /* Set the cwd to its parent's cwd */
+            thread_current()->process_details->cwd = 
+                iter->process_details->cwd;
+
             /* Tell the parent that there was NO error */
             iter->child_loaded_error = 0;
 
