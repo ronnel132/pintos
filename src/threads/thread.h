@@ -51,6 +51,7 @@ struct process {
 
     int num_files_open;
     bool open_file_descriptors[MAX_OPEN_FILES];
+    bool fd_is_dir[MAX_OPEN_FILES];
     struct file * files[MAX_OPEN_FILES];
     struct dir * directories[MAX_OPEN_FILES];
 };

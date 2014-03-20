@@ -13,6 +13,7 @@
 #include "filesys/filesys.h"
 #include "filesys/inode.h"
 #include "filesys/file.h"
+#include "filesys/directory.h"
 
 #include "devices/input.h"
 
@@ -24,13 +25,14 @@ extern void palloc_free_page (void *);
 /* Validates a user-provided pointer. Checks that it's in the required
  * range, and that it correpsonds to a page directory entry
  */
-bool valid_user_pointer(const void *ptr);
+static bool valid_user_pointer(const void *ptr);
 
 /* Checks if a file is open */
-bool file_is_open(int fd);
+static bool is_open(int fd);
 
 /* Gets the file struct from a file descriptor */
-struct file * get_file_struct(int fd);
+static struct file * get_file_struct(int fd);
+static struct dir * get_dir_struct(int fd);
 
 /* Function prototype */
 static void syscall_handler(struct intr_frame *);
@@ -43,7 +45,7 @@ extern struct list all_list;
 /* Validates a user-provided pointer. Checks that it's in the required
  * range, and that it correpsonds to a page directory entry
  */
-bool valid_user_pointer(const void *ptr) {
+static bool valid_user_pointer(const void *ptr) {
     uint32_t *pd, *pde;
 
     pd = active_pd();
@@ -60,8 +62,8 @@ bool valid_user_pointer(const void *ptr) {
 
 /* Helper functions for files related to process. */
 
-/* Checks if a file is open */
-bool file_is_open(int fd) {
+/* Checks if a file descriptor is open */
+static bool is_open(int fd) {
     bool opn = false;
 
     if (fd >= 0 && fd < MAX_OPEN_FILES) {
@@ -72,7 +74,7 @@ bool file_is_open(int fd) {
 }
 
 /* Gets the file struct from a file descriptor */
-struct file * get_file_struct(int fd) {
+static struct file * get_file_struct(int fd) {
     struct file *f = NULL;
 
     if (fd >= 0 && fd < MAX_OPEN_FILES) {
@@ -80,6 +82,17 @@ struct file * get_file_struct(int fd) {
     }
 
     return f;
+}
+
+/* Gets the dir struct from a file descriptor */
+static struct dir * get_dir_struct(int fd) {
+    struct dir *d = NULL;
+
+    if (fd >= 0 && fd < MAX_OPEN_FILES) {
+        d = thread_current()->process_details->directories[fd];
+    }
+
+    return d;
 }
 
 
@@ -204,6 +217,42 @@ static void syscall_handler(struct intr_frame *f UNUSED) {
             }
             close(*((int *) arg1));
             break;
+
+        case SYS_CHDIR:
+            if ((!valid_user_pointer(arg1))) {
+                exit(EXIT_BAD_PTR);
+            }
+            f->eax = chdir(*((const char **)arg1));
+            break;
+
+        case SYS_MKDIR:
+            if ((!valid_user_pointer(arg1))) {
+                exit(EXIT_BAD_PTR);
+            }
+            f->eax = mkdir(*((const char **)arg1));
+            break;
+
+        case SYS_READDIR:
+            if ((!valid_user_pointer(arg1)) || (!valid_user_pointer(arg2))) {
+                exit(EXIT_BAD_PTR);
+            }
+            f->eax = readdir(*((int *)arg1), *((char **)arg2)); 
+            break;
+
+        case SYS_ISDIR:
+            if ((!valid_user_pointer(arg1))) {
+                exit(EXIT_BAD_PTR);
+            }
+            f->eax = isdir(*((int *) arg1));
+            break;
+
+        case SYS_INUMBER:
+            if ((!valid_user_pointer(arg1))) {
+                exit(EXIT_BAD_PTR);
+            }
+            f->eax = inumber(*((int *) arg1));
+            break;
+
         default:
             /* Yeah, we're not that nice */
             exit(-1);
@@ -392,7 +441,7 @@ int filesize(int fd) {
     int size = -1;
 
     /* If file is indeed open, return length */
-    if (file_is_open(fd)) {
+    if (is_open(fd)) {
         size = file_length(get_file_struct(fd));
     }
 
@@ -429,7 +478,7 @@ int read(int fd, void *buffer, unsigned size) {
             /* If the file descriptor is not stdout, read the file using
              * the filesystem.
              */
-            if (file_is_open(fd)) {
+            if (is_open(fd)) {
                 bytes_read = file_read(get_file_struct(fd), buffer, size);
             }
         }
@@ -456,7 +505,7 @@ int write(int fd, const void *buffer, unsigned size) {
             putbuf((const char *) buffer, (size_t) size);
         } else if (fd != STDIN_FILENO) {
             /* If file is not stdin, write to file in the filesystem */
-            if (file_is_open(fd)) {
+            if (is_open(fd)) {
                 bytes_written = file_write(get_file_struct(fd), buffer, size);
             }
         }
@@ -472,7 +521,7 @@ int write(int fd, const void *buffer, unsigned size) {
  * is the file's start.)
  */
 void seek(int fd, unsigned position) {
-    if (file_is_open(fd)) {
+    if (is_open(fd)) {
         file_seek(get_file_struct(fd), position);
     }
 }
@@ -483,7 +532,7 @@ void seek(int fd, unsigned position) {
 unsigned tell(int fd) {
     unsigned pos = 0;
 
-    if (file_is_open(fd)) {
+    if (is_open(fd)) {
         pos = file_tell(get_file_struct(fd));
     }
 
@@ -498,7 +547,7 @@ void close(int fd) {
 
     struct thread * cur_thread = thread_current();
 
-    if (file_is_open(fd)) {
+    if (is_open(fd)) {
         /* If file is opened by this process */
 
         /* Close the file using the filesystem. */
@@ -558,12 +607,17 @@ bool readdir(int fd, char *name) {
  * ordinary file.
  */
 bool isdir (int fd) {
-    return false;
+    return thread_current()->process_details->fd_is_dir[fd];
 }
 
 /* Returns the inode number of the inode associated with fd, which may
  * represent an ordinary file or a directory.
  */
 int inumber(int fd) {
+    if (isdir(fd)) {
+        return (int) inode_get_inumber(file_get_inode(get_file_struct(fd)));
+    } else {
+        return (int) inode_get_inumber(dir_get_inode(get_dir_struct(fd)));
+    }
     return false;
 }
