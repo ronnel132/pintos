@@ -161,6 +161,9 @@ struct thread {
     /* This will be 1 if there's a child load error, otherwise undefined */
     int child_loaded_error;
 #endif
+    
+    /* The thread's current directory. */
+    struct dir *cur_dir;
 
     /*! Owned by thread.c. */
     /**@{*/

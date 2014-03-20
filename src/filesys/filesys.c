@@ -6,6 +6,7 @@
 #include "filesys/free-map.h"
 #include "filesys/inode.h"
 #include "filesys/directory.h"
+#include "threads/thread.h"
 
 /*! Partition that contains the file system. */
 struct block *fs_device;
@@ -26,6 +27,10 @@ void filesys_init(bool format) {
         do_format();
 
     free_map_open();
+    
+    /* Set the current directory for the current running thread (main) to the 
+       root directory. */
+    thread_current()->cur_dir = dir_open_root();
 }
 
 /*! Shuts down the file system module, writing any unwritten data to disk. */
