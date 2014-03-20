@@ -11,6 +11,12 @@
 /*! Partition that contains the file system. */
 struct block *fs_device;
 
+/* Flags to control when to stop the write behind and
+ * read ahead daemons
+ */
+extern bool rad_stop;
+extern bool wbd_stop;
+
 static void do_format(void);
 
 /*! Initializes the file system module.
@@ -37,6 +43,11 @@ void filesys_init(bool format) {
 void filesys_done(void) {
     /* Write dirty blocks */
     write_behind();
+
+    /* Stop daemons */
+    rad_stop = true;
+    wbd_stop = true;
+
     free_map_close();
 }
 

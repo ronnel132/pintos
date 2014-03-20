@@ -32,8 +32,11 @@ static struct cache_entry * cache_get_entry(block_sector_t sector_idx);
 /* Write-back daemon */
 static void write_behind_daemon(void * aux);
 
-/* Last time a write_behind was performed */
-static last_flushed = 0;
+/* Flags to control when to stop the write behind and
+ * read ahead daemons
+ */
+bool rad_stop = false;
+bool wbd_stop = false;
 
 /* Read ahead list. */
 static void read_ahead_daemon(void * aux);
@@ -96,11 +99,11 @@ void cache_init(void) {
 
 //TODO: Reenable
 
-//     thread_create("rad",
-//                   0,
-//                   read_ahead_daemon,
-//                   NULL);
-//     thread_create("wbd", 0, write_behind_daemon, NULL);
+    thread_create("rad",
+                  0,
+                  read_ahead_daemon,
+                  NULL);
+    thread_create("wbd", 0, write_behind_daemon, NULL);
 }
 
 void cache_evict() {
@@ -356,6 +359,7 @@ static void _cache_write(block_sector_t sector_idx, const void *buffer, off_t si
     bool present;
     block_sector_t stored_cache_idx;
 
+
     ASSERT(offset + size <= BLOCK_SECTOR_SIZE); 
 
     lock_acquire(&ht_lock);
@@ -519,7 +523,9 @@ static void read_ahead_daemon(void * aux) {
     struct cache_entry *next_centry;
 
     while (true) {
-        // ASSERT(!list_empty(&read_ahead_list));
+        if (rad_stop = true) {
+            exit(-1);
+        }
 
         lock_acquire(&ra_lock);
         cond_wait(&ra_cond, &ra_lock);
@@ -547,20 +553,11 @@ static void read_ahead_daemon(void * aux) {
 void write_behind_daemon(void *aux) {
 // TODO: No need for last_flushed trick if we sleep 5s
     while (1) {
-        int64_t current_ticks = timer_ticks();
-
-        /* If last_flushed was never initialized */
-        /* This trick was based on a SO answer */
-        if (last_flushed == 0) {
-            last_flushed = timer_ticks();
-        }
-
-        /* If it's been more than 5 seconds since last write_behind
-         * do it again */
-        if ((current_ticks - last_flushed) >= 5 * TIMER_FREQ) {
-            write_behind();
+        if (wbd_stop = true) {
+            exit(-1);
         }
         timer_msleep(5000);
+        write_behind();
     }
 }
 
