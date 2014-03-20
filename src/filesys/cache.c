@@ -220,6 +220,7 @@ void cache_read(block_sector_t sector_idx, void *buffer, off_t size,
 
     /* If that cache block has changed, retry */
     if (cache[cache_get_entry(sector_idx)->cache_idx].sector_idx != sector_idx) {
+        read_unlock(cblock);
         cache_read(sector_idx, buffer, size, offset);
         return;
     }
@@ -254,6 +255,7 @@ void cache_write(block_sector_t sector_idx, const void *buffer, off_t size,
 
     /* If that cache block has changed, retry */
     if (cache[cache_get_entry(sector_idx)->cache_idx].sector_idx != sector_idx) {
+        write_unlock(cblock);
         cache_write(sector_idx, buffer, size, offset);
         return;
     }
