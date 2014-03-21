@@ -274,14 +274,49 @@ Lock to protect hand pointer used in the clock policy
 >> C5: When one process is actively reading or writing data in a
 >> buffer cache block, how are other processes prevented from evicting
 >> that block?
+As previously mentioned, a read-write lock mechanism is implemented.
+To evict a block, a write lock must be acquired for that block. Hence,
+if we try to evict a block, we must acquire a write lock => we
+must make sure that there are no other processes currently reading
+and writing from that block.
 
 >> C6: During the eviction of a block from the cache, how are other
 >> processes prevented from attempting to access the block?
+A write lock is acquired during eviction. Other readers/writers
+have to respectively acquire read/write locks, both of which are
+impossible while a write lock is already acquired (for eviction, in that case) 
+for that block. Thus, they can't access that block without the eviction finishing.
+
+Note that there is an unfortunate case that during a cache read/write,
+a block was just evicted before the reader/writer ever got to acquire
+its lock. Thus, the reader/writer always checks for the validity
+of the block for which it acquired a lock for (after it get the lock).
+If it's valid and the sector_id matches to what it shold be it
+goes ahead and does it thing. Otherwise tries again.
 
 ---- RATIONALE ----
 
 >> C7: Describe a file workload likely to benefit from buffer caching,
 >> and workloads likely to benefit from read-ahead and write-behind.
+From buffer cache: Reading/writing to the same block/file a lot. 
+For example, if a process reads/writes a lot to the same group
+of blocks, they will likely be cached. Hence, the read/write will
+be done in cache (memory) rather than disk (which is much slower).
+
+For read-ahead: When a process accesses the file sequentially,
+read-ahead adds the possibility that the later accesses are already
+cached, hence making them much faster. Thus, sequential access 
+processes will benefit.
+
+For write-behind: Write behind is important for two things: 1. It
+flushes the cache (if needed) to disk, hence potentially saving
+the data in case of an improper shutdown.
+2. It could make cache evicts faster. If a process is doing a lot 
+of IO (maybe not sequential, or other pattern that makes clock eviction bad)
+then there will be a lot of evictions. But if the process is also 
+writing, each evicted block will need to be written back. Write-behind
+adds the posibility that the block that's being evicted was already
+written back previously, hence making evictions faster.
 
                SURVEY QUESTIONS
                ================
