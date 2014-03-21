@@ -107,6 +107,31 @@ the lock first); but in this case the writers never wrote, so its OK!
 >> processes writing to a file cannot prevent another process forever
 >> from reading the file.
 
+File read/write is done in blocks, i.e. the lock is not in the file-level. 
+The locks, too, (read write lock) are granular enough that don't lock the entire
+file, but only cached blocks. Hence, this is a major improvement,
+especially for big files. Multiple concurrent readers
+are allowed without blocking each other, but not writers (or a comination of 
+writers and readers).
+
+However, there is no "preemptive fairness", in the sense that writers
+won't block new readers from reading (if someone's already reading).
+This could be disatvantageous if there are tons of readers/writers 
+to the same block. It should not be a big deal for usual disk IO.
+
+The current approach could be extended the following way:
+If a writer tried to get the write lock, don't wait for all readers to 
+finish, but set up a flag to block future readers (hence only wayt for current readers to finish).
+
+This was not implemented because this sort of fairness wasn't explicitely 
+mendioned in the spec (and we have just a couple of hours to 
+turn this in, don't wanna mess it up)
+
+Also note that writers can never block readers indefinitely, because there can only be only one writer to the sector with the
+write lock. When he finishes, either another writer can get the
+lock, or another reader. They are both treader equaly, hence this
+case is completely fair.
+
 ---- RATIONALE ----
 
 >> A6: Is your inode structure a multilevel index?  If so, why did you
