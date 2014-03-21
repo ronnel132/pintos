@@ -619,7 +619,7 @@ bool readdir(int fd, char *name) {
 /* Returns true if fd represents a directory, false if it represents an
  * ordinary file.
  */
-bool isdir (int fd) {
+bool isdir(int fd) {
     return thread_current()->process_details->fd_is_dir[fd];
 }
 
