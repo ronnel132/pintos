@@ -10,10 +10,14 @@
 struct dir {
     struct inode *inode;                /*!< Backing store. */
     off_t pos;                          /*!< Current position. */
+    struct dir *parent;                 /*!< Parent directory. */
 };
 
 /*! A single directory entry. */
 struct dir_entry {
+    bool is_dir;                        /*!< Is this dir_entry a directory? */
+    /* The directory this dir_entry corresponds to. */
+    struct dir *cur_dir;               
     block_sector_t inode_sector;        /*!< Sector number of header. */
     char name[NAME_MAX + 1];            /*!< Null terminated file name. */
     bool in_use;                        /*!< In use or free? */
@@ -32,6 +36,7 @@ struct dir * dir_open(struct inode *inode) {
     if (inode != NULL && dir != NULL) {
         dir->inode = inode;
         dir->pos = 0;
+        dir->parent = NULL;
         return dir;
     }
     else {
@@ -109,12 +114,33 @@ bool dir_lookup(const struct dir *dir, const char *name, struct inode **inode) {
     return *inode != NULL;
 }
 
-/*! Adds a file named NAME to DIR, which must not already contain a file by
-    that name.  The file's inode is in sector INODE_SECTOR.
+/*! Takes a NULL terminated array of strings, PATH, which represents a 
+    directory path from root. Returns the struct dir of the last directory 
+    in the path if path is valid, otherwise return NULL. */
+// struct dir *dir_path_lookup(char **path) {
+//     struct dir *dir = dir_open_root();
+//     struct dir_entry e;
+//     int i = 0;
+//     while (path[i] != NULL) {
+//         if (lookup(dir, path[i], &e, NULL)) {
+//             dir = e.cur_dir;
+//         }
+//         else {
+//             return NULL;
+//         }
+//         i++;
+//     }
+//     return dir; 
+// }
+
+/*! Adds a file or directory (depending on if IS_DIR is false or true) named 
+    NAME to DIR, which must not already contain a file or directory by that 
+    name. The file or directory's inode is in sector INODE_SECTOR.
     Returns true if successful, false on failure.
-    Fails if NAME is invalid (i.e. too long) or a disk or memory
-    error occurs. */
-bool dir_add(struct dir *dir, const char *name, block_sector_t inode_sector) {
+    Fails if NAME is invalid (i.e. too long) or a disk or memory error occurs.
+    */
+bool dir_add(struct dir *dir, const char *name, block_sector_t inode_sector, 
+             bool is_dir) {
     struct dir_entry e;
     off_t ofs;
     bool success = false;
@@ -147,14 +173,27 @@ bool dir_add(struct dir *dir, const char *name, block_sector_t inode_sector) {
     e.in_use = true;
     strlcpy(e.name, name, sizeof e.name);
     e.inode_sector = inode_sector;
+    e.is_dir = is_dir;
+    if (is_dir) {
+        struct dir *new_dir = dir_open(inode_open(e.inode_sector));
+        if (new_dir == NULL) {
+            goto done;
+        }
+        new_dir->parent = dir;
+        e.cur_dir = new_dir;
+    }
+    else {
+        e.cur_dir = NULL;
+    }
     success = inode_write_at(dir->inode, &e, sizeof(e), ofs) == sizeof(e);
 
 done:
     return success;
 }
 
-/*! Removes any entry for NAME in DIR.  Returns true if successful, false on
-    failure, which occurs only if there is no file with the given NAME. */
+/*! Removes any entry for NAME in DIR, either a directory or a file. Returns 
+    true if successful, false on failure, which occurs only if there is no file
+    with the given NAME. */
 bool dir_remove(struct dir *dir, const char *name) {
     struct dir_entry e;
     struct inode *inode = NULL;
