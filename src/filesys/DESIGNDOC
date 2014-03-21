@@ -37,6 +37,38 @@ FirstName LastName <email@domain.example>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+struct lock ra_lock;
+Used to lock the readahead list form concurrent modifications.
+
+
+bool rad_stop = false;
+bool wbd_stop = false;
+Flags to control when to stop the write behind and
+read ahead daemons
+
+
+struct lock ht_lock;
+Used to lock the hashtable when accessing/modifying it. Note that
+this isn't a global FS lock since this lock is held only 
+to obtain the actual cache block, then released.
+
+
+struct hash cache_table; 
+A mapping between filesys sector index and cache index. 
+
+
+struct cache_block cache[CACHE_SIZE];
+The actual cache itself. An array of cache_block's.
+
+
+static int hand;
+The clock hand index for implementing the clock policy. Corresponds to an 
+index in cache.
+
+
+struct lock hand_lock;
+Lock to protect hand pointer used in the clock policy
+
 struct inode_disk {
     off_t length;
     unsigned magic;
