@@ -37,37 +37,6 @@ FirstName LastName <email@domain.example>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
-struct lock ra_lock;
-Used to lock the readahead list form concurrent modifications.
-
-
-bool rad_stop = false;
-bool wbd_stop = false;
-Flags to control when to stop the write behind and
-read ahead daemons
-
-
-struct lock ht_lock;
-Used to lock the hashtable when accessing/modifying it. Note that
-this isn't a global FS lock since this lock is held only 
-to obtain the actual cache block, then released.
-
-
-struct hash cache_table; 
-A mapping between filesys sector index and cache index. 
-
-
-struct cache_block cache[CACHE_SIZE];
-The actual cache itself. An array of cache_block's.
-
-
-static int hand;
-The clock hand index for implementing the clock policy. Corresponds to an 
-index in cache.
-
-
-struct lock hand_lock;
-Lock to protect hand pointer used in the clock policy
 
 struct inode_disk {
     off_t length;
@@ -119,6 +88,17 @@ When two processes try to extend a file at the same time, they will both
 >> may not read data other than what B writes, e.g. if B writes
 >> nonzero data, A is not allowed to see all zeros.  Explain how your
 >> code avoids this race.
+A read-write lock mechanism is used to synchronize concurrent reads 
+and writes to blocks. This system allows multiple concurrent read
+ers, but not writers (or a combination of readers + writers) in t
+he same block. Since a file consists of multiple blocks, depending
+on what thread obtains the lock first, a reader can either see
+the unmodified version of the file (if the readers get the lock first),
+or a writer will acquire the lock, modify the file, then the readers
+will see the new version of that block (i.e. part of file). In
+this way, the readers only read data that the writers write, or
+original data that was there before writers wrote (if they get
+the lock first); but in this case the writers never wrote, so its OK!
 
 >> A5: Explain how your synchronization design provides "fairness".
 >> File access is "fair" if readers cannot indefinitely block writers
@@ -216,6 +196,37 @@ on the is_dir flag of the corresponding dir_entry struct.
 >> C1: Copy here the declaration of each new or changed `struct' or
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
+struct lock ra_lock;
+Used to lock the readahead list form concurrent modifications.
+
+
+bool rad_stop = false;
+bool wbd_stop = false;
+Flags to control when to stop the write behind and
+read ahead daemons
+
+
+struct lock ht_lock;
+Used to lock the hashtable when accessing/modifying it. Note that
+this isn't a global FS lock since this lock is held only 
+to obtain the actual cache block, then released.
+
+
+struct hash cache_table; 
+A mapping between filesys sector index and cache index. 
+
+
+struct cache_block cache[CACHE_SIZE];
+The actual cache itself. An array of cache_block's.
+
+
+static int hand;
+The clock hand index for implementing the clock policy. Corresponds to an 
+index in cache.
+
+
+struct lock hand_lock;
+Lock to protect hand pointer used in the clock policy
 
 ---- ALGORITHMS ----
 
