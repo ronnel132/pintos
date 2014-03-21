@@ -99,10 +99,10 @@ void cache_init(void) {
 
 
     thread_create("rad",
-                  0,
+                  PRI_MIN + 1,
                   read_ahead_daemon,
                   NULL);
-    thread_create("wbd", 0, write_behind_daemon, NULL);
+    thread_create("wbd", PRI_MIN + 1, write_behind_daemon, NULL);
 }
 
 void cache_evict() {
@@ -522,12 +522,13 @@ static void read_ahead_daemon(void * aux) {
     struct cache_entry *next_centry;
 
     while (true) {
-        if (rad_stop = true) {
-            exit(-1);
-        }
-
+        
         lock_acquire(&ra_lock);
         cond_wait(&ra_cond, &ra_lock);
+        if (rad_stop == true) {
+            lock_release(&ra_lock);
+            exit(0);
+        }
         if (!list_empty(&read_ahead_list)) {
             /* Pop first read_ahead entry */
             raentry = list_entry(list_pop_front(&read_ahead_list),
@@ -551,10 +552,10 @@ static void read_ahead_daemon(void * aux) {
 
 void write_behind_daemon(void *aux) {
     while (1) {
-        if (wbd_stop = true) {
-            exit(-1);
-        }
         timer_msleep(5000);
+        if (wbd_stop == true) {
+            exit(0);
+        }
         write_behind();
     }
 }
@@ -565,6 +566,7 @@ void write_behind_daemon(void *aux) {
 void write_behind() {
     int i;
 
+    printf("writing behind\n");
     for (i = 0; i < CACHE_SIZE; i++) {
         read_lock(&cache[i]);
         if (cache[i].valid && cache[i].dirty) {
@@ -573,4 +575,5 @@ void write_behind() {
         cache[i].dirty = 0;
         read_unlock(&cache[i]);
     }
+    printf("end write behind\n");
 }

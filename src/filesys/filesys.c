@@ -11,6 +11,10 @@
 /*! Partition that contains the file system. */
 struct block *fs_device;
 
+/* Read ahead condition and mutex */
+extern struct condition ra_cond;
+struct lock ra_lock;
+
 /* Flags to control when to stop the write behind and
  * read ahead daemons
  */
@@ -41,12 +45,17 @@ void filesys_init(bool format) {
 
 /*! Shuts down the file system module, writing any unwritten data to disk. */
 void filesys_done(void) {
+    /* Stop daemons */
+    lock_acquire(&ra_lock);
+    cond_signal(&ra_cond, &ra_lock);
+    lock_release(&ra_lock);
+
+    rad_stop = true;
+    wbd_stop = true;
+
     /* Write dirty blocks */
     write_behind();
 
-    /* Stop daemons */
-    rad_stop = true;
-    wbd_stop = true;
 
     free_map_close();
 }

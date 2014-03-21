@@ -20,6 +20,19 @@
 
 #include "userprog/process.h"
 
+#define MAIN_TID 3
+
+
+/* Read ahead condition and mutex */
+extern struct condition ra_cond;
+struct lock ra_lock;
+
+/* Flags to control when to stop the write behind and
+ * read ahead daemons
+ */
+extern bool rad_stop;
+extern bool wbd_stop;
+
 /* Frees a page */
 extern void palloc_free_page (void *);
 
@@ -271,6 +284,10 @@ void halt (void) {
 
 /* Terminates the current user program, returning status to the kernel. */
 void exit(int status) {
+    if (thread_current()->tid == MAIN_TID) {
+        wbd_stop = true;
+        rad_stop = true;
+    }
     thread_current()->exit_status = status;
     thread_exit();
 }
