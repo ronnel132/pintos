@@ -514,6 +514,10 @@ const char * thread_name(void) {
     return thread_current()->name;
 }
 
+struct dir * thread_cwd(void) {
+    return thread_current()->cwd;
+}
+
 /*! Returns the running thread.
     This is running_thread() plus a couple of sanity checks.
     See the big comment at the top of thread.h for details. */
