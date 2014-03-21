@@ -264,10 +264,34 @@ Lock to protect hand pointer used in the clock policy
 
 >> C2: Describe how your cache replacement algorithm chooses a cache
 >> block to evict.
+A clock strategy is being used. Cache blocks are stored in an array,
+and a "hand" pointer moves around. The clock strategly is identicaly to 
+second chance, but much faster as we're not pushing back into a queue, 
+just moving the hand. Basically, goes through all blocks until it finds 
+one that is not accessed and evicts that, while it clears the access bit for 
+those blocks who have it set.
 
 >> C3: Describe your implementation of write-behind.
+Write behind is implemented as a daemon thread that loops, sleeps
+5 seconds, and writes behind every dirty cache block. This thread is low priority,
+and if there are other threads, it's not guaranteed that flushing
+is done every 5 seconds (depending on scheduler), but that is not 
+a requirement in the spec (and it makes sense, we want this to be quite low pri).
 
 >> C4: Describe your implementation of read-ahead.
+After each sector read, after cache_read is called in inode read/write,
+we calculate whether the next sector is in the file or not. If it is,
+read ahead is called. It just adds the sector into the read ahead
+queue and returns, while also signaling the read-ahead daemon thread.
+The daemon is ismilar to the write behind daemon, looping and reading ahead. 
+It waits on a condition so it doesn't busy wait.
+It's also a low priority thread.
+
+The queue is bounded to 32 elements, though this is #defined and
+can be tuned. If the queue is full, we're not adding the sector
+to the queue at all. We cold maintain only the last 32 elems,
+but we chose the simpler approach for our implementation.
+
 
 ---- SYNCHRONIZATION ----
 
