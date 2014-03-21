@@ -524,11 +524,18 @@ static void read_ahead_daemon(void * aux) {
     while (true) {
         
         lock_acquire(&ra_lock);
+
+        /* Wait to be signaled */
         cond_wait(&ra_cond, &ra_lock);
-        if (rad_stop == true) {
+
+        /* Check if stopping condition for daemon is true */
+        if (rad_stop = true) {
+            /* Make sure we don't leak locks */
             lock_release(&ra_lock);
+
             exit(0);
         }
+
         if (!list_empty(&read_ahead_list)) {
             /* Pop first read_ahead entry */
             raentry = list_entry(list_pop_front(&read_ahead_list),
@@ -553,7 +560,10 @@ static void read_ahead_daemon(void * aux) {
 void write_behind_daemon(void *aux) {
     while (1) {
         timer_msleep(5000);
-        if (wbd_stop == true) {
+
+        /* Check if stopping condition for daemon is true */
+        if (wbd_stop = true) {
+
             exit(0);
         }
         write_behind();
