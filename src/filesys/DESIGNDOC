@@ -1,4 +1,4 @@
-       	       	     +-------------------------+
+                     +-------------------------+
                      |          CS 124         |
                      | PROJECT 6: FILE SYSTEMS |
                      |     DESIGN DOCUMENT     |
@@ -28,8 +28,8 @@ FirstName LastName <email@domain.example>
 >> preparing your submission, other than the Pintos documentation, course
 >> text, lecture notes, and course instructors.
 
-		     INDEXED AND EXTENSIBLE FILES
-		     ============================
+             INDEXED AND EXTENSIBLE FILES
+             ============================
 
 ---- DATA STRUCTURES ----
 
@@ -140,8 +140,8 @@ case is completely fair.
 >> structure, and what advantages and disadvantages does your
 >> structure have, compared to a multilevel index?
 
-			    SUBDIRECTORIES
-			    ==============
+                SUBDIRECTORIES
+                ==============
 
 ---- DATA STRUCTURES ----
 
@@ -149,7 +149,14 @@ case is completely fair.
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
-// TODO Archan
+thread.h: added directories list and a variable to indicate if
+the file descriptor is that for a directory or a file.
+struct process {
+    ...
+    bool fd_is_dir[MAX_OPEN_FILES];
+    ...
+    struct dir * directories[MAX_OPEN_FILES];
+};
 
 ---- ALGORITHMS ----
 
@@ -213,8 +220,8 @@ searched for, we set the is_dir flag of the inode struct based
 on the is_dir flag of the corresponding dir_entry struct.
 
 
-			     BUFFER CACHE
-			     ============
+                 BUFFER CACHE
+                 ============
 
 ---- DATA STRUCTURES ----
 
@@ -276,8 +283,8 @@ Lock to protect hand pointer used in the clock policy
 >> C7: Describe a file workload likely to benefit from buffer caching,
 >> and workloads likely to benefit from read-ahead and write-behind.
 
-			   SURVEY QUESTIONS
-			   ================
+               SURVEY QUESTIONS
+               ================
 
 Answering these questions is optional, but it will help us improve the
 course in future quarters.  Feel free to tell us anything you
