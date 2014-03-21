@@ -73,16 +73,32 @@ struct read_ahead_entry {
 }; 
 
 void cache_init(void); 
+
+/* Read an sector through the cache. Will trigger a cache_miss
+ * if the sector isn't cached */
 void cache_read(block_sector_t sector_idx, void *buffer, off_t size, 
                 off_t offset);
+
+
+/* Write an sector through the cache. Will trigger a cache_miss
+ * if the sector isn't cached */
 void cache_write(block_sector_t sector_idx, const void *buffer, off_t size,
                  off_t offset);
+
+/* Hashes a cache entry. The hash is its sector_id */
 unsigned cache_hash(const struct hash_elem *element, void *aux);
+
+/* Helper function used to compae two cache entries */
 bool cache_less(const struct hash_elem *a, const struct hash_elem *b, 
                 void *aux);
 
 
+/* Read asynchronously the next sector. Returns immediately.
+ * Readahead-s aren't guaranteed, and depend on system load
+ * and current read ahead queue size */
 void read_ahead(block_sector_t sector_idx);
+
+/* Write all dirty sectors back to disk */
 void write_behind(void);
 
 #endif /* filesys/cache.h */

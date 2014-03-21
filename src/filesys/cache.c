@@ -8,7 +8,7 @@
 #include "threads/synch.h"
 
 /* Max size of read ahead list */
-#define MAX_RA_LIST 256
+#define MAX_RA_LIST 32
 
 /* Acquire a read lock for this cache descriptor */
 static void read_lock(struct cache_block *cb);
@@ -20,13 +20,24 @@ static void write_lock(struct cache_block *cb);
 /* Release a write lock for this cache descriptor */
 static void write_unlock(struct cache_block *cb);
 
+
+/* Read an sector through the cache. Will trigger a cache_miss
+ * if the sector isn't cached */
 static void _cache_read(block_sector_t sector_idx, void *buffer, off_t size, 
                 off_t offset, int *error);
+
+/* Write an sector through the cache. Will trigger a cache_miss
+ * if the sector isn't cached */
 static void _cache_write(block_sector_t sector_idx, const void *buffer, off_t size,
                 off_t offset, int *error);
 
+/* Called in cache_read and cache_write when the desired block is not cached.
+   Store it in the cache, then return its corresponding cache_entry struct. */
 static struct cache_entry *cache_miss(block_sector_t sector_idx);
 
+/*! Gets cache table entry from the hash table. Returns NULL if
+ *  sector is not in present in the hash table.
+ */
 static struct cache_entry * cache_get_entry(block_sector_t sector_idx);
 
 /* Write-back daemon */
@@ -98,6 +109,7 @@ void cache_init(void) {
     list_init(&read_ahead_list);
 
 
+    /* Create read ahead and write behind daemons */
     thread_create("rad",
                   PRI_MIN + 1,
                   read_ahead_daemon,
@@ -105,6 +117,8 @@ void cache_init(void) {
     thread_create("wbd", PRI_MIN + 1, write_behind_daemon, NULL);
 }
 
+/* Find and evict an entry from the cache. A clock
+ * policy is being used */
 void cache_evict() {
     struct cache_block *cb;
     struct cache_entry ce;
@@ -123,11 +137,17 @@ void cache_evict() {
         write_lock(cb);
 
         ASSERT(cb->valid);
+
+        /* If it's been accessed, clear the accessed bit */
         if (cb->accessed) {
             cb->accessed = 0;
+
+            /* Advance hand */
             hand = (hand + 1) % CACHE_SIZE;
             write_unlock(cb);
         }
+
+        /* Else evict entry, unless it's pinned */
         else {
 
             if (!lock_held_by_current_thread(&ht_lock)) {
@@ -136,6 +156,8 @@ void cache_evict() {
             }
             
             tmp = cache_get_entry(cb->sector_idx); 
+
+            /* Ignore pinned entries */
             if (tmp->pinned) {
                 write_unlock(cb);
                 hand = (hand + 1) % CACHE_SIZE;
@@ -174,7 +196,6 @@ void cache_evict() {
                 locked = true;
             }
             
-            // TODO: Double check this
             free(hash_entry(elem, struct cache_entry, elem));
 
             if (locked) {
@@ -185,6 +206,9 @@ void cache_evict() {
             break;
         }
     }
+
+    /* Make sure that the block hand is pointing to is invalid.
+     * cache_miss() will overwrite this */
     ASSERT(!cache[hand].valid);
 }
 
@@ -197,6 +221,7 @@ static struct cache_entry *cache_get_entry(block_sector_t sector_idx) {
     struct cache_entry *tmp;
     bool locked = false;
 
+    /* Only acquire hashtable lock if we don't already have it */
     if (!lock_held_by_current_thread(&ht_lock)) {
         lock_acquire(&ht_lock);
         locked = true;
@@ -233,6 +258,7 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
     }
 
     lock_acquire(&hand_lock);
+    /* Only acquire hashtable lock if we don't already have it */
     if (!lock_held_by_current_thread(&ht_lock)) {
         lock_acquire(&ht_lock);
         locked = true;
@@ -244,6 +270,8 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
         }
         cache_evict();
     }
+
+    /* Index of new cahce entry is old hand (now invalid) */
     centry->cache_idx = hand; 
     hand = (hand + 1) % CACHE_SIZE;
     
@@ -255,6 +283,8 @@ static struct cache_entry *cache_miss(block_sector_t sector_idx) {
         lock_acquire(&ht_lock);
         locked = true;
     }
+
+    /* Insert entry pointer in the hash table */
     hash_insert(&cache_table, &centry->elem);
 
     if (locked) {
@@ -301,10 +331,13 @@ static void _cache_read(block_sector_t sector_idx, void *buffer, off_t size,
     lock_acquire(&ht_lock);
     stored_ce = cache_get_entry(sector_idx);
     
+    /* If entry in cache */ 
     if (stored_ce != NULL) {
         stored_ce->pinned = true;
         stored_cache_idx = stored_ce->cache_idx;
     }
+
+    /* Otherwise get it by cache_miss()ing */
     else {
         stored_ce = cache_miss(sector_idx);
         stored_ce->pinned = true;
@@ -364,10 +397,12 @@ static void _cache_write(block_sector_t sector_idx, const void *buffer, off_t si
     lock_acquire(&ht_lock);
 
     stored_ce = cache_get_entry(sector_idx);
+    /* If entry in cache */
     if (stored_ce != NULL) {
         stored_ce->pinned = true;
         stored_cache_idx = stored_ce->cache_idx;
     }
+    /* Otherwise get it by cache_miss()ing */
     else {
         stored_ce = cache_miss(sector_idx);
         stored_ce->pinned = true;
@@ -483,11 +518,14 @@ static void write_unlock(struct cache_block *cb) {
 }
 
 
+/* Hashes a cache entry. The hash is its sector_id */
 unsigned cache_hash(const struct hash_elem *element, void *aux UNUSED) {
     struct cache_entry *ce = hash_entry(element, struct cache_entry, elem);
     return hash_int((int) ce->sector_idx);
 }
 
+
+/* Helper function used to compae two cache entries */
 bool cache_less(const struct hash_elem *a, const struct hash_elem *b,
                 void *aux UNUSED) {
     struct cache_entry *ce1 = hash_entry(a, struct cache_entry, elem);
@@ -497,7 +535,9 @@ bool cache_less(const struct hash_elem *a, const struct hash_elem *b,
 
 
 
-// TODO
+/* Read asynchronously the next sector. Returns immediately.
+ * Readahead-s aren't guaranteed, and depend on system load
+ * and current read ahead queue size */
 void read_ahead(block_sector_t sector_idx) {
     struct read_ahead_entry *raentry;
 
@@ -516,13 +556,14 @@ void read_ahead(block_sector_t sector_idx) {
     lock_release(&ra_lock);
 }
 
+/* Daemon that runs read_ahead on the qeueue. Waits for a 
+ * signal from the producer */
 static void read_ahead_daemon(void * aux) {
     struct read_ahead_entry *raentry;
     struct cache_entry *centry;
     struct cache_entry *next_centry;
 
     while (true) {
-        
         lock_acquire(&ra_lock);
 
         /* Wait to be signaled */
@@ -532,7 +573,6 @@ static void read_ahead_daemon(void * aux) {
         if (rad_stop = true) {
             /* Make sure we don't leak locks */
             lock_release(&ra_lock);
-
             exit(0);
         }
 
@@ -557,6 +597,7 @@ static void read_ahead_daemon(void * aux) {
     }
 }
 
+/* Daemon that does a periodic writeback */
 void write_behind_daemon(void *aux) {
     while (1) {
         timer_msleep(5000);
@@ -576,7 +617,6 @@ void write_behind_daemon(void *aux) {
 void write_behind() {
     int i;
 
-    printf("writing behind\n");
     for (i = 0; i < CACHE_SIZE; i++) {
         read_lock(&cache[i]);
         if (cache[i].valid && cache[i].dirty) {
@@ -585,5 +625,4 @@ void write_behind() {
         cache[i].dirty = 0;
         read_unlock(&cache[i]);
     }
-    printf("end write behind\n");
 }
