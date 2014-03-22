@@ -383,6 +383,8 @@ bool create(const char *file, unsigned initial_size) {
         return false;
     }
 
+    inode_set_dir(opened_inode, true);
+
     name[READDIR_MAX_LEN] = '\0';
     name_length = 0;
     cur_dir = NULL;
@@ -525,6 +527,8 @@ int open(const char *file) {
         return -1;
     }
 
+    inode_set_dir(opened_inode, true);
+
     name[READDIR_MAX_LEN] = '\0';
     name_length = 0;
     cur_dir = NULL;
@@ -556,12 +560,18 @@ int open(const char *file) {
                     /* else do nothing */
                 }
                 else {
-                    cur_dir = dir_open(opened_inode);
-                    if (dir_lookup(cur_dir, &name, &opened_inode)) {
-                        dir_close(cur_dir);
+                    if (inode_isdir(opened_inode)) {
+                        cur_dir = dir_open(opened_inode);
+                        if (dir_lookup(cur_dir, &name, &opened_inode)) {
+                            dir_close(cur_dir);
+                        }
+                        else {
+                            dir_close(cur_dir);
+                            open_fail = true;
+                            break;
+                        }
                     }
                     else {
-                        dir_close(cur_dir);
                         open_fail = true;
                         break;
                     }
@@ -779,8 +789,6 @@ void close(int fd) {
  */
 bool chdir(const char *dir) {
 
-    return false;
-    //strlcat(thread_current()->process_details->cwd, dir, READDIR_MAX_LEN + 1);
 }
 
 /* Creates the directory named dir, which may be relative or absolute.
@@ -816,6 +824,8 @@ bool mkdir(const char *dir) {
     else {
         return false;
     }
+
+    inode_set_dir(opened_inode, true);
 
     name[READDIR_MAX_LEN] = '\0';
     name_length = 0;
