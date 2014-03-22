@@ -492,6 +492,10 @@ bool remove(const char *file) {
         exit(EXIT_BAD_PTR);
     }
 
+    if (strcmp(file, "/") == 0) {
+        return false;
+    }
+
     /* Try and find inode corresponding to given file name string */
     name_ptr = file;
 
