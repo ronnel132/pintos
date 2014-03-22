@@ -1152,6 +1152,14 @@ bool mkdir(const char *dir) {
  * increase this value from the default of 14.
  */
 bool readdir(int fd, char *name) {
+    if (name == NULL || !valid_user_pointer(name)) {
+        exit(EXIT_BAD_PTR);
+    }
+
+    if (is_open(fd) && isdir(fd)) {
+        return dir_readdir(get_dir_struct(fd), name);
+    }
+
     return false;
 }
 
