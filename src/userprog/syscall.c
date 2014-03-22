@@ -1,6 +1,7 @@
 #include "userprog/syscall.h"
 #include <stdio.h>
 #include <syscall-nr.h>
+#include <string.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "threads/palloc.h"
@@ -355,14 +356,118 @@ int wait(pid_t pid) {
  * Returns true if successful, false otherwise. 
  */
 bool create(const char *file, unsigned initial_size) {
-    bool status = false;
+    bool status;
+    int name_length;
+    char name[READDIR_MAX_LEN + 1];
+    char *name_ptr;
+    struct inode * opened_inode;
+    struct inode * temp_inode;
+    struct dir * cur_dir;
 
-    /* Validate user pointer and then create file. */
-    if (valid_user_pointer(file)) {
-        status = filesys_create(file, initial_size);
-    } else {
-        /* If user pointer is invalid, exit. */
+    /* Validate user pointer and then open file. */
+    if (file == NULL || !valid_user_pointer(file)) {
         exit(EXIT_BAD_PTR);
+    }
+
+    /* Try and find inode corresponding to given file name string */
+    name_ptr = file;
+
+    if (*name_ptr == '/') {
+        opened_inode = inode_open(ROOT_DIR_SECTOR);
+        name_ptr++;
+    }
+    else if (*name_ptr != '\0') {
+        opened_inode = inode_reopen(dir_inode(thread_cwd()));
+    }
+    else {
+        return false;
+    }
+
+    name[READDIR_MAX_LEN] = '\0';
+    name_length = 0;
+    cur_dir = NULL;
+    status = false;
+
+    while (true) {
+        /* If ending current token. */
+        if (*name_ptr == '/' || *name_ptr == '\0') {
+            name[name_length] = '\0';
+
+            /* If token length is greater than 0. */
+            if (name_length > 0) {
+                if (strcmp(name, "..") == 0) {
+                    if (inode_isdir(opened_inode)) {
+                        temp_inode = opened_inode;
+                        opened_inode = inode_parent(opened_inode);
+                        inode_close(temp_inode);
+                    }
+                    else {
+                        status = false;
+                        break;
+                    }
+                }
+                else if (strcmp(name, ".") == 0) {
+                    if (!inode_isdir(opened_inode)) {
+                        status = false;
+                        break;
+                    }
+                }
+                else {
+                    if (inode_isdir(opened_inode)) {
+                        cur_dir = dir_open(opened_inode);
+                        if (dir_lookup(cur_dir, &name, &opened_inode)) {
+                            dir_close(cur_dir);
+                        }
+                        else if (*name_ptr == '\0') {
+                            status = true;
+                            break;
+                        }
+                        else {
+                            status = false;
+                            dir_close(cur_dir);
+                            break;
+                        }
+                    }
+                    else {
+                        status = false;
+                        break;
+                    }
+                }
+            }
+
+            name[0] = '\0';
+            name_length = 0;
+
+            /* End loop if at end of given string. */
+            if (*name_ptr == '\0') {
+                status = false;
+                break;
+            }
+        }
+        /* Else if building current token name. */
+        else if (name_length < READDIR_MAX_LEN) {
+            name[name_length] = *name_ptr;
+            name_length++;
+        }
+        /* Else name length is overflowing. */
+        else {
+            status = false;
+            break;
+        }
+
+        name_ptr++;
+    }
+
+    if (status) {
+        block_sector_t inode_sector = 0;
+        status = (cur_dir != NULL &&
+                        free_map_allocate(1, &inode_sector) &&
+                        inode_create(inode_sector, initial_size) &&
+                        dir_add(cur_dir, &name, inode_sector, false));
+        if (!status && inode_sector != 0) {
+            free_map_release(inode_sector, 1);
+        }
+        dir_close(cur_dir);
     }
 
     return status;
@@ -388,48 +493,142 @@ bool remove(const char *file) {
  */
 int open(const char *file) {
     struct file * opened_file;
+    struct dir * opened_dir;
     struct process * pd;
     int file_descriptor = -1;
-    unsigned i;
+    int i;
+    
+    int name_length;
+    char name[READDIR_MAX_LEN + 1];
+    char *name_ptr;
+    bool open_fail;
+    struct inode * opened_inode;
+    struct inode * temp_inode;
+    struct dir * cur_dir;
 
     /* Validate user pointer and then open file. */
-    if (valid_user_pointer(file)) {
+    if (file == NULL || !valid_user_pointer(file)) {
+        exit(EXIT_BAD_PTR);
+    }
 
-        /* Open the file and get the file struct from the filesystem. */
-        opened_file = filesys_open(file);
+    /* Try and find inode corresponding to given file name string */
+    name_ptr = file;
 
-        /* If file actually exists */
-        if (opened_file != NULL) {
-            /* Get pointer to the process_details */
-            pd = thread_current()->process_details;
+    if (*name_ptr == '/') {
+        opened_inode = inode_open(ROOT_DIR_SECTOR);
+        name_ptr++;
+    }
+    else if (*name_ptr != '\0') {
+        opened_inode = inode_reopen(dir_inode(thread_cwd()));
+    }
+    else {
+        return -1;
+    }
 
-            /* If there are available file descriptors */
-            if (pd->num_files_open < MAX_OPEN_FILES) {
-                /* Search for first available file descriptor */
-                for (i = 0; i < MAX_OPEN_FILES; i++) {
-                    /* The file descriptor is the index into the
-                     * open_file_descriptors array.
-                     */
-                    if (pd->open_file_descriptors[i] == false) {
-                        file_descriptor = i;
+    name[READDIR_MAX_LEN] = '\0';
+    name_length = 0;
+    cur_dir = NULL;
+    open_fail = true;
+
+    while (true) {
+        /* If ending current token. */
+        if (*name_ptr == '/' || *name_ptr == '\0') {
+            name[name_length] = '\0';
+
+            /* If token length is greater than 0. */
+            if (name_length > 0) {
+                if (strcmp(name, "..") == 0) {
+                    if (inode_isdir(opened_inode)) {
+                        temp_inode = opened_inode;
+                        opened_inode = inode_parent(opened_inode);
+                        inode_close(temp_inode);
+                    }
+                    else {
+                        open_fail = true;
                         break;
                     }
                 }
+                else if (strcmp(name, ".") == 0) {
+                    if (!inode_isdir(opened_inode)) {
+                        open_fail = true;
+                        break;
+                    }
+                    /* else do nothing */
+                }
+                else {
+                    cur_dir = dir_open(opened_inode);
+                    if (dir_lookup(cur_dir, &name, &opened_inode)) {
+                        dir_close(cur_dir);
+                    }
+                    else {
+                        dir_close(cur_dir);
+                        open_fail = true;
+                        break;
+                    }
+                }
+            }
 
-                /* Update the current process_details file details.
-                 * Set the file descriptor index to true, is open.
-                 * Set the file struct at the file descriptor index to the
-                 * one returned by the filesystem.
-                 * Increment the variable number of files that are open.
-                 */
-                pd->open_file_descriptors[file_descriptor] = true;
-                pd->files[file_descriptor] = opened_file;
-                pd->num_files_open++;
+            name[0] = '\0';
+            name_length = 0;
+
+            /* End loop if at end of given string. */
+            if (*name_ptr == '\0') {
+                open_fail = false;
+                break;
             }
         }
+        /* Else if building current token name. */
+        else if (name_length < READDIR_MAX_LEN) {
+            name[name_length] = *name_ptr;
+            name_length++;
+        }
+        /* Else name length is overflowing. */
+        else {
+            open_fail = true;
+            break;
+        }
 
-    } else {
-        exit(EXIT_BAD_PTR);
+        name_ptr++;
+    }
+
+
+    if (open_fail) {
+        inode_close_tree(opened_inode);
+    }
+    /* If inode was opened properly, open corresponding directory or file. */
+    else {
+        pd = thread_current()->process_details;
+
+        /* If there are available file descriptors */
+        if (pd->num_files_open < MAX_OPEN_FILES) {
+            /* Search for first available file descriptor */
+            for (i = 0; i < MAX_OPEN_FILES; i++) {
+                /* The file descriptor is the index into the
+                 * open_file_descriptors array.
+                 */
+                if (pd->open_file_descriptors[i] == false) {
+                    file_descriptor = i;
+                    break;
+                }
+            }
+
+            /* Update the current process_details file details.
+             * Set the file descriptor index to true, is open.
+             * Set the file struct at the file descriptor index to the
+             * one returned by the filesystem.
+             * Increment the variable number of files that are open.
+             */
+            pd->open_file_descriptors[file_descriptor] = true;
+            pd->num_files_open++;
+            pd->fd_is_dir[file_descriptor] = inode_isdir(opened_inode);
+
+            if (pd->fd_is_dir[file_descriptor]) {
+                pd->directories[file_descriptor] = dir_open(opened_inode);
+            }
+            else {
+                pd->files[file_descriptor] = file_open(opened_inode);
+            }
+        }
     }
 
     return file_descriptor;
@@ -441,7 +640,7 @@ int filesize(int fd) {
     int size = -1;
 
     /* If file is indeed open, return length */
-    if (is_open(fd)) {
+    if (is_open(fd) && !isdir(fd)) {
         size = file_length(get_file_struct(fd));
     }
 
@@ -474,13 +673,11 @@ int read(int fd, void *buffer, unsigned size) {
                 /* Decrement the size for the while loop condition */
                 size--;
             }
-        } else if (fd != STDOUT_FILENO) {
+        } else if (fd != STDOUT_FILENO && is_open(fd) && !isdir(fd)) {
             /* If the file descriptor is not stdout, read the file using
              * the filesystem.
              */
-            if (is_open(fd)) {
-                bytes_read = file_read(get_file_struct(fd), buffer, size);
-            }
+            bytes_read = file_read(get_file_struct(fd), buffer, size);
         }
     } else {
         exit(EXIT_BAD_PTR);
@@ -503,11 +700,9 @@ int write(int fd, const void *buffer, unsigned size) {
              * to console.
              */
             putbuf((const char *) buffer, (size_t) size);
-        } else if (fd != STDIN_FILENO) {
+        } else if (fd != STDIN_FILENO && is_open(fd) && !isdir(fd)) {
             /* If file is not stdin, write to file in the filesystem */
-            if (is_open(fd)) {
-                bytes_written = file_write(get_file_struct(fd), buffer, size);
-            }
+            bytes_written = file_write(get_file_struct(fd), buffer, size);
         }
     } else {
         exit(EXIT_BAD_PTR);
@@ -521,7 +716,7 @@ int write(int fd, const void *buffer, unsigned size) {
  * is the file's start.)
  */
 void seek(int fd, unsigned position) {
-    if (is_open(fd)) {
+    if (is_open(fd) && !isdir(fd)) {
         file_seek(get_file_struct(fd), position);
     }
 }
@@ -532,7 +727,7 @@ void seek(int fd, unsigned position) {
 unsigned tell(int fd) {
     unsigned pos = 0;
 
-    if (is_open(fd)) {
+    if (is_open(fd) && !isdir(fd)) {
         pos = file_tell(get_file_struct(fd));
     }
 
@@ -544,11 +739,19 @@ unsigned tell(int fd) {
  * each one.
  */
 void close(int fd) {
-
     struct thread * cur_thread = thread_current();
 
     if (is_open(fd)) {
         /* If file is opened by this process */
+
+        /* Update the process_details struct.
+         * Specify that the filedescriptor is now available.
+         */
+        thread_current()->process_details->open_file_descriptors[fd] = false;
+
+        /* Decrement the variable of number of files that are open */
+        cur_thread->process_details->num_files_open--;
+
 
         if (cur_thread->process_details->fd_is_dir[fd]) {
             /* Close the directory using the filesystem. */
@@ -568,14 +771,6 @@ void close(int fd) {
              */
             thread_current()->process_details->files[fd] = NULL;
         }
-
-        /* Update the process_details struct.
-         * Specify that the filedescriptor is now available.
-         */
-        thread_current()->process_details->open_file_descriptors[fd] = false;
-
-        /* Decrement the variable of number of files that are open */
-        cur_thread->process_details->num_files_open--;
     }
 }
 
@@ -583,6 +778,7 @@ void close(int fd) {
  * relative or absolute. Returns true if successful, false on failure.
  */
 bool chdir(const char *dir) {
+
     return false;
     //strlcat(thread_current()->process_details->cwd, dir, READDIR_MAX_LEN + 1);
 }
@@ -594,7 +790,121 @@ bool chdir(const char *dir) {
  * exists and /a/b/c does not.
  */
 bool mkdir(const char *dir) {
-    return false;
+    bool status;
+    int name_length;
+    char name[READDIR_MAX_LEN + 1];
+    char *name_ptr;
+    struct inode * opened_inode;
+    struct inode * temp_inode;
+    struct dir * cur_dir;
+
+    /* Validate user pointer and then open file. */
+    if (dir == NULL || !valid_user_pointer(dir)) {
+        exit(EXIT_BAD_PTR);
+    }
+
+    /* Try and find inode corresponding to given file name string */
+    name_ptr = dir;
+
+    if (*name_ptr == '/') {
+        opened_inode = inode_open(ROOT_DIR_SECTOR);
+        name_ptr++;
+    }
+    else if (*name_ptr != '\0') {
+        opened_inode = inode_reopen(dir_inode(thread_cwd()));
+    }
+    else {
+        return false;
+    }
+
+    name[READDIR_MAX_LEN] = '\0';
+    name_length = 0;
+    cur_dir = NULL;
+    status = false;
+
+    while (true) {
+        /* If ending current token. */
+        if (*name_ptr == '/' || *name_ptr == '\0') {
+            name[name_length] = '\0';
+
+            /* If token length is greater than 0. */
+            if (name_length > 0) {
+                if (strcmp(name, "..") == 0) {
+                    if (inode_isdir(opened_inode)) {
+                        temp_inode = opened_inode;
+                        opened_inode = inode_parent(opened_inode);
+                        inode_close(temp_inode);
+                    }
+                    else {
+                        status = false;
+                        break;
+                    }
+                }
+                else if (strcmp(name, ".") == 0) {
+                    if (!inode_isdir(opened_inode)) {
+                        status = false;
+                        break;
+                    }
+                }
+                else {
+                    if (inode_isdir(opened_inode)) {
+                        cur_dir = dir_open(opened_inode);
+                        if (dir_lookup(cur_dir, &name, &opened_inode)) {
+                            dir_close(cur_dir);
+                        }
+                        else if (*name_ptr == '\0') {
+                            status = true;
+                            break;
+                        }
+                        else {
+                            status = false;
+                            dir_close(cur_dir);
+                            break;
+                        }
+                    }
+                    else {
+                        status = false;
+                        break;
+                    }
+                }
+            }
+
+            name[0] = '\0';
+            name_length = 0;
+
+            /* End loop if at end of given string. */
+            if (*name_ptr == '\0') {
+                status = false;
+                break;
+            }
+        }
+        /* Else if building current token name. */
+        else if (name_length < READDIR_MAX_LEN) {
+            name[name_length] = *name_ptr;
+            name_length++;
+        }
+        /* Else name length is overflowing. */
+        else {
+            status = false;
+            break;
+        }
+
+        name_ptr++;
+    }
+
+    if (status) {
+        block_sector_t inode_sector = 0;
+        status = (cur_dir != NULL &&
+                        free_map_allocate(1, &inode_sector) &&
+                        dir_create(inode_sector, 0) &&
+                        dir_add(cur_dir, &name, inode_sector, true));
+        if (!status && inode_sector != 0) {
+            free_map_release(inode_sector, 1);
+        }
+        dir_close(cur_dir);
+    }
+
+    return status;
 }
 
 /* Reads a directory entry from file descriptor fd, which must represent a

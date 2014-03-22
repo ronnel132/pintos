@@ -106,10 +106,14 @@ bool dir_lookup(const struct dir *dir, const char *name, struct inode **inode) {
     ASSERT(dir != NULL);
     ASSERT(name != NULL);
 
-    if (lookup(dir, name, &e, NULL))
+    if (lookup(dir, name, &e, NULL)) {
         *inode = inode_open(e.inode_sector);
-    else
+        inode_set_dir(*inode, e.is_dir);
+        inode_set_parent(*inode, inode_reopen(dir->inode));
+    }
+    else {
         *inode = NULL;
+    }
 
     return *inode != NULL;
 }
@@ -241,3 +245,6 @@ bool dir_readdir(struct dir *dir, char name[NAME_MAX + 1]) {
     return false;
 }
 
+struct inode * dir_inode(struct dir * dir) {
+    return dir->inode;
+}

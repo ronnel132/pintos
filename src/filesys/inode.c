@@ -6,6 +6,7 @@
 #include "filesys/cache.h"
 #include "filesys/filesys.h"
 #include "filesys/free-map.h"
+#include "filesys/directory.h"
 #include "threads/malloc.h"
 
 /*! Identifies an inode. */
@@ -41,7 +42,8 @@
 struct inode_disk {
     off_t length;                       /*!< File size in bytes. */
     unsigned magic;                     /*!< Magic number. */
-    int blocks[IDX_BLOCKS]; /*!< Not used. */
+
+    int blocks[IDX_BLOCKS];
 };
 
 /*! Returns the number of sectors to allocate for an inode SIZE
@@ -57,6 +59,10 @@ struct inode {
     int open_cnt;                       /*!< Number of openers. */
     bool removed;                       /*!< True if deleted, false otherwise. */
     int deny_write_cnt;                 /*!< 0: writes ok, >0: deny writes. */
+    
+    bool is_dir;
+    struct inode * parent_inode;
+
     struct inode_disk data;             /*!< Inode content. */
 };
 
@@ -323,6 +329,7 @@ struct inode * inode_open(block_sector_t sector) {
     inode = malloc(sizeof *inode);
     if (inode == NULL)
         return NULL;
+    inode->parent_inode = NULL;
 
     /* Initialize. */
     list_push_front(&open_inodes, &inode->elem);
@@ -524,3 +531,29 @@ off_t inode_length(const struct inode *inode) {
     return inode->data.length;
 }
 
+bool inode_isdir(const struct inode *inode) {
+    return inode->is_dir;
+}
+
+struct inode * inode_parent_dir(struct inode * inode) {
+    return inode->parent_inode;
+}
+
+void inode_close_tree(struct inode *inode) {
+    if (inode != NULL) {
+        inode_close(inode->parent_inode);
+        inode_close(inode);
+    }
+}
+
+void inode_set_dir(struct inode * inode, bool is_dir) {
+    inode->is_dir = is_dir;
+}
+
+void inode_set_parent(struct inode * inode, struct inode * parent) {
+    inode->parent_inode = parent;
+}
+
+struct inode * inode_parent(struct inode * inode) {
+    return inode->parent_inode;
+}
