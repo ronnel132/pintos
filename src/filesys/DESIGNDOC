@@ -25,12 +25,15 @@ Ronnel Boettcher <ronnel@caltech.edu>
 >> If you have any preliminary comments on your submission, notes for the
 >> TAs, or extra credit, please give them here.
 
-The syn-write/rw tests sometimes fail. This is most definitely a race condition,
-which we couldn't find after hours of staring. However, note that these tests
-pass with bochs (with jitter values 1-100). Seems like qemu is interrupting
-at some very unfortunate time.
+The syn-write/rw tests sometimes fail. This is most definitely a race
+condition, which we couldn't find after hours of staring. However, note that
+these tests pass with bochs (with jitter values 1-100). Seems like qemu is
+interrupting at some very unfortunate time.
 
-vine probably fails due to a memleak. Couldn't figure that out either :(
+We believe dir-vine fails due to a memory leak associated with not closing
+parent directories when traversing a path. We claim this because a malloc
+fails when trying to create or remove some high depth node. We couldn't
+solve this issue in time, however.
 
 >> Please cite any offline or online sources you consulted while
 >> preparing your submission, other than the Pintos documentation, course
@@ -135,13 +138,15 @@ to the same block. It should not be a big deal for usual disk IO.
 
 The current approach could be extended the following way:
 If a writer tried to get the write lock, don't wait for all readers to 
-finish, but set up a flag to block future readers (hence only wayt for current readers to finish).
+finish, but set up a flag to block future readers (hence only wayt for current
+readers to finish).
 
 This was not implemented because this sort of fairness wasn't explicitely 
 mendioned in the spec (and we have just a couple of hours to 
 turn this in, don't wanna mess it up)
 
-Also note that writers can never block readers indefinitely, because there can only be only one writer to the sector with the
+Also note that writers can never block readers indefinitely, because there can
+only be only one writer to the sector with the
 write lock. When he finishes, either another writer can get the
 lock, or another reader. They are both treader equaly, hence this
 case is completely fair.
@@ -305,10 +310,11 @@ evicting the previous block.
 >> C3: Describe your implementation of write-behind.
 
 Write behind is implemented as a daemon thread that loops, sleeps
-5 seconds, and writes behind every dirty cache block. This thread is low priority,
-and if there are other threads, it's not guaranteed that flushing
+5 seconds, and writes behind every dirty cache block. This thread is low
+priority, and if there are other threads, it's not guaranteed that flushing
 is done every 5 seconds (depending on scheduler), but that is not 
-a requirement in the spec (and it makes sense, we want this to be quite low pri).
+a requirement in the spec (and it makes sense, we want this to be quite low
+priority).
 
 >> C4: Describe your implementation of read-ahead.
 
@@ -344,7 +350,8 @@ and writing from that block.
 A write lock is acquired during eviction. Other readers/writers
 have to respectively acquire read/write locks, both of which are
 impossible while a write lock is already acquired (for eviction, in that case) 
-for that block. Thus, they can't access that block without the eviction finishing.
+for that block. Thus, they can't access that block without the eviction
+finishing.
 
 Note that there is an unfortunate case that during a cache read/write,
 a block was just evicted before the reader/writer ever got to acquire
@@ -378,9 +385,9 @@ writing, each evicted block will need to be written back. Write-behind
 adds the posibility that the block that's being evicted was already
 written back previously, hence making evictions faster.
 
-Write-behind will also benefit processes which make repeated writes to the same 
-offsets within the file, since, on each write, we do not have to write to the
-file system immediately after.
+Write-behind will also benefit processes which make repeated writes to the
+same offsets within the file, since, on each write, we do not have to write to
+the file system immediately after.
 
 
                SURVEY QUESTIONS
