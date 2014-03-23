@@ -24,10 +24,13 @@ Ronnel Boettcher <ronnel@caltech.edu>
 
 >> If you have any preliminary comments on your submission, notes for the
 >> TAs, or extra credit, please give them here.
+
 The syn-write/rw tests sometimes fail. This is most definitely a race condition,
 which we couldn't find after hours of staring. However, note that these tests
 pass with bochs (with jitter values 1-100). Seems like qemu is interrupting
 at some very unfortunate time.
+
+vine probably fails due to a memleak. Couldn't figure that out either :(
 
 >> Please cite any offline or online sources you consulted while
 >> preparing your submission, other than the Pintos documentation, course
