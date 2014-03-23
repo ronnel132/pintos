@@ -158,7 +158,20 @@ open file/directories.
 >> B6: Explain why you chose to represent the current directory of a
 >> process the way you did.
 
-// TODO Archan
+The directory structure is almost the same as the initial structure
+before the implementation of subdirectories. Now, we search for
+files in root by searching the dir entries in directory of represented
+by the inode of the root directory sector. The dir entries specify
+the sector representing an inode which is a child of that directory.
+The dir entries also specify whether the child is a directory or
+a file.
+
+We had to stick to this way even though arguably it's better to
+specify whether something is a folder or a file in the inode on
+disk itself for completeness. Right now it's taken that root /
+is a directory because it is hard coded in. Whenever a child is
+searched for, we set the is_dir flag of the inode struct based
+on the is_dir flag of the corresponding dir_entry struct.
 
 
 			     BUFFER CACHE
