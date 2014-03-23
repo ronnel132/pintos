@@ -17,6 +17,8 @@ struct block *fs_device;
 extern bool rad_stop;
 extern bool wbd_stop;
 
+extern struct lock sector_alloc_lock;
+
 static void do_format(void);
 
 /*! Initializes the file system module.
@@ -37,6 +39,7 @@ void filesys_init(bool format) {
     /* Set the current directory for the current running thread (main) to the 
        root directory. */
     thread_current()->cwd = dir_open_root();
+    lock_init(&sector_alloc_lock);
 }
 
 /*! Shuts down the file system module, writing any unwritten data to disk. */

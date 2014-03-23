@@ -8,6 +8,7 @@
 #include "filesys/free-map.h"
 #include "filesys/directory.h"
 #include "threads/malloc.h"
+#include "threads/synch.h"
 
 /*! Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44
@@ -36,6 +37,8 @@
 #define DBL_INDIRECT_UPPER (DBL_INDIRECT_LOWER + \
                            (IDX_PER_SECTOR * IDX_PER_SECTOR * \
                             BLOCK_SECTOR_SIZE))
+
+struct lock sector_alloc_lock;
 
 /*! On-disk inode.
     Must be exactly BLOCK_SECTOR_SIZE bytes long. */
@@ -467,6 +470,7 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
     while (size > 0) {
         /* Sector to write, starting byte offset within sector. */
         /* TODO: sector_idx = merge conflict third parameter "true"? */
+        lock_acquire(&sector_alloc_lock);
         block_sector_t sector_idx = byte_to_sector(inode, offset);
         /* If there is no sector assigned to this offset, assign one. */
         while ((int) sector_idx == -1) {
@@ -474,6 +478,7 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
             /* Try again. */
             sector_idx = byte_to_sector(inode, offset);
         }
+        lock_release(&sector_alloc_lock);
         int sector_ofs = offset % BLOCK_SECTOR_SIZE;
 
         /* Bytes left in inode, bytes left in sector, lesser of the two. */
