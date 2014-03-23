@@ -98,6 +98,7 @@ writing to the same location at the same time.
 >> may not read data other than what B writes, e.g. if B writes
 >> nonzero data, A is not allowed to see all zeros.  Explain how your
 >> code avoids this race.
+
 A read-write lock mechanism is used to synchronize concurrent reads 
 and writes to blocks. This system allows multiple concurrent read
 ers, but not writers (or a combination of readers + writers) in t
@@ -118,15 +119,15 @@ the lock first); but in this case the writers never wrote, so its OK!
 >> from reading the file.
 
 File read/write is done in blocks, i.e. the lock is not in the file-level. 
-The locks, too, (read write lock) are granular enough that don't lock the entire
+The locks, (read write lock) are granular enough that don't lock the entire
 file, but only cached blocks. Hence, this is a major improvement,
 especially for big files. Multiple concurrent readers
-are allowed without blocking each other, but not writers (or a comination of 
+are allowed without blocking each other, but not writers (or a combination of 
 writers and readers).
 
 However, there is no "preemptive fairness", in the sense that writers
 won't block new readers from reading (if someone's already reading).
-This could be disatvantageous if there are tons of readers/writers 
+This could be disadvantageous if there are tons of long readers 
 to the same block. It should not be a big deal for usual disk IO.
 
 The current approach could be extended the following way:
@@ -278,15 +279,9 @@ Lock to protect hand pointer used in the clock policy
 
 >> C2: Describe how your cache replacement algorithm chooses a cache
 >> block to evict.
-A clock strategy is being used. Cache blocks are stored in an array,
-and a "hand" pointer moves around. The clock strategly is identicaly to 
-second chance, but much faster as we're not pushing back into a queue, 
-just moving the hand. Basically, goes through all blocks until it finds 
-one that is not accessed and evicts that, while it clears the access bit for 
-those blocks who have it set.
 
-We utilize the second chance policy. The second chance policy (AKA clock 
-policy) keeps track of a queue, and the entry at the head of the queue is
+We utilize the clock policy (like second chance, but faster0. The clock policy
+keeps track of a queue, and the entry at the head of the queue is
 evicted if it has been accessed. Otherwise, its accessed bit is cleared, and
 its enqueued. In our implementation, we use a circular buffer queue, meaning 
 we keep track of a "hand" pointer corresponding to the front of the queue. 
@@ -305,6 +300,7 @@ cache entry details into the position where the hand stopped at, effectively
 evicting the previous block.
 
 >> C3: Describe your implementation of write-behind.
+
 Write behind is implemented as a daemon thread that loops, sleeps
 5 seconds, and writes behind every dirty cache block. This thread is low priority,
 and if there are other threads, it's not guaranteed that flushing
@@ -312,11 +308,12 @@ is done every 5 seconds (depending on scheduler), but that is not
 a requirement in the spec (and it makes sense, we want this to be quite low pri).
 
 >> C4: Describe your implementation of read-ahead.
+
 After each sector read, after cache_read is called in inode read/write,
 we calculate whether the next sector is in the file or not. If it is,
 read ahead is called. It just adds the sector into the read ahead
 queue and returns, while also signaling the read-ahead daemon thread.
-The daemon is ismilar to the write behind daemon, looping and reading ahead. 
+The daemon is similar to the write behind daemon, looping and reading ahead. 
 It waits on a condition so it doesn't busy wait.
 It's also a low priority thread.
 
@@ -331,6 +328,7 @@ but we chose the simpler approach for our implementation.
 >> C5: When one process is actively reading or writing data in a
 >> buffer cache block, how are other processes prevented from evicting
 >> that block?
+
 As previously mentioned, a read-write lock mechanism is implemented.
 To evict a block, a write lock must be acquired for that block. Hence,
 if we try to evict a block, we must acquire a write lock => we
@@ -339,6 +337,7 @@ and writing from that block.
 
 >> C6: During the eviction of a block from the cache, how are other
 >> processes prevented from attempting to access the block?
+
 A write lock is acquired during eviction. Other readers/writers
 have to respectively acquire read/write locks, both of which are
 impossible while a write lock is already acquired (for eviction, in that case) 
@@ -355,6 +354,7 @@ goes ahead and does it thing. Otherwise tries again.
 
 >> C7: Describe a file workload likely to benefit from buffer caching,
 >> and workloads likely to benefit from read-ahead and write-behind.
+
 From buffer cache: Reading/writing to the same block/file a lot. 
 For example, if a process reads/writes a lot to the same group
 of blocks, they will likely be cached. Hence, the read/write will
@@ -370,26 +370,15 @@ flushes the cache (if needed) to disk, hence potentially saving
 the data in case of an improper shutdown.
 2. It could make cache evicts faster. If a process is doing a lot 
 of IO (maybe not sequential, or other pattern that makes clock eviction bad)
-then there will be a lot of evictions. But if the process is also 
+then there will be a lot of evictions (thrashing). But if the process is also 
 writing, each evicted block will need to be written back. Write-behind
 adds the posibility that the block that's being evicted was already
 written back previously, hence making evictions faster.
 
-An access pattern in which we access the same blocks with regular frequency,
-and not too many other blocks, would benefit immensely from the buffer cache.
-This is most optimal of course if we are accessing a number of blocks less than
-the size of the buffer cache.
-
-A sequential file read (reading from beginning to end) access pattern would 
-benefit from the read-ahead daemon, since, when the process eventually reads
-the next sector, it will already be loaded into cache. Of course, the 
-read-ahead daemon would also benefit any process reading or writing to sections
-of code that are at least larger than the size of one sector, for the same 
-reasons.
-
-Write-behind will benefit processes which make repeated writes to the same 
+Write-behind will also benefit processes which make repeated writes to the same 
 offsets within the file, since, on each write, we do not have to write to the
 file system immediately after.
+
 
                SURVEY QUESTIONS
                ================
