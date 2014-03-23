@@ -220,7 +220,7 @@ open file/directories.
 
 The directory structure is almost the same as the initial structure
 before the implementation of subdirectories. Now, we search for
-files in root by searching the dir entries in directory of represented
+files in root by searching the dir entries in the directory represented
 by the inode of the root directory sector. The dir entries specify
 the sector representing an inode which is a child of that directory.
 The dir entries also specify whether the child is a directory or
