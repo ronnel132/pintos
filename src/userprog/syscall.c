@@ -567,7 +567,7 @@ bool remove(const char *file) {
                             dir_lookup(cur_dir, name, &opened_inode);
                             if (inode_get_inumber(opened_inode) == inode_get_inumber(dir_inode(thread_cwd())) ||
                                 inode_get_inumber(opened_inode) == ROOT_DIR_SECTOR ||
-                                is_open_by_process(opened_inode)) {
+                                (inode_isdir(opened_inode) && is_open_by_process(opened_inode))) {
                                 status = false;
                             }
                             else {
