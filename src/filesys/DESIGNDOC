@@ -37,13 +37,49 @@ FirstName LastName <email@domain.example>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+struct inode_disk {
+    off_t length;
+    unsigned magic;
+
+    int blocks[IDX_BLOCKS];
+};
+
+>> I changed the "unused" array to an int array of index blocks, containing
+the sector indices of the direct, indirect, and doubly indirect blocks.
+
 >> A2: What is the maximum size of a file supported by your inode
 >> structure?  Show your work.
+
+There are 126 index blocks. 124 of them are direct blocks. Each direct blocks
+point directly to blocks on the file system used for file storage, so the
+direct blocks store up to 124 * 512 = 63,488 bytes.
+
+There is one indirect block. This indirect block points to a block containing
+128 indices, each of which points to a storage sector on disk. Thus, the
+indirect block stores up to 128 * 512 = 65,536 bytes.
+
+Lastly, there is one doubly indirect block. This block points to an index
+block, containing 128 indices. Each of these indices points to another index
+block, containing 128 indices, pointing directly to storage blocks on disk.
+Thus, the doubly indirect block stores up to 128 * 128 * 512 = 8,388,608
+bytes.
+
+Thus, in total, our inode structure can support
+    63,488
+    65,536
+   +8,388,608
+   ----------
+    8,517,632
+
+bytes, equivalent to 8.12 megabytes. Thus, the inode structure supports a
+little over 8 megabytes.
 
 ---- SYNCHRONIZATION ----
 
 >> A3: Explain how your code avoids a race if two processes attempt to
 >> extend a file at the same time.
+
+When two processes try to extend a file at the same time, they will both 
 
 >> A4: Suppose processes A and B both have file F open, both
 >> positioned at end-of-file.  If A reads and B writes F at the same
