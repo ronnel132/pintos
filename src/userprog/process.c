@@ -43,14 +43,16 @@ tid_t process_execute(const char *raw_args) {
     /* create one copy for tokenizing, since strtok modifies the original 
        string. */
     raw_args_tok_copy = palloc_get_page(0);
-    if (raw_args_tok_copy == NULL)
+    if (raw_args_tok_copy == NULL) {
         return TID_ERROR;
+    }
     strlcpy(raw_args_tok_copy, raw_args, PGSIZE);
 
     /* create the copy for passing to start_process. */
     raw_args_copy = palloc_get_page(0);
-    if (raw_args_copy == NULL)
+    if (raw_args_copy == NULL) {
         return TID_ERROR;
+    }
     strlcpy(raw_args_copy, raw_args, PGSIZE);
 
     /* Tokenize once to get argv[0], the thread name. */

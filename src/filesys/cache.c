@@ -97,7 +97,6 @@ void cache_init(void) {
     cond_init(&ra_cond);
     list_init(&read_ahead_list);
 
-//TODO: Reenable
 
     thread_create("rad",
                   0,
@@ -551,7 +550,6 @@ static void read_ahead_daemon(void * aux) {
 }
 
 void write_behind_daemon(void *aux) {
-// TODO: No need for last_flushed trick if we sleep 5s
     while (1) {
         if (wbd_stop = true) {
             exit(-1);
