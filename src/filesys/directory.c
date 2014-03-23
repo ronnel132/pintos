@@ -132,25 +132,6 @@ bool dir_lookup(const struct dir *dir, const char *name, struct inode **inode) {
     return *inode != NULL;
 }
 
-/*! Takes a NULL terminated array of strings, PATH, which represents a 
-    directory path from root. Returns the struct dir of the last directory 
-    in the path if path is valid, otherwise return NULL. */
-// struct dir *dir_path_lookup(char **path) {
-//     struct dir *dir = dir_open_root();
-//     struct dir_entry e;
-//     int i = 0;
-//     while (path[i] != NULL) {
-//         if (lookup(dir, path[i], &e, NULL)) {
-//             dir = e.cur_dir;
-//         }
-//         else {
-//             return NULL;
-//         }
-//         i++;
-//     }
-//     return dir; 
-// }
-
 /*! Adds a file or directory (depending on if IS_DIR is false or true) named 
     NAME to DIR, which must not already contain a file or directory by that 
     name. The file or directory's inode is in sector INODE_SECTOR.
