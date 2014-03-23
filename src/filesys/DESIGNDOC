@@ -112,10 +112,25 @@ When two processes try to extend a file at the same time, they will both
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+// TODO Archan
+
 ---- ALGORITHMS ----
 
 >> B2: Describe your code for traversing a user-specified path.  How
 >> do traversals of absolute and relative paths differ?
+
+Traversals of absolute and relative paths differ at the start of a
+traversal. At the start, the current directory of the traversal
+is chosen as "/" if it is an absolute path (first character is '/')
+or is chosen as the current working directory otherwise.
+
+Then, a name of the next node is built up and when we've reached
+the the end of the node (a '/' character or an NUL '\0' character)
+we look for an entry in the current directory with that name.
+If we're at the end we make sure we have what we came for and it
+is valid. If we're not at the end then we keep looping, advancing
+the current directory.
+
 
 ---- SYNCHRONIZATION ----
 
@@ -124,15 +139,27 @@ When two processes try to extend a file at the same time, they will both
 >> should succeed, as should only one of two simultaneous attempts to
 >> create a file with the same name, and so on.
 
+// TODO Archan
+
 >> B5: Does your implementation allow a directory to be removed if it
 >> is open by a process or if it is in use as a process's current
 >> working directory?  If so, what happens to that process's future
 >> file system operations?  If not, how do you prevent it?
 
+No, the implementation does not allow a directory to be removed if it
+is open by a process or if it is in use as a process's current working
+directory. We prevent this by checking if the path specified is a
+directory with same sector as the current working directory or if
+it has same sector as any directory open in the process's array of
+open file/directories.
+
 ---- RATIONALE ----
 
 >> B6: Explain why you chose to represent the current directory of a
 >> process the way you did.
+
+// TODO Archan
+
 
 			     BUFFER CACHE
 			     ============
