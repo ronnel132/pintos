@@ -530,14 +530,12 @@ off_t inode_length(const struct inode *inode) {
     return inode->data.length;
 }
 
+/*! Returns if inode is a directory. */
 bool inode_isdir(const struct inode *inode) {
     return inode->is_dir;
 }
 
-struct inode * inode_parent_dir(struct inode * inode) {
-    return inode->parent_inode;
-}
-
+/*! Closes inode tree recursively. */
 void inode_close_tree(struct inode *inode) {
     if (inode != NULL) {
         inode_close(inode->parent_inode);
@@ -545,14 +543,17 @@ void inode_close_tree(struct inode *inode) {
     }
 }
 
+/*! Sets an inode as being a directory or not. */
 void inode_set_dir(struct inode * inode, bool is_dir) {
     inode->is_dir = is_dir;
 }
 
+/*! Sets the inode's parent. */
 void inode_set_parent(struct inode * inode, struct inode * parent) {
     inode->parent_inode = parent;
 }
 
+/*! Returns the inode's parent inode. */
 struct inode * inode_parent(struct inode * inode) {
     return inode->parent_inode;
 }
