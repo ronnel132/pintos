@@ -8,11 +8,12 @@
 
 >> Fill in the names and email addresses of your group members.
 
-FirstName LastName <email@domain.example>
-FirstName LastName <email@domain.example>
-FirstName LastName <email@domain.example>
+Aleksander Bello <abello@caltech.edu>
+Archan Luhar <archan@caltech.edu>
+Ronnel Boettcher <ronnel@caltech.edu>
 
 >> Specify how many late tokens you are using on this assignment:  
+3
 
 >> What is the Git repository and commit hash for your submission?
 
@@ -23,6 +24,10 @@ FirstName LastName <email@domain.example>
 
 >> If you have any preliminary comments on your submission, notes for the
 >> TAs, or extra credit, please give them here.
+The syn-write/rw tests sometimes fail. This is most definitely a race condition,
+which we couldn't find after hours of staring. However, note that these tests
+pass with bochs (with jitter values 1-100). Seems like qemu is interrupting
+at some very unfortunate time.
 
 >> Please cite any offline or online sources you consulted while
 >> preparing your submission, other than the Pintos documentation, course
