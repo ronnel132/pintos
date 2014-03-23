@@ -80,7 +80,12 @@ little over 8 megabytes.
 >> A3: Explain how your code avoids a race if two processes attempt to
 >> extend a file at the same time.
 
-When two processes try to extend a file at the same time, they will both 
+When two processes try to extend a file at the same time, they will both call
+inode_write_at with the same arguments -- same file, offset, and size. There 
+will not be a race, however, because when they attempt to write to the sector
+corresponding to the byte offset both processes attempt to write to, they will
+encounter the cache read/write locks, which prevent the two processes from 
+writing to the same location at the same time.
 
 >> A4: Suppose processes A and B both have file F open, both
 >> positioned at end-of-file.  If A reads and B writes F at the same
@@ -139,6 +144,10 @@ case is completely fair.
 >> indirect blocks?  If not, why did you choose an alternative inode
 >> structure, and what advantages and disadvantages does your
 >> structure have, compared to a multilevel index?
+
+We chose 124 direct blocks, 1 indirect block, and 1 doubly indirect block,
+because it allowed for maximum file sizes just over 8 megabytes -- the size we
+were required to support. The arithmetic demonstrating this is shown in A2. 
 
                 SUBDIRECTORIES
                 ==============
@@ -265,6 +274,25 @@ Lock to protect hand pointer used in the clock policy
 >> C2: Describe how your cache replacement algorithm chooses a cache
 >> block to evict.
 
+We utilize the second chance policy. The second chance policy (AKA clock 
+policy) keeps track of a queue, and the entry at the head of the queue is
+evicted if it has been accessed. Otherwise, its accessed bit is cleared, and
+its enqueued. In our implementation, we use a circular buffer queue, meaning 
+we keep track of a "hand" pointer corresponding to the front of the queue. 
+When we seek to remove an entry from the cache, we examine the entry where the
+"hand" is, and check if it is accessed. If so, we clear its accessed bit, then
+advance the hand by 1 (also modding by the maximum size of the cache -- 64). 
+By advancing the hand by 1 entry when we've found an entry with its accessed
+bit set, this is equivalent to moving that entry to the back of the queue, 
+since the hand would have to advance throughout the entire queue again to 
+encounter that same block. 
+
+When the hand points to a cache entry with its accessed bit cleared, we then
+check the dirty bit of the block. If its dirty, we write to the sector it the
+cache entry corresponds to. Otherwise, do nothing. Then, we write the new 
+cache entry details into the position where the hand stopped at, effectively
+evicting the previous block.
+
 >> C3: Describe your implementation of write-behind.
 
 >> C4: Describe your implementation of read-ahead.
@@ -282,6 +310,22 @@ Lock to protect hand pointer used in the clock policy
 
 >> C7: Describe a file workload likely to benefit from buffer caching,
 >> and workloads likely to benefit from read-ahead and write-behind.
+
+An access pattern in which we access the same blocks with regular frequency,
+and not too many other blocks, would benefit immensely from the buffer cache.
+This is most optimal of course if we are accessing a number of blocks less than
+the size of the buffer cache.
+
+A sequential file read (reading from beginning to end) access pattern would 
+benefit from the read-ahead daemon, since, when the process eventually reads
+the next sector, it will already be loaded into cache. Of course, the 
+read-ahead daemon would also benefit any process reading or writing to sections
+of code that are at least larger than the size of one sector, for the same 
+reasons.
+
+Write-behind will benefit processes which make repeated writes to the same 
+offsets within the file, since, on each write, we do not have to write to the
+file system immediately after.
 
                SURVEY QUESTIONS
                ================

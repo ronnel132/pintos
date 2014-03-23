@@ -466,7 +466,6 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
 
     while (size > 0) {
         /* Sector to write, starting byte offset within sector. */
-        /* TODO: sector_idx = merge conflict third parameter "true"? */
         block_sector_t sector_idx = byte_to_sector(inode, offset);
         /* If there is no sector assigned to this offset, assign one. */
         while ((int) sector_idx == -1) {
