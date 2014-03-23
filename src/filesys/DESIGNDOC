@@ -139,7 +139,9 @@ the current directory.
 >> should succeed, as should only one of two simultaneous attempts to
 >> create a file with the same name, and so on.
 
-// TODO Archan
+Since directories are read to and written to just like files -- through
+inodes -- these simultaneous attempts to remove or create the same file
+or directory are theoretically prevented by inode read and write locks.
 
 >> B5: Does your implementation allow a directory to be removed if it
 >> is open by a process or if it is in use as a process's current
