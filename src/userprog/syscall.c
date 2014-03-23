@@ -47,7 +47,7 @@ static bool is_open(int fd);
 /* Gets the file struct from a file descriptor */
 static struct file * get_file_struct(int fd);
 static struct dir * get_dir_struct(int fd);
-static is_open_by_process(struct inode * inode);
+static bool is_open_by_process(struct inode * inode);
 
 /* Function prototype */
 static void syscall_handler(struct intr_frame *);
@@ -387,9 +387,12 @@ bool create(const char *file, unsigned initial_size) {
         exit(EXIT_BAD_PTR);
     }
 
-    /* Try and find inode corresponding to given file name string */
+    /*
+     * Try and find inode corresponding to given file name string
+     */
     name_ptr = file;
 
+    /* Set current directory. */
     if (*name_ptr == '/') {
         opened_inode = inode_open(ROOT_DIR_SECTOR);
         name_ptr++;
@@ -403,6 +406,7 @@ bool create(const char *file, unsigned initial_size) {
 
     inode_set_dir(opened_inode, true);
 
+    /* Begin looping through path given. */
     name[READDIR_MAX_LEN] = '\0';
     name_length = 0;
     cur_dir = NULL;
@@ -416,6 +420,8 @@ bool create(const char *file, unsigned initial_size) {
             /* If token length is greater than 0. */
             if (name_length > 0) {
                 if (strcmp(name, "..") == 0) {
+                    /* If new node name is .., go back a directory if
+                     * current node is a directory; else fail. */
                     if (inode_isdir(opened_inode)) {
                         temp_inode = opened_inode;
                         opened_inode = inode_parent(opened_inode);
@@ -427,6 +433,8 @@ bool create(const char *file, unsigned initial_size) {
                     }
                 }
                 else if (strcmp(name, ".") == 0) {
+                    /* If node name is ., stay in current directory if
+                     * current node is a directory, else fail. */
                     if (!inode_isdir(opened_inode)) {
                         status = false;
                         break;
@@ -434,15 +442,24 @@ bool create(const char *file, unsigned initial_size) {
                 }
                 else {
                     if (inode_isdir(opened_inode)) {
+                        /* If current node is a directory, then we can
+                         * search it for the new node name. */
                         cur_dir = dir_open(opened_inode);
                         if (dir_lookup(cur_dir, name, &opened_inode)) {
+                            /* If updating opened_inode was successful,
+                             * close the opened cur_dir and continue on. */
                             dir_close(cur_dir);
                         }
                         else if (*name_ptr == '\0') {
+                            /* If the path has just ended, break , and thus
+                             * move onto creating file in cur_dir. */
                             status = true;
                             break;
                         }
                         else {
+                            /* Path has not ended but name was not found
+                             * in cur_dir, so some part of path
+                             * doesn't exist. Fail. */
                             status = false;
                             dir_close(cur_dir);
                             break;
@@ -478,6 +495,7 @@ bool create(const char *file, unsigned initial_size) {
         name_ptr++;
     }
 
+    /* If path traversal went well, create file called name in cur_dir. */
     if (status) {
         block_sector_t inode_sector = 0;
         status = (cur_dir != NULL &&
@@ -561,16 +579,24 @@ bool remove(const char *file) {
                     /* else do nothing */
                 }
                 else {
+                    /* Should only get here if current opened inode is a
+                     * directory. */
                     if (inode_isdir(opened_inode)) {
                         cur_dir = dir_open(opened_inode);
                         if (*name_ptr == '\0') {
+                            /* If last one, search for new node. */
                             dir_lookup(cur_dir, name, &opened_inode);
+
+                            /* Fail if new node is cwd, root, or is a folder
+                             * open by the process. */
                             if (inode_get_inumber(opened_inode) == inode_get_inumber(dir_inode(thread_cwd())) ||
                                 inode_get_inumber(opened_inode) == ROOT_DIR_SECTOR ||
                                 (inode_isdir(opened_inode) && is_open_by_process(opened_inode))) {
                                 status = false;
                             }
                             else {
+                                /* If not failed yet, remove file or if
+                                 * directory, remove it only if empty. */
                                 if (inode_isdir(opened_inode)) {
                                     temp_dir = dir_open(opened_inode);
                                     if (dir_empty(temp_dir)) {
@@ -591,9 +617,13 @@ bool remove(const char *file) {
                             break;
                         }
                         else if (dir_lookup(cur_dir, name, &opened_inode)) {
+                            /* else if not last one and found next node in
+                             * path, move on and close current directory. */
                             dir_close(cur_dir);
                         }
                         else {
+                            /* Node was not found in current directory so
+                             * close and fail. */
                             dir_close(cur_dir);
                             status = false;
                             break;
@@ -1033,10 +1063,12 @@ bool chdir(const char *dir) {
 
     inode_close_tree(opened_inode);
 
+    /* Don't change if failed or if given path is not a directory. */
     if (open_fail || !inode_isdir(opened_inode)) {
         return false;
     }
     else {
+        /* Else, close current directory and change to new directory. */
         dir_close(thread_cwd());
         thread_current()->cwd = dir_open(opened_inode);
         return true;
@@ -1173,18 +1205,9 @@ bool mkdir(const char *dir) {
  * directory. If successful, stores the null-terminated file name in name,
  * which must have room for READDIR_MAX_LEN + 1 bytes, and returns true. If
  * no entries are left in the directory, returns false.
- *
- * . and .. should not be returned by readdir.
- *
- * If the directory changes while it is open, then it is acceptable for some
- * entries not to be read at all or to be read multiple times. Otherwise,
- * each directory entry should be read once, in any order.
- *
- * READDIR_MAX_LEN is defined in lib/user/syscall.h. If your file system
- * supports longer file names than the basic file system, you should
- * increase this value from the default of 14.
  */
 bool readdir(int fd, char *name) {
+    /* Exit if bad pointer. */
     if (name == NULL || !valid_user_pointer(name)) {
         exit(EXIT_BAD_PTR);
     }
@@ -1215,7 +1238,9 @@ int inumber(int fd) {
     return false;
 }
 
-static is_open_by_process(struct inode * inode) {
+/* Helper function returns boolean indicating if an inode is open by the
+ * current process. */
+static bool is_open_by_process(struct inode * inode) {
     struct process * pd = thread_current()->process_details;
     int i;
 
