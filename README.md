@@ -1,6 +1,6 @@
-cs124
+Caltech CS124 - PintOS
 =====
 
 CS124 team repo -- Ronnel Boettcher | Aleksander Bello | Archan Luhar
 
-Our (somewhat buggy) implementations for CS124. Do not use this code as your own, unless you enjoy getting BOC'd.
+Our (somewhat buggy) PintOS implementations. Do not use this code as your own, unless you enjoy getting BOC'd and debugging race conditions.
